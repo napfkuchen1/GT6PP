@@ -342,3 +342,20 @@ Method: restore `work/_db_pre_patch2.dat` (page-0 form), patch bytes from `work/
 - Not yet known: what the guest compares in the 512 bytes. The reader chain is virtual-call heavy (func_009F82C0 -> indirect calls), so static reading is slow; next try a guest function-entry trace after the 512-byte read.
 - New diagnostics: `[fsread]` now prints `buf=0x...`; `PS3_FSLOG_READS_BT=1` dumps the guest stack at each logged read.
 - Seen once: a run with FS_CALLER+FSLOG stuck at `[HOTREAD8] spinning on 0x21 ... guest-fn=0x005F3434` before reaching the db (not reproduced in 4 reruns).
+
+### Validator trace diff (2026-11-21)
+
+Method: `PS3_ICALL_TRACE=1` + `PS3_ICALL_GATE=<existing file>` now logs `[ict] target r3 lr=…`.
+Boot 2 with failing db (page-0 form) vs. same db with the 512-byte marker block restored (passes).
+Traces are identical up to the 512-byte read + a 4096-byte page-size getter (`00B59BD8`) + a
+memset (`00A4FE78`, caller lr `00B24040`, function in ppu_recomp_025). Then:
+
+- pass: next is the 100-byte read (`00A03438` lr `009F4A60` -> `fsread want=100`), boot continues.
+- fail: the 100-byte read never happens; `00A434B8`/`00A43618` run instead, error value 26 first
+  appears at `008AAF18` (error handler) -> dialog [183].
+
+So the decision is made from the 512-byte buffer in the code after `00B24040`
+(`[r29+0x3C]` stream object check, `func_00AF8AFC(…, 0x64, 0)`), before the 100-byte read.
+Not yet resolved: which compare on the buffer fails. Next: read the function containing
+`00B24040` up to its branch to `00B24348`, watch `r0=[[r29+0x3C]]`.
+Stopgap unchanged: archive/move `userdb0101.dat` before each boot.
