@@ -79,7 +79,7 @@ loader; the port targets `EMAIN.elf` directly, as GT5P does.
 | Runtime build | `work/build_ps3recomp` — **succeeds** |
 | `_WIN32_WINNT` | `0x0A00` (needed for `GetCurrentThreadStackLimits`) |
 
-`ps3recomp` v0.18.0 builds as `libps3recomp_runtime.a` with this toolchain.
+`ps3recomp` v0.19.0 (v0.18.0 before) builds as `libps3recomp_runtime.a` with this toolchain.
 D3D12 headers and libraries are found; `#pragma comment(lib, ...)` is ignored by
 MinGW, so the port's CMake links `d3d12 dxgi dxguid d3dcompiler ws2_32 xinput
 ole32 bcrypt` explicitly.

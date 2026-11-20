@@ -301,3 +301,11 @@ abort, so it is timing dependent. Not fixed yet.
 ## VBlank/flip handlers ruled out
 
 Upstream ps3recomp README/docs: `docs/DIAGNOSTICS.md` lists every debug env (`GCM_PUMP_DBG`, `MUTEX_WATCH`, `GCM_HANDLER_THREAD`, `PS3_WAITBT`, `GCM_FLIPCB_ONTICK`). GT6 registers both handlers (`SetVBlankHandler` opd 0x014E4868, `SetFlipHandler` opd 0x014E4848). With `GCM_PUMP_DBG=1` they are delivered at ~60 Hz (about 1800 vblank and 1800 flip callbacks in 30 s). So a missing vblank tick is not the cause of the presents stall; look at the guest-side timer/time source or a blocked thread next (`MUTEX_WATCH`, `PS3_WAITBT`).
+
+## ps3recomp upgraded to v0.19.0 (local)
+
+Our whole local ps3recomp delta (EU runtime, lwcond real wait, immediate-mode render fix, MinGW bits) was re-applied on the v0.19.0 tag with `git apply --3way`. 10 conflict hunks: took upstream for `cellSpurs.h`, `ppu_loader.cpp` (their MinGW fix) and `ppu_fs.cpp` (our PDIPFS cache trace only, diagnostic); kept both sides in `cellGcmSys.c` (GCM_DRAWPROBE next to their report hold). Dropped our `cellSpursInitializeWithAttribute2` alias because v0.19.0 has a proper 8192-byte CellSpurs2 version.
+
+Result: builds, boots, first frame ("Sony Computer Entertainment presents", ~62 FPS in the window title), same presents stall as on v0.18.0 (4384 flips in 60 s, no abort in this run). So the stall is not a v0.18.0 runtime bug.
+
+Consolidated delta vs v0.19.0: `patches/ps3recomp-v0.19.0-gt6-eu-all.patch` (replaces the per-topic stack for v0.19.0; the older patches remain for v0.18.0). The ppu_lifter changed upstream (+41 lines); the generated tree was not re-lifted yet.

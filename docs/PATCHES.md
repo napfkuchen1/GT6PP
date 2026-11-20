@@ -6,7 +6,7 @@ fresh clone.
 
 ## `patches/ps3recomp-mingw-seh.patch`
 
-Applies to `third_party/ps3recomp` on `master` (v0.18.0 at the time of writing).
+Applies to `third_party/ps3recomp` on `master` (v0.18.0 originally; the local tree now runs v0.19.0, see `ps3recomp-v0.19.0-gt6-eu-all.patch`).
 
 Two MinGW/Clang incompatibilities in `runtime/ppu/ppu_loader.cpp`:
 
