@@ -304,6 +304,14 @@ static DWORD WINAPI main_stack_dump(LPVOID secs)
     fprintf(stderr, "[mainstack] in_hle=%s rip=%p\n",
             g_hle_inflight[1] ? g_hle_inflight[1] : (g_hle_inflight[0] ? g_hle_inflight[0] : "-"), (void*)g_last_rip);
     {
+        /* Every thread that is inside an HLE call right now, by name. Shows who
+         * is parked where without a debugger. */
+        char ib[2048]; int ip = snprintf(ib, sizeof ib, "[inflight]");
+        for (int t = 0; t < 64; t++)
+            if (g_hle_inflight[t] && ip < 1900) ip += snprintf(ib + ip, sizeof ib - ip, " %d:%s", t, g_hle_inflight[t]);
+        fprintf(stderr, "%s\n", ib);
+    }
+    {
         static int once = 0;
         if (!once++)
             fprintf(stderr, "[hostmap] stwcx32=%p indirect=%p hle_call=%p "
