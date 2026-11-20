@@ -47,6 +47,12 @@ if (-not $exe) {
     if (-not $exe) { throw "GTToolsSharp.exe not found after extraction" }
 }
 
+# Only compare a main.adc produced by THIS run: a leftover file from an earlier
+# extraction must not be able to certify a failed one (GTToolsSharp can exit 0
+# after handled errors).
+if ((Test-Path $Output) -and (Get-ChildItem $Output -Force | Select-Object -First 1)) {
+    throw "Output directory $Output is not empty. Use an empty -Output directory so a stale main.adc cannot be mistaken for this run."
+}
 Write-Host "Unpacking $GtVol -> $Output (takes a while)"
 & $exe.FullName unpack --input $GtVol --output $Output --no-print --log $Log
 if ($LASTEXITCODE -ne 0) { throw "GTToolsSharp exited with $LASTEXITCODE (see $Log)" }

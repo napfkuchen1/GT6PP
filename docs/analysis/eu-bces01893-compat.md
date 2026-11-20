@@ -4,9 +4,11 @@
 hard-coded guest addresses, function lists and post-lift patches also apply to
 the EU disc `BCES01893`?
 
-**Short answer:** yes. `EMAIN.elf` layout matches, the raw `GT.VOL` slices
-hash identically, and the extracted `scripts/gt6/main.adc` is byte-identical
-to the documented US file.
+**Short answer:** everything checked so far is consistent with compatibility.
+`EMAIN.elf` layout matches, the raw `GT.VOL` slices hash identically, and the
+extracted `scripts/gt6/main.adc` is byte-identical to the documented US file.
+These are sampled checks, not a check of every address the function lists and
+patches use; a relift and a build on the EU ELF are needed to confirm it.
 
 ## Disc facts (EU, from a user-owned dump)
 

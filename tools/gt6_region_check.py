@@ -3,8 +3,10 @@
 
 GT6PP hard-codes guest addresses (0x9CD410, 0x987910, 0xB98168, ...) taken from
 the US disc (BCUS98296 v1.00). Run this on the ELF of any other disc (EU, JP,
-patched builds) BEFORE a relift: if every anchor passes, the existing function
-lists, post-lift patches and hooks apply unchanged.
+patched builds) BEFORE a relift. Passing only means the sampled layout checks
+(sizes, entry/TOC values and the first instruction at a handful of anchors)
+agree with the US build. It does not prove that every address used by the
+function lists and patches matches; only a relift and a build confirm that.
 
 Usage:
   python tools/gt6_region_check.py [work/bin/EMAIN.elf]
@@ -75,8 +77,16 @@ def main():
         print(f"{path} is not an ELF (still an encrypted SELF?)")
         return 2
 
-    segs = load_segments(d)
-    entry = struct.unpack_from(">Q", d, 0x18)[0]
+    try:
+        segs = load_segments(d)
+        entry = struct.unpack_from(">Q", d, 0x18)[0]
+        opd = read_va(d, segs, entry, 8)
+        if opd is None or len(opd) < 8:
+            raise ValueError(f"entry descriptor {entry:#x} is not mapped by any segment")
+        code, toc = struct.unpack(">II", opd)  # PS3 OPD: 32-bit pair
+    except (struct.error, ValueError) as e:
+        print(f"{path} is not a usable PS3 ELF: {e}")
+        return 2
     ok = True
 
     def row(name, got, want):
@@ -89,7 +99,6 @@ def main():
     print(f"sha256 : {hashlib.sha256(d).hexdigest()}")
     row("size", len(d), EXPECT["size"])
     row("entryOPD", entry, EXPECT["entry_opd"])
-    code, toc = struct.unpack(">II", read_va(d, segs, entry, 8))  # PS3 OPD: 32-bit pair
     row("entryCode", code, EXPECT["entry_code"])
     row("toc", toc, EXPECT["toc"])
 
@@ -102,7 +111,7 @@ def main():
         ok &= good
         print(f"{'PASS' if good else 'FAIL'}  {va:#010x} {mn:<6} (want {'/'.join(want)})  {why}")
 
-    print("RESULT:", "layout matches the US build" if ok else "MISMATCH - do not reuse US address lists")
+    print("RESULT:", "sampled layout checks match the US build (relift + build still needed to confirm)" if ok else "MISMATCH - do not reuse US address lists")
     return 0 if ok else 1
 
 
