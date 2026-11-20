@@ -309,3 +309,9 @@ Our whole local ps3recomp delta (EU runtime, lwcond real wait, immediate-mode re
 Result: builds, boots, first frame ("Sony Computer Entertainment presents", ~62 FPS in the window title), same presents stall as on v0.18.0 (4384 flips in 60 s, no abort in this run). So the stall is not a v0.18.0 runtime bug.
 
 Consolidated delta vs v0.19.0: `patches/ps3recomp-v0.19.0-gt6-eu-all.patch` (replaces the per-topic stack for v0.19.0; the older patches remain for v0.18.0). The ppu_lifter changed upstream (+41 lines); the generated tree was not re-lifted yet.
+
+## The sys_process_exit(1) abort
+
+`func_00B8EC2C` (lifted in `ppu_recomp_027.cpp`) is the game's fatal-error printer: it writes through `sys_tty_write` (syscall 988/403) and then exits; `func_00BA2460` is a thin wrapper around it, called indirectly from `func_00BA2420` (a callback through a global function pointer). So the earlier abort was the game deliberately quitting after an internal error, not a runtime crash.
+
+It did not reproduce after the ps3recomp v0.19.0 upgrade and re-lift: 6 of 6 windowed runs of 100 s (6855 to 7363 flips each) plus 5 earlier runs ran to the end without `exit-chain`. It was only ever seen on the v0.18.0 build (one run at ~2075 flips, one with GT6_SCRIPT_TRACE). If it comes back, check the TTY text in `work/gt6_run.log` right before the exit; the abort log was not saved at the time.
