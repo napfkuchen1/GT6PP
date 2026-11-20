@@ -114,6 +114,26 @@ The repo already has experimental `ps3recomp-lwcond-generation*.patch` and
 `-qid-pending` patches. This one does not cap the wait at 1 ms; it is not built
 on them and has not been tried together with them.
 
+### Third round: cellFiber WaitFlag / CheckFlags
+
+The two unnamed cellFiber imports are `0xA4599CF3` = `cellFiberPpuWaitFlag` and
+`0xF6C6900C` = `cellFiberPpuCheckFlags` (found by hashing the cellFiber export
+names; `sha1(name + suffix)`, first 4 bytes little endian). The GT6 call sites
+(`0xA2F448`, `0xA2F8E8`) store 1 into a word, call `WaitFlag(&word, 0)`, and the
+other side clears it and calls `CheckFlags(scheduler)`. `gt6/src/stubs.cpp` now
+registers two overrides: `WaitFlag` yields the current fiber until
+`*flag == value` (gives up outside a fiber), `CheckFlags` returns `CELL_OK`.
+
+Same 150 s headless run as before: still 0 `null-call`, 0 `unresolved indirect
+call`, no access violation. `unresolved NID` lines drop from 24 to 14 (left:
+`cellUsbd` `0x7FE92C54` / `0xBD554BCB`, `sysPrxForUser` `0xCA9A60BF` /
+`0xA5D06BF0`, sys_io `0x1F71ECBE`). The guest now gets past `menudb.dat` and
+loads the boot and dialog projects (`projects/gt6/boot/boot.adc`,
+`BootProject.gpb`, `dialog.adc`, `DialogProject.gpb`) and
+`projects/gt6/boot/DE/PresentsRootSCEE.gpb`, the EU presents screen. `cellGcm`
+still only shows `_cellGcmInitBody` and `GetLabelAddress`; no flip yet in the
+headless run.
+
 Still open: what the guest does after `menudb.dat` (the `0xA4599CF3` NID is the
 last one reported before the stream of `GetLabelAddress` calls) and the
 `null-read` hits at `0x009791B4` / `0x00B6E950` / `0x00A03438`.

@@ -1159,6 +1159,39 @@ static void gt6_cellUsbdSetThreadPriority2(ppu_context* ctx)
     ctx->gpr[3] = 0;   /* CELL_OK */
 }
 
+/*
+ * cellFiberPpuWaitFlag (0xA4599CF3) / cellFiberPpuCheckFlags (0xF6C6900C).
+ *
+ * Neither NID is named in the import table; the names were found by hashing
+ * the cellFiber export list. The GT6 call sites (0xA2F448, 0xA2F8E8) are a
+ * fiber-side event: the waiter stores 1 into a word, calls
+ * WaitFlag(&word, 0), and the other side clears the word and calls
+ * CheckFlags(scheduler). Semantics used here: WaitFlag yields the current
+ * fiber until *flag == value; CheckFlags has nothing to do because the
+ * waiter polls on every pass of the scheduler. Outside a fiber, Yield returns
+ * an error and WaitFlag gives up instead of spinning.
+ */
+extern "C" int32_t cellFiberPpuYield(void);
+
+static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
+{
+    const uint32_t flag  = (uint32_t)ctx->gpr[3];
+    const uint32_t value = (uint32_t)ctx->gpr[4];
+
+    if (flag) {
+        while (vm_read32((uint64_t)flag) != value) {
+            if (cellFiberPpuYield() != 0)
+                break;
+        }
+    }
+    ctx->gpr[3] = 0;   /* CELL_OK */
+}
+
+static void gt6_cellFiberPpuCheckFlags(ppu_context* ctx)
+{
+    ctx->gpr[3] = 0;   /* CELL_OK */
+}
+
 /* -------------------------------------------------------------------------
  * Boot/presents probes: the pending project handoff.
  *
@@ -1495,5 +1528,9 @@ extern "C" void gt6_hle_overrides(void)
                          gt6_cellVideoOutGetScreenSize);
     ps3_hle_register_ctx(0x5C832BD7u, "cellUsbdSetThreadPriority2",
                          gt6_cellUsbdSetThreadPriority2);
+    ps3_hle_register_ctx(0xA4599CF3u, "cellFiberPpuWaitFlag",
+                         gt6_cellFiberPpuWaitFlag);
+    ps3_hle_register_ctx(0xF6C6900Cu, "cellFiberPpuCheckFlags",
+                         gt6_cellFiberPpuCheckFlags);
 }
 
