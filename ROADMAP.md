@@ -51,7 +51,7 @@ set of assets.
       buffers.
 - [x] Drain the GCM FIFO and parse the first command buffer. Clears, immediate draws and flips run; with `FP_FORCE=1` the backbuffer fills with geometry. Real frames are still black.
 - [ ] Translate the first RSX vertex/fragment shaders.
-- [ ] Present one frame from the game's own command stream.
+- [x] Present one frame from the game's own command stream. *(EU disc: the "Sony Computer Entertainment presents" legal screen renders, see `docs/analysis/first-frame-sce.png`.)*
 - [ ] Fix color-buffer / render-target issues as they appear.
 
 **Exit criteria:** a stable menu or attract-mode frame from the game's own

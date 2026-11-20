@@ -1,8 +1,30 @@
 diff --git a/libs/video/rsx_d3d12_backend.c b/libs/video/rsx_d3d12_backend.c
-index bc05a308..fa4185d8 100644
+index bc05a308..6e07735e 100644
 --- a/libs/video/rsx_d3d12_backend.c
 +++ b/libs/video/rsx_d3d12_backend.c
-@@ -2645,6 +2645,11 @@ static ID3D12PipelineState* vp_get_fp_pso(int vs_idx, u32 fp_addr, u32 blend, in
+@@ -2613,6 +2613,21 @@ static ID3D12PipelineState* vp_get_fp_pso(int vs_idx, u32 fp_addr, u32 blend, in
+         int _un = atoi(getenv("FP_TEX"));
+         if (_un < 0 || _un > 3) _un = 0;
+         char* rp = strstr(hlsl, "_po.c0 = ");
++        char* tailp = rp ? NULL : strstr(hlsl, "return (_o == _o) ? _o : (float4)0;");
++        if (tailp) {
++            /* Current decompiler output ends in a NaN-guarded return and has no
++             * "_po.c0 =" statement; end the program with the sample instead. */
++            char rep2[200];
++            snprintf(rep2, sizeof rep2,
++                     getenv("FP_TEX_UV")
++                       ? "return rsx_tex[%d].Sample(rsx_samp[%d], float2(0.5, 0.5));\n}\n"
++                       : "return rsx_tex[%d].Sample(rsx_samp[%d], input.tc0.xy);\n}\n",
++                     _un, _un);
++            fprintf(stderr, "[FP_TEX] program 0x%X rewritten to sample unit %d%c",
++                    fp_addr, _un, 10);
++            if ((size_t)(tailp - hlsl) + strlen(rep2) + 1 < sizeof(hlsl))
++                strcpy(tailp, rep2);
++        }
+         if (rp) {
+             char* semi = strchr(rp, ';');
+             if (semi) {
+@@ -2645,6 +2660,11 @@ static ID3D12PipelineState* vp_get_fp_pso(int vs_idx, u32 fp_addr, u32 blend, in
      if (getenv("FP_FORCE")) {
          char* rp = strstr(hlsl, "return r[0];");
          if (rp) memcpy(rp, "return float4(1,0,1,1)", 23);
@@ -14,7 +36,7 @@ index bc05a308..fa4185d8 100644
      }
      ID3DBlob* pb = NULL; ID3DBlob* e = NULL;
      HRESULT hr = D3DCompile(hlsl, strlen(hlsl), "guest_fp", NULL, NULL,
-@@ -7016,6 +7021,9 @@ static u32 upload_strip_vp_indexed(const rsx_state* state, u32 first, u32 count,
+@@ -7016,6 +7036,9 @@ static u32 upload_strip_vp_indexed(const rsx_state* state, u32 first, u32 count,
  
  static void d3d12_draw_arrays(void* ud, u32 primitive, u32 first, u32 count)
  {
@@ -24,7 +46,7 @@ index bc05a308..fa4185d8 100644
      /* RSX_LIVE_FEED_DBG=1: pair with the [feed] method counts so "the FIFO
       * carries no draw batches" can be checked against "the backend is told
       * to draw" in the same run. */
-@@ -7264,6 +7272,9 @@ static void d3d12_draw_arrays(void* ud, u32 primitive, u32 first, u32 count)
+@@ -7264,6 +7287,9 @@ static void d3d12_draw_arrays(void* ud, u32 primitive, u32 first, u32 count)
  
  static void d3d12_draw_indexed(void* ud, u32 primitive, u32 first, u32 count)
  {
@@ -35,10 +57,27 @@ index bc05a308..fa4185d8 100644
       * carries no draw batches" can be checked against "the backend is told
       * to draw" in the same run. */
 diff --git a/libs/video/rsx_commands.c b/libs/video/rsx_commands.c
-index 5e9725e..49b2488 100644
+index 5e9725e..786caa9 100644
 --- a/libs/video/rsx_commands.c
 +++ b/libs/video/rsx_commands.c
-@@ -581,10 +581,11 @@ static void rsx_immediate_finish(rsx_state* state)
+@@ -511,6 +511,8 @@ static void rsx_inline_finish(rsx_state* state)
+ #define RSX_IMMEDIATE_MAX_VERTS 4096u
+ #define RSX_IMMEDIATE_SCRATCH   0x0FF00000u
+ static float s_immediate[RSX_IMMEDIATE_MAX_VERTS][4];
++static float s_immediate_tc[RSX_IMMEDIATE_MAX_VERTS][4];
++#define RSX_IMMEDIATE_SCRATCH_TC 0x0FF40000u
+ static u32   s_immediate_count;
+ 
+ static void rsx_immediate_reset(void)
+@@ -523,6 +525,7 @@ static void rsx_immediate_push(rsx_state* state)
+     if (!state->in_begin_end) return;
+     if (s_immediate_count >= RSX_IMMEDIATE_MAX_VERTS) return;
+     memcpy(s_immediate[s_immediate_count], state->vertex_data4f[0], 16);
++    memcpy(s_immediate_tc[s_immediate_count], state->vertex_data4f[8], 16);
+     { static int pd = -1;
+       if (pd < 0) pd = getenv("GCM_DRAWPROBE") ? 1 : 0;
+       if (pd) { static int n = 0;
+@@ -581,15 +584,18 @@ static void rsx_immediate_finish(rsx_state* state)
        } }
  
      if (s_backend && s_backend->draw_arrays) {
@@ -52,3 +91,26 @@ index 5e9725e..49b2488 100644
          if (base && vm_base) {
              for (u32 i = 0; i < count; i++) {
                  for (u32 lane = 0; lane < 4; lane++) {
+                     u32 bits; memcpy(&bits, &s_immediate[i][lane], 4);
+                     vm_write32(base + i * 16u + lane * 4u, bits);
++                    memcpy(&bits, &s_immediate_tc[i][lane], 4);
++                    vm_write32(cellGcmResolveLocated(1, RSX_IMMEDIATE_SCRATCH_TC) + i * 16u + lane * 4u, bits);
+                 }
+             }
+             /* The backend reads vertices from current_rsx_state, which is set
+@@ -606,10 +612,15 @@ static void rsx_immediate_finish(rsx_state* state)
+             state->vertex_attribs[0].frequency = 0u;
+             state->vertex_attribs[0].enabled   = 1;
+ 
++            const rsx_vertex_attrib saved8 = state->vertex_attribs[8];
++            state->vertex_attribs[8].format = 0x00001042u; state->vertex_attribs[8].offset = RSX_IMMEDIATE_SCRATCH_TC;
++            state->vertex_attribs[8].stride = 16u; state->vertex_attribs[8].size = 4u; state->vertex_attribs[8].type = 2u;
++            state->vertex_attribs[8].frequency = 0u; state->vertex_attribs[8].enabled = 1;
+             ++g_rsx_draw_backend_calls;
+             s_backend->draw_arrays(s_backend->userdata, state->primitive_type, 0, count);
+ 
+             state->vertex_attribs[0] = saved;
++            state->vertex_attribs[8] = saved8;
+         }
+     }
+     s_immediate_count = 0;

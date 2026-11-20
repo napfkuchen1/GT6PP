@@ -256,11 +256,20 @@ this title's translated programs end in `return (_o == _o) ? _o : (float4)0;`,
 so the override silently did nothing and an earlier "even magenta stays black"
 conclusion was wrong. Both endings are handled now.
 
-Normal runs still produce black frames. Open: texture contents/upload (864x128
-and 24x24 textures), the vertex shader never writing col0, and whether the scene
-is still on its fade-in.
+## First real frame
 
-Patches: `patches/ps3recomp-gt6-eu-render.patch` (both fixes plus the FP_FORCE
-anchor) and `patches/ps3recomp-gt6-eu-runtime.patch` (lwcond slot table 256 ->
+Normal frames were black because the texcoords were constant. GT6 draws its
+legal screen with immediate-mode DATA2F triangle strips: per vertex it writes
+position (attr0) and texcoord (attr8). `rsx_immediate_finish` only snapshotted
+attr0 into a scratch array, so attr8 stayed at whatever the last write was and
+every vertex sampled the same texel (`FP_TEX_UV=1` sampling the centre gave
+content, `input.tc0.xy` gave black, which pointed here). It now snapshots attr8
+as well and feeds it through a second scratch array for the draw.
+
+Result: the backbuffer shows "Sony Computer Entertainment presents"
+(`docs/analysis/first-frame-sce.png`), rendered from the game's own command
+stream on the EU disc.
+
+Patches: `patches/ps3recomp-gt6-eu-render.patch` (POLYGON as fan, scratch base, FP_FORCE/FP_TEX anchors, immediate attr8) and `patches/ps3recomp-gt6-eu-runtime.patch` (lwcond slot table 256 ->
 16384 with destroy cleanup, `cellFsGetFreeSize` free-space override). Apply them
 after `ps3recomp-gt6-runtime.patch`, with `--ignore-whitespace`.
