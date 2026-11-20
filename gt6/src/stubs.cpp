@@ -1162,6 +1162,85 @@ static void gt6_cellUsbdSetThreadPriority2(ppu_context* ctx)
 }
 
 /*
+ * Harmless firmware-import stubs (found as "unresolved NID" at boot; names
+ * recovered by hashing candidates with the PS3 NID suffix). None of them has
+ * a port-side backend, so each reports "nothing available".
+ *   0x7FE92C54 cellUsbdRegisterExtraLdd, 0xBD554BCB cellUsbdRegisterExtraLdd2
+ *   0x1F71ECBE cellKbGetConfiguration (out: arrange/read_mode/code_type)
+ *   0xA5D06BF0 sys_prx_get_module_list, 0xCA9A60BF sys_mempool_create
+ *   0x13EFE7F5 getsockname, 0x8AF3825E inet_pton
+ */
+static void gt6_stub_log_once(const char* name, int* flag, long rc)
+{
+    if (!*flag) {
+        fprintf(stderr, "[GT6] %s -> %ld (stub)\n", name, rc);
+        *flag = 1;
+    }
+}
+
+static void gt6_cellUsbdRegisterExtraLdd(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("cellUsbdRegisterExtraLdd", &l, 0);
+    ctx->gpr[3] = 0;
+}
+
+static void gt6_cellUsbdRegisterExtraLdd2(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("cellUsbdRegisterExtraLdd2", &l, 0);
+    ctx->gpr[3] = 0;
+}
+
+static void gt6_cellKbGetConfiguration(ppu_context* ctx)
+{
+    static int l = 0;
+    const uint64_t cfg = (uint64_t)(uint32_t)ctx->gpr[4];
+    if (cfg) {
+        vm_write32(cfg + 0, 0);
+        vm_write32(cfg + 4, 0);
+        vm_write32(cfg + 8, 0);
+    }
+    gt6_stub_log_once("cellKbGetConfiguration", &l, 0);
+    ctx->gpr[3] = 0;
+}
+
+static void gt6_sys_prx_get_module_list(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("sys_prx_get_module_list", &l, 0x80010003L);
+    ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010003; /* ENOSYS */
+}
+
+static void gt6_sys_mempool_create(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("sys_mempool_create", &l, 0x80010004L);
+    ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010004; /* ENOMEM */
+}
+
+static void gt6_net_getsockname(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("getsockname", &l, -1);
+    ctx->gpr[3] = (uint64_t)(int64_t)-1;
+}
+
+static void gt6_unknown_27DEDA93(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("unknown_0x27DEDA93 (net-area import, name unknown)", &l, 0);
+    ctx->gpr[3] = 0;
+}
+
+static void gt6_net_inet_pton(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("inet_pton", &l, 0);
+    ctx->gpr[3] = 0;   /* 0 = invalid address string */
+}
+
+/*
  * cellFiberPpuWaitFlag (0xA4599CF3) / cellFiberPpuCheckFlags (0xF6C6900C).
  *
  * Neither NID is named in the import table; the names were found by hashing
@@ -1554,6 +1633,14 @@ extern "C" void gt6_hle_overrides(void)
                          gt6_cellVideoOutGetScreenSize);
     ps3_hle_register_ctx(0x5C832BD7u, "cellUsbdSetThreadPriority2",
                          gt6_cellUsbdSetThreadPriority2);
+    ps3_hle_register_ctx(0x7FE92C54u, "cellUsbdRegisterExtraLdd", gt6_cellUsbdRegisterExtraLdd);
+    ps3_hle_register_ctx(0xBD554BCBu, "cellUsbdRegisterExtraLdd2", gt6_cellUsbdRegisterExtraLdd2);
+    ps3_hle_register_ctx(0x1F71ECBEu, "cellKbGetConfiguration", gt6_cellKbGetConfiguration);
+    ps3_hle_register_ctx(0xA5D06BF0u, "sys_prx_get_module_list", gt6_sys_prx_get_module_list);
+    ps3_hle_register_ctx(0xCA9A60BFu, "sys_mempool_create", gt6_sys_mempool_create);
+    ps3_hle_register_ctx(0x13EFE7F5u, "getsockname", gt6_net_getsockname);
+    ps3_hle_register_ctx(0x8AF3825Eu, "inet_pton", gt6_net_inet_pton);
+    ps3_hle_register_ctx(0x27DEDA93u, "unknown_0x27DEDA93", gt6_unknown_27DEDA93);
     ps3_hle_register_ctx(0xA4599CF3u, "cellFiberPpuWaitFlag",
                          gt6_cellFiberPpuWaitFlag);
     ps3_hle_register_ctx(0xF6C6900Cu, "cellFiberPpuCheckFlags",
