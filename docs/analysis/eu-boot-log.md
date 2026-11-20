@@ -359,3 +359,5 @@ So the decision is made from the 512-byte buffer in the code after `00B24040`
 Not yet resolved: which compare on the buffer fails. Next: read the function containing
 `00B24040` up to its branch to `00B24348`, watch `r0=[[r29+0x3C]]`.
 Stopgap unchanged: archive/move `userdb0101.dat` before each boot.
+
+Update 2026-11-21 (later): `00B23FD4..00B24060` = open-file path: `func_00B0FF60(r3=ctx,r4=obj,r5=path,r6=0x4C,r7=flags)` (contains the 512-byte read chain `00AF8CD8`), then memset 0x64 at `00B24040`, then `r3=[[obj]+0x3C]; if [r3]!=0 -> func_00AF8AFC(…,0x64,0)` = the 100-byte read. Fail case: that `[r3]` check/read is skipped. Page-0 form is what the game itself writes over the 512 header (same after 60 s), so either the game expects the header region decrypted (guest crypto, possible lift bug in VMX/AES code) or a later header re-write at clean shutdown never happens because runs are killed. Untested hypotheses: (a) clean shutdown writes header; (b) decrypt/compare in guest crypto code miscompiles.
