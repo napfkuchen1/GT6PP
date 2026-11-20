@@ -19,6 +19,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <tlhelp32.h>
 #endif
 
 #if defined(_MSC_VER)
@@ -95,6 +96,7 @@ void vm_write64(uint64_t a, uint64_t v);
 void vm_write8(uint64_t a, uint8_t v);
 void vm_write16(uint64_t a, uint16_t v);
 uint64_t vm_read64(uint64_t a);
+extern "C" uint32_t g_lwc_armed_addr;
 extern const char* g_hle_inflight[64];    /* per-thread: HLE currently executing */
 void gt6_spu_register_all(void);         /* generated: src/gen/spu_workloads.c */
 void gt6_spu_register_pm_clean(void);    /* WWS job-manager PM, image id 5 */
@@ -297,6 +299,73 @@ static DWORD WINAPI main_stack_dump(LPVOID secs)
         }
     }
 
+    if (getenv("GT6_ALLTHREADS")) {
+        /* Sample every other host thread: suspend, unwind, map frames to guest
+         * functions. Shows which fibers/workers are executing guest code
+         * versus parked in a host wait. */
+        HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+        THREADENTRY32 te; te.dwSize = sizeof te;
+        DWORD me = GetCurrentThreadId(), pid = GetCurrentProcessId();
+        if (snap != INVALID_HANDLE_VALUE && Thread32First(snap, &te)) do {
+            if (te.th32OwnerProcessID != pid || te.th32ThreadID == me) continue;
+            HANDLE th = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT, FALSE, te.th32ThreadID);
+            if (!th) continue;
+            CONTEXT c; c.ContextFlags = CONTEXT_FULL;
+            if (SuspendThread(th) != (DWORD)-1) {
+                char buf[700]; int p = 0; buf[0] = 0; int guest = 0;
+                if (GetThreadContext(th, &c)) {
+                    for (int f = 0; f < 40 && c.Rip && p < 640; f++) {
+                        uint32_t g = ppu_prof_resolve_host((void*)c.Rip);
+                        if (g) { guest++; p += snprintf(buf + p, sizeof buf - p, " %08X", g); }
+                        DWORD64 ib = 0;
+                        PRUNTIME_FUNCTION rf = RtlLookupFunctionEntry(c.Rip, &ib, nullptr);
+                        if (!rf) break;
+                        PVOID hd = nullptr; DWORD64 est = 0;
+                        RtlVirtualUnwind(UNW_FLAG_NHANDLER, ib, c.Rip, rf, &c, &hd, &est, nullptr);
+                    }
+                }
+                ResumeThread(th);
+                if (guest) {
+                    int ti = -1; uint32_t tsp = 0;
+                    for (int i = 0; i < PPU_THREAD_MAX; i++)
+                        if (g_ppu_threads[i].state != PPU_THREAD_STATE_FREE && g_ppu_threads[i].host_tid == te.th32ThreadID) { ti = i; tsp = (uint32_t)g_ppu_threads[i].ctx.gpr[1]; }
+                    fprintf(stderr, "[thr %lu tid=%d sp=%08X]%s\n", (unsigned long)te.th32ThreadID, ti, tsp, buf);
+                    if (strstr(buf, "007DBF48") && tsp) {
+                        uint32_t sb = ti >= 0 ? g_ppu_threads[ti].stack_addr : 0, ss = ti >= 0 ? g_ppu_threads[ti].stack_size : 0;
+                        fprintf(stderr, "[stkinfo] base=%08X size=%X\n", sb, ss);
+                        {
+                            extern uint8_t* vm_base;
+                            static const uint32_t rg[][2] = { {0xD0000000u, 0xD0400000u}, {0x10000000u, 0x80000000u}, {0xE0000000u, 0xF0000000u} };
+                            int found = 0;
+                            for (int r = 0; r < 3 && !found; r++)
+                                for (uint32_t a = rg[r][0]; a < rg[r][1]; a += 4) {
+                                    uint32_t w = __builtin_bswap32(*(volatile uint32_t*)(vm_base + a));
+                                    if (w == 0x00961648u) {
+                                        uint32_t slot = a + 0x8c;
+                                        fprintf(stderr, "[sleepslot] ra@%08X slot=%08X val=%08X\n", a, slot, vm_read32(slot));
+                                        { char tx[260]; int n = 0; for (; n < 256; n++) { uint8_t ch = vm_base[slot + 8 + n]; if (!ch) break; tx[n] = (ch >= 32 && ch < 127) ? (char)ch : '.'; } tx[n] = 0; fprintf(stderr, "[sleepmsg] %s\n", tx); fprintf(stderr, "[sleepwords]"); for (int k = -4; k < 12; k++) fprintf(stderr, " %08X", vm_read32(slot + k * 4)); fprintf(stderr, "\n"); }
+                                        {   /* reliable guest back-chain: 961290's frame is a-0x14, each frame's back chain is a u64 at sp */
+                                            uint32_t gsp = a - 0x14;
+                                            fprintf(stderr, "[sleepchain] sp=%08X", gsp);
+                                            for (int k = 0; k < 40 && gsp > 0x10000; k++) {
+                                                uint32_t nsp = vm_read32(gsp + 4);
+                                                if (nsp <= gsp || nsp - gsp > 0x10000) break;
+                                                fprintf(stderr, " %08X", vm_read32(nsp + 0x10 + 4));
+                                                gsp = nsp;
+                                            }
+                                            fprintf(stderr, "\n");
+                                        }
+                                        found = 1; break;
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+            CloseHandle(th);
+        } while (Thread32Next(snap, &te));
+        if (snap != INVALID_HANDLE_VALUE) CloseHandle(snap);
+    }
     uint32_t sp = (uint32_t)g_main_ctx.gpr[1];
     fprintf(stderr, "[mainstack] in=func_%08X sp=0x%08X lr=0x%08X ctr=0x%08X r3=0x%08X r31=0x%08X\n",
             live, sp, (uint32_t)g_main_ctx.lr, (uint32_t)g_main_ctx.ctr,
@@ -319,6 +388,7 @@ static DWORD WINAPI main_stack_dump(LPVOID secs)
                     (void*)&ppu_stwcx32, (void*)&ps3_indirect_call,
                     (void*)&ps3_hle_call, (void*)&vm_read32, (void*)&vm_write32);
     }
+    if (g_lwc_armed_addr) { uint32_t m = g_lwc_armed_addr - 0x30; fprintf(stderr, "[mgrstate] mgr=0x%08X state48=%u +4c=%02X +4d=%02X\n", m, vm_read32(m + 0x48), vm_read32(m + 0x4c) >> 24, (vm_read32(m + 0x4c) >> 16) & 0xFF); }
     fprintf(stderr, "[mainregs]");
     for (int r = 0; r < 32; r++)
         fprintf(stderr, " r%d=%08X", r, (uint32_t)g_main_ctx.gpr[r]);

@@ -841,8 +841,13 @@ extern "C" int gt6_guest_file_vtable_valid(uint32_t object_ea)
     if (vtable < 0x01000000u || vtable >= 0x02000000u) return 0;
     const uint32_t open_opd = vm_read32((uint64_t)vtable + 0x20u);
     const uint32_t close_opd = vm_read32((uint64_t)vtable + 0x24u);
-    return (open_opd >= 0x01000000u && open_opd < 0x02000000u) &&
-           (close_opd >= 0x01000000u && close_opd < 0x02000000u);
+    if ((open_opd >= 0x01000000u && open_opd < 0x02000000u) &&
+        (close_opd >= 0x01000000u && close_opd < 0x02000000u))
+        return 1;
+    // Device objects (e.g. the /APP_DATA mount) keep their open method at
+    // slot +0x88 and leave +0x20 empty; they are valid too.
+    const uint32_t dev_open_opd = vm_read32((uint64_t)vtable + 0x88u);
+    return dev_open_opd >= 0x01000000u && dev_open_opd < 0x02000000u;
 }
 
 extern "C" void gt6_script_path_hint(uint32_t reader_ea, uint32_t str_ea)
