@@ -273,3 +273,20 @@ stream on the EU disc.
 Patches: `patches/ps3recomp-gt6-eu-render.patch` (POLYGON as fan, scratch base, FP_FORCE/FP_TEX anchors, immediate attr8) and `patches/ps3recomp-gt6-eu-runtime.patch` (lwcond slot table 256 ->
 16384 with destroy cleanup, `cellFsGetFreeSize` free-space override). Apply them
 after `ps3recomp-gt6-runtime.patch`, with `--ignore-whitespace`.
+
+## After the first frame
+
+The legal screen fades in and the loading dots appear (frames ~400+), but the
+sequence never advances: after 11000 flips (about 150 s) the backbuffer is
+still the "Sony Computer Entertainment presents" screen. The US notes in
+`boot-project-handoff-fix.md` say the presents table should switch images
+every 2 to 4 s and then hand off to the movie sequence, so something is
+waiting and never completes.
+
+One run (RSX_CAP, 180 s) ended after about 2000 flips with
+`sys_process_exit(1)`. The host backtrace resolves (via `llvm-nm` on gt6.exe)
+to `func_00BA2460`, which only calls the abort helper `func_00B8EC2C`; it is
+a pure-virtual-style stub reached by an indirect call from `func_00BA2420`.
+It happens right after `PresentsRootSCEE.gpb` loads, three short "PDI"
+threads are joined and the guest stores 0 to NULL+0x500. A second run did not
+abort, so it is timing dependent. Not fixed yet.
