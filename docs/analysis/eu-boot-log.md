@@ -38,14 +38,31 @@ copied volume.
 | `unresolved indirect call` lines | 181 (same kind as in `CONTINUE-HERE.md`) |
 | Display | headless, no RSX backend; nothing was rendered |
 
-The run reaches the stop documented for the US build. All job images hit by the
-guest are found in the registry, which also shows that cutting the images out
-of `EMAIN.elf` gives the same fingerprints the owner captured at runtime.
+All job images hit by the guest are found in the registry, which also shows that
+cutting the images out of `EMAIN.elf` gives the same fingerprints the owner
+captured at runtime.
+
+The process does not stay up, though. After about 6 seconds it dies with
+`ACCESS VIOLATION: read at host <vm_base>+0x100000000` (rva `0xAF7FD3`, guest
+read at `0xFFFFFFFF`, "crash is NOT a PPU thread"). That is the SPU event crash
+described in `spu-event-crash-check.md`: the SPURS completion index runs past
+the 16-entry handler table and the unresolved-call reporter then dereferences
+guest `0xFFFFFFFF`. The build here is ps3recomp `v0.18.0` plus only the MinGW
+SEH patch, so the producer-side fix from `ps3recomp-gt6-runtime` is not in it.
+The run therefore ends earlier than the "black frame, `draws: 0`" state in
+`CONTINUE-HERE.md`.
 
 ## Not covered
 
 - No windowed run, so no statement about `draws`/frame output on EU.
-- The `[scriptload]` markers quoted in `pfs-script.md` come from the optional
-  `tools/gt6_pfs_probe_patch.py` probe, which was not applied here, so the
-  script-loader path was not traced. Only `GT.VOL` being opened was observed.
-- Only about 90 seconds of one run.
+- Script-loader trace (`tools/gt6_pfs_probe_patch.py`, `[scriptload]` markers):
+  applied to `ppu_recomp_022/023.cpp` (needed `git apply --ignore-whitespace`
+  because the generated files are CRLF) and rebuilt. The run printed four
+  `[pfsprobe]` lines (`pfs-header` twice, `mount` twice) and no `[scriptload]`
+  line, because it crashes (above) before the script loader runs. So the ADCH
+  check at `0x9CD410` was not observed on EU.
+- Second attempt: additionally ran `tools/patches/spu_event_dispatch_guard.py
+  --apply`. Same access violation at the same address, so that guard alone is
+  not enough; the producer fix in the `ps3recomp-gt6-runtime` patch (not tried
+  here) is the likely missing piece.
+- Each run lasted about 6 seconds until the crash, so no long-run behaviour.

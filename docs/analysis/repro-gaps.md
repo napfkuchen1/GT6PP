@@ -26,7 +26,8 @@ Update after getting a first `gt6.exe` linked from a clean clone (EU disc):
 
 - **ps3recomp base that works:** tag `v0.18.0` + `ps3recomp-mingw-seh.patch`
   (that is what the docs were written on). The other patches were not needed
-  to get a linking build.
+  to get a linking build, but see the last paragraph: the run itself crashes
+  without the SPURS fix.
 - **Gap 5 is solvable without the owner's files.** `tools/find_functions.py`
   followed by `tools/boundary_audit.py` regenerates `functions_corrected.json`
   from the decrypted ELF (70,823 functions here vs. 70,672 documented; the
@@ -48,7 +49,11 @@ Update after getting a first `gt6.exe` linked from a clean clone (EU disc):
   there the HLE reports `BLES00000`. Layout used for the EU test: that
   directory holds `PS3_GAME/` from the disc, with `USRDIR/GT.VOL` hardlinked.
 
-With that, the EU disc boots to the documented stop (`BootCheck` reads
-`BCES01893` from PARAM.SFO, SPURS initialises, black frame, `draws: 0`).
+With that, the EU disc boots (`BootCheck` reads `BCES01893` from PARAM.SFO,
+SPURS initialises, job images dispatch) and then dies after about 6 seconds in
+the SPU event crash from `spu-event-crash-check.md` (access violation, rva
+`0xAF7FD3`). The producer-side fix lives in `ps3recomp-gt6-runtime` and was not
+part of this build; `spu_event_dispatch_guard.py --apply` alone did not help.
+See `eu-boot-log.md`.
 
 Region check for the EU disc: see `eu-bces01893-compat.md`.
