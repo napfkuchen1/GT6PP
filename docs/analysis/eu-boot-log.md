@@ -329,3 +329,16 @@ Trigger: on the SECOND boot, validation of an existing `USRDIR/db/userdb0101.dat
 Stopgap: move `work/gt6_hdd0/game/BCES01893/USRDIR/db/userdb0101.dat` to ARCHIV before each boot (fresh flow works).
 
 Diagnostics added: `PS3_FSLOG_WRITES=<fd>` logs `[fswrite] fd want got pos b0..b3` (next to `PS3_FSLOG_READS`).
+
+### Validator bisect (2026-11-20, later session)
+
+Method: restore `work/_db_pre_patch2.dat` (page-0 form), patch bytes from `work/hdr512.bin` (the 512-byte block of a fresh run), boot 22 s, count the dialog.
+- The 512-byte block is deterministic (B8633B64 0C25CE82 ... in every fresh run), not random. It acts as an "uninitialised file" marker: the game accepts it, re-reads 100 bytes and rewrites the pages.
+- All 512 bytes are needed: patching 0..504, 8..512, 0..256, 256..512, 0..100 or 0..400 still shows the dialog; only 0..512 passes.
+- Header magic: 359FC9E2 A6ED500B = encrypted "SQLite format" (same key stream for `userdb0101.dat` and our own `grim2/grim007.db`; `DB0106.dat` uses another, 685AF834).
+- Plaintext diff userdb vs grim007 only in change counter, page count and schema cookie; counter equals version-valid-for in both. So the decrypted page-0 header is consistent.
+- Putting grim007's first 512 bytes into the db still fails. Truncating the db to the 11 written pages (45056 B) still fails. No failing HLE return (`PS3_HLE_ERRLOG=1`) around the db open.
+- Boot 2 trace (`FS_CALLER=1`): open, read 8, close, open, lseek 0, read 512, close, repeat once, then the dialog thread. No further file IO.
+- Not yet known: what the guest compares in the 512 bytes. The reader chain is virtual-call heavy (func_009F82C0 -> indirect calls), so static reading is slow; next try a guest function-entry trace after the 512-byte read.
+- New diagnostics: `[fsread]` now prints `buf=0x...`; `PS3_FSLOG_READS_BT=1` dumps the guest stack at each logged read.
+- Seen once: a run with FS_CALLER+FSLOG stuck at `[HOTREAD8] spinning on 0x21 ... guest-fn=0x005F3434` before reaching the db (not reproduced in 4 reruns).
