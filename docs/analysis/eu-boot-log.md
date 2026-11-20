@@ -155,6 +155,36 @@ outcome, so it is not the blocker.
 Next: find out which event the loop at `0x0081FD34` / `0x0082039C` is waiting for
 (queue 4/5 owners and their senders).
 
+### Where the windowed run stops (analysis)
+
+Logged with `PS3_LWCOND_LOG=1`, `PS3_VERBOSE=1`, 45-55 s:
+
+- The boot phase finishes cleanly. Main (tid 1) and the loader worker (tid 11)
+  ping-pong through two lwconds (`0x7FFD55D8` / `0x72539110`); the last cycle
+  completes, `PresentsRootSCEE.gpb` is served, the short-lived `PDI` / `Z-9YS`
+  threads (36-39) run and exit, and `tmp_save_work.dat` is opened under
+  `/dev_hdd1/cache/BCES01893`.
+- After that tid 1 makes no further logged syscall or sync call. The render
+  worker group (tids 16/17 signal, 19/27/29 wait on `0xD0089DD8`,
+  `0xD00BDDD8`, `0xD00B2DB8`, all `lr` `0x00A43038` / `0x00A4309C`) cycles
+  with `cellGcmGetLabelAddress(0x48..0x4B)` and nothing else: no flip, no
+  `SetFlip`, no `rsx_process_fifo`.
+- `[mainstack]` / `[hostchain]` show `func_00F9AC18` (a `cellSailRec` import stub
+  in the table) on top. That dump scans raw stack words, so it is not evidence.
+  What it does not tell is where main is parked; it is either spinning in
+  guest code without a syscall or inside a sync primitive that is not logged.
+- `[HOTREAD]` on `0x7FEE8084` (`lr` `0x00A2F44C`) is the `cellFiberPpuWaitFlag`
+  caller, a worker queue loop at `0x00A2F464`, i.e. normal consumer behaviour.
+- Queue 4/5 polling by tid 18 (`0x0081FC80..0x00820100`) is a 16-entry ring
+  dispatcher around `sys_event_queue_receive`; those receives return because
+  SPURS completion events keep arriving, so this is activity, not the blocker.
+- `gt6/src/gt6_present.cpp` drains the RSX FIFO from its presents hooks, so no
+  flip means no drain: the render group waits on labels the RSX would write.
+
+Next step: sample where main is at the end of the run (guest PC sampling, or a
+log line for every lwmutex / semaphore / cond call with tid) instead of relying on
+the stack scan.
+
 Still open: what the guest does after `menudb.dat` (the `0xA4599CF3` NID is the
 last one reported before the stream of `GetLabelAddress` calls) and the
 `null-read` hits at `0x009791B4` / `0x00B6E950` / `0x00A03438`.
