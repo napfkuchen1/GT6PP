@@ -1,0 +1,262 @@
+diff --git a/runtime/ppu/ppu_sysprx.cpp b/runtime/ppu/ppu_sysprx.cpp
+index a79cef1..6ac7f5f 100644
+--- a/runtime/ppu/ppu_sysprx.cpp
++++ b/runtime/ppu/ppu_sysprx.cpp
+@@ -30,12 +30,12 @@ extern "C" uint64_t host_monotonic_ns(void);
+ extern "C" uint8_t* vm_base;
+ extern "C" void ps3_hle_register_ctx(uint32_t nid, const char* name, void (*fn)(ppu_context*));
+ extern "C" void ps3_hle_register_fast(uint32_t nid, int (*fn)(ppu_context*));
+-/* libs/spurs/cellSpurs.c: CellSpurs2 initialiser. Declared here rather than
+- * pulling the whole spurs header into the sysPrx set. */
+-struct CellSpurs;
+-struct CellSpursAttribute;
+-extern "C" int32_t cellSpursInitializeWithAttribute2(CellSpurs* spurs,
+-                                                     const CellSpursAttribute* attr);
++/* libs/spurs/cellSpurs.c: CellSpurs2 initialiser. Declared here rather than
++ * pulling the whole spurs header into the sysPrx set. */
++struct CellSpurs;
++struct CellSpursAttribute;
++extern "C" int32_t cellSpursInitializeWithAttribute2(CellSpurs* spurs,
++                                                     const CellSpursAttribute* attr);
+ extern "C" uint32_t vm_read32(uint64_t a);
+ extern "C" uint64_t vm_read64(uint64_t a);
+ extern "C" void     vm_write32(uint64_t a, uint32_t v);
+@@ -121,19 +121,19 @@ static void sys_process_is_stack(ppu_context* ctx)
+  * unregistered context (bug); stamp a sentinel that matches no real thread. */
+ #define LWM_SELF(ctx) ((uint32_t)(ctx)->thread_id ? (uint32_t)(ctx)->thread_id : 0x7FFFFFFEu)
+ 
+-/* A lwmutex must live wholly inside the guest window. The SPURS event crash
+- * was reported as sys_lwmutex_lock only because that was the thread's last HLE
+- * (the real fault was the indirect-call reporter), but a corrupted id must
+- * still not become a host read. Check the full 24-byte structure, not just the
+- * first word. */
+-static int lwm_addr_ok(uint32_t a)
+-{
+-    const uint64_t end = (uint64_t)a + 0x18u;
+-    if (a < 0x10000u || end > 0x100000000ull) return 0;
+-    if (ppu_vm_size && end > ppu_vm_size) return 0;
+-    return 1;
+-}
+-
++/* A lwmutex must live wholly inside the guest window. The SPURS event crash
++ * was reported as sys_lwmutex_lock only because that was the thread's last HLE
++ * (the real fault was the indirect-call reporter), but a corrupted id must
++ * still not become a host read. Check the full 24-byte structure, not just the
++ * first word. */
++static int lwm_addr_ok(uint32_t a)
++{
++    const uint64_t end = (uint64_t)a + 0x18u;
++    if (a < 0x10000u || end > 0x100000000ull) return 0;
++    if (ppu_vm_size && end > ppu_vm_size) return 0;
++    return 1;
++}
++
+ struct LwmSlot;
+ static struct LwmSlot* lwm_slot(uint32_t addr);   /* fwd (defined below) */
+ static void lwm_release(struct LwmSlot* sl);
+@@ -275,13 +275,13 @@ static void sys_lwmutex_lock(ppu_context* ctx)
+ {
+     uint32_t lwm = (uint32_t)ctx->gpr[3];
+     uint32_t self = LWM_SELF(ctx);
+-    if (!lwm_addr_ok(lwm)) {
+-        { static int _n = 0; if (PS3_LOG_FIRST(_n, 8))
+-            fprintf(stderr, "[LWM] lock: non-guest lwm=0x%08X tid=%llu -- ESRCH\n",
+-                    lwm, (unsigned long long)ctx->thread_id); }
+-        ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010005u;  /* CELL_ESRCH */
+-        return;
+-    }
++    if (!lwm_addr_ok(lwm)) {
++        { static int _n = 0; if (PS3_LOG_FIRST(_n, 8))
++            fprintf(stderr, "[LWM] lock: non-guest lwm=0x%08X tid=%llu -- ESRCH\n",
++                    lwm, (unsigned long long)ctx->thread_id); }
++        ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010005u;  /* CELL_ESRCH */
++        return;
++    }
+     /* lv2 ABI: r4 = timeout in microseconds, 0 = infinite. The real kernel
+      * returns ETIMEDOUT (0x8001000B) when the wait expires; games rely on that
+      * (e.g. LBP's resource loader locks with a 2s timeout in a retry loop so a
+@@ -333,7 +333,7 @@ static void sys_lwmutex_lock(ppu_context* ctx)
+ static int sys_lwmutex_lock_fast(ppu_context* ctx)
+ {
+     const uint32_t lwm = (uint32_t)ctx->gpr[3];
+-    if (!lwm_addr_ok(lwm)) return 0;   /* full handler logs + returns ESRCH */
++    if (!lwm_addr_ok(lwm)) return 0;   /* full handler logs + returns ESRCH */
+     struct LwmSlot* sl = lwm_slot(lwm);
+     if (!sl || lwm_trace()) return 0;
+     const uint32_t self = LWM_SELF(ctx);
+@@ -358,10 +358,10 @@ static void sys_lwmutex_trylock(ppu_context* ctx)
+ {
+     uint32_t lwm = (uint32_t)ctx->gpr[3];
+     uint32_t self = LWM_SELF(ctx);
+-    if (!lwm_addr_ok(lwm)) {
+-        ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010005u;  /* CELL_ESRCH */
+-        return;
+-    }
++    if (!lwm_addr_ok(lwm)) {
++        ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010005u;  /* CELL_ESRCH */
++        return;
++    }
+     struct LwmSlot* sl0 = lwm_slot(lwm);
+     if (sl0) {
+         if (vm_read32(lwm + LWM_OWNER) == self && vm_read32(lwm + LWM_RECUR) > 0) {
+@@ -379,10 +379,10 @@ static void sys_lwmutex_trylock(ppu_context* ctx)
+ static void sys_lwmutex_unlock(ppu_context* ctx)
+ {
+     uint32_t lwm = (uint32_t)ctx->gpr[3];
+-    if (!lwm_addr_ok(lwm)) {
+-        ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010005u;  /* CELL_ESRCH */
+-        return;
+-    }
++    if (!lwm_addr_ok(lwm)) {
++        ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010005u;  /* CELL_ESRCH */
++        return;
++    }
+     uint32_t rc = vm_read32(lwm + LWM_RECUR);
+     if (rc > 1) {                       /* recursive hold: count down, keep the lock */
+         vm_write32(lwm + LWM_RECUR, rc - 1);
+@@ -443,32 +443,100 @@ static void sys_lwcond_create(ppu_context* ctx)
+     vm_write32(lwcond + 0x04, ++s_lwcond_id);
+     ctx->gpr[3] = 0;
+ }
++/* Real lwcond: lv2 never wakes a waiter spuriously. A waiter parks on a
++ * per-lwcond semaphore after releasing the paired lwmutex; signal / signal_all
++ * give out one / all tickets for threads waiting right now (a signal with
++ * nobody waiting is lost, as on lv2). PS3_LWCOND_POLL=1 restores the old
++ * 1 ms poll with no-op signals. signal_to (r4 = thread id) wakes any one
++ * waiter, who is waiting is not tracked. */
++struct LwcSlot { uint32_t addr; HANDLE sem; long waiters; };
++static LwcSlot g_lwc[256];
++static CRITICAL_SECTION g_lwc_cs;
++static INIT_ONCE g_lwc_once = INIT_ONCE_STATIC_INIT;
++static BOOL CALLBACK lwc_init_cb(PINIT_ONCE, PVOID, PVOID*) { InitializeCriticalSection(&g_lwc_cs); return TRUE; }
++static LwcSlot* lwc_slot(uint32_t addr)   /* g_lwc_cs held */
++{
++    for (int i = 0; i < 256; i++) if (g_lwc[i].addr == addr) return &g_lwc[i];
++    for (int i = 0; i < 256; i++) if (!g_lwc[i].addr) {
++        g_lwc[i].addr = addr; g_lwc[i].waiters = 0;
++        g_lwc[i].sem = CreateSemaphoreA(NULL, 0, 0x7FFFFFFF, NULL);
++        return &g_lwc[i];
++    }
++    return nullptr;
++}
++static int lwc_poll_mode(void)
++{
++    static int m = -1;
++    if (m < 0) { const char* e = getenv("PS3_LWCOND_POLL"); m = (e && *e == '1') ? 1 : 0; }
++    return m;
++}
++static void lwc_signal(ppu_context* ctx, int all)
++{
++    uint32_t addr = (uint32_t)ctx->gpr[3];
++    ctx->gpr[3] = 0;
++    if (lwc_poll_mode()) return;
++    InitOnceExecuteOnce(&g_lwc_once, lwc_init_cb, NULL, NULL);
++    EnterCriticalSection(&g_lwc_cs);
++    LwcSlot* c = lwc_slot(vm_read32(addr + 0x04));
++    if (getenv("PS3_LWCOND_LOG")) fprintf(stderr, "[LWC] signal%s lwc=0x%08X tid=%llu waiters=%ld lr=0x%08X\n", all ? "_all" : "", addr, (unsigned long long)ctx->thread_id, c ? c->waiters : -1L, (unsigned)ctx->lr);
++    if (c && c->waiters > 0) {
++        long n = all ? c->waiters : 1;
++        c->waiters -= n;
++        ReleaseSemaphore(c->sem, n, NULL);
++    }
++    LeaveCriticalSection(&g_lwc_cs);
++}
+ static void sys_lwcond_destroy(ppu_context* ctx)    { ctx->gpr[3] = 0; }
+-static void sys_lwcond_signal(ppu_context* ctx)     { ctx->gpr[3] = 0; }
+-static void sys_lwcond_signal_all(ppu_context* ctx) { ctx->gpr[3] = 0; }
+-static void sys_lwcond_signal_to(ppu_context* ctx)  { ctx->gpr[3] = 0; }
+-/* Now that the lwmutex is REAL, a no-op wait that keeps holding it deadlocks the
+- * signaler. Release the paired lwmutex, wait briefly, reacquire (poll-style: the
+- * guest's while(!predicate) loop re-checks; signalers stay no-ops). Handles the
+- * common single (non-recursive) hold. */
++static void sys_lwcond_signal(ppu_context* ctx)     { lwc_signal(ctx, 0); }
++static void sys_lwcond_signal_all(ppu_context* ctx) { lwc_signal(ctx, 1); }
++static void sys_lwcond_signal_to(ppu_context* ctx)  { lwc_signal(ctx, 0); }
++/* wait: r3 = lwcond, r4 = timeout us (0 = infinite). The paired lwmutex is
++ * released while parked and taken again (with its owner/recursion stamps)
++ * before returning. */
+ static void sys_lwcond_wait(ppu_context* ctx)
+ {
+     uint32_t lwcond  = (uint32_t)ctx->gpr[3];
++    uint64_t tmo_us  = ctx->gpr[4];
+     uint32_t lwmutex = vm_read32(lwcond + 0x00);
+     struct LwmSlot* sl = lwm_slot(lwmutex);
++    int poll = lwc_poll_mode();
++    LwcSlot* c = nullptr;
++    if (!poll) {
++        InitOnceExecuteOnce(&g_lwc_once, lwc_init_cb, NULL, NULL);
++        EnterCriticalSection(&g_lwc_cs);
++        c = lwc_slot(vm_read32(lwcond + 0x04));
++        if (c) c->waiters++;
++        LeaveCriticalSection(&g_lwc_cs);
++    }
++    if (getenv("PS3_LWCOND_LOG")) fprintf(stderr, "[LWC] wait lwc=0x%08X tid=%llu tmo=%llu lr=0x%08X\n", lwcond, (unsigned long long)ctx->thread_id, (unsigned long long)tmo_us, (unsigned)ctx->lr);
++    uint32_t own = 0, rc = 0;
+     if (sl) {
+-        uint32_t own = vm_read32(lwmutex + LWM_OWNER);
+-        uint32_t rc  = vm_read32(lwmutex + LWM_RECUR);
++        own = vm_read32(lwmutex + LWM_OWNER);
++        rc  = vm_read32(lwmutex + LWM_RECUR);
+         vm_write32(lwmutex + LWM_RECUR, 0);
+         vm_write32(lwmutex + LWM_OWNER, 0);
+-        ppu_thread_note_block(ctx->thread_id);
+         lwm_release(sl);
++    }
++    ppu_thread_note_block(ctx->thread_id);
++    uint64_t rv = 0;
++    if (!c) {
+         Sleep(1);
++    } else {
++        DWORD ms = INFINITE;
++        if (tmo_us) { unsigned long long m = (tmo_us + 999) / 1000; ms = m > 0xFFFFFFFEull ? 0xFFFFFFFEu : (DWORD)m; }
++        if (WaitForSingleObject(c->sem, ms) == WAIT_TIMEOUT) {
++            EnterCriticalSection(&g_lwc_cs);
++            if (c->waiters > 0) { c->waiters--; rv = 0x8001000Bu; }   /* ETIMEDOUT */
++            LeaveCriticalSection(&g_lwc_cs);
++            if (!rv) WaitForSingleObject(c->sem, INFINITE);           /* signal raced the timeout */
++        }
++    }
++    if (sl) {
+         lwm_acquire(sl, 0);
+         vm_write32(lwmutex + LWM_OWNER, own);
+         vm_write32(lwmutex + LWM_RECUR, rc ? rc : 1);
+     }
+-    ctx->gpr[3] = 0;
++    ctx->gpr[3] = rv ? (uint64_t)(int64_t)(int32_t)rv : 0;
+ }
+ 
+ /* sys_ppu_thread_get_id(vm::ptr<u64> id) -> *id = calling thread's real id.
+@@ -949,21 +1017,21 @@ static void sys_spinlock_unlock(ppu_context* ctx)
+     _InterlockedExchange(spin_word(ea), 0);
+ }
+ 
+-/* cellSpursInitializeWithAttribute2(spurs, attr). The generic import path has
+- * no NID entry for 0x30AA96C4, so GT6's second instance was never initialised.
+- * The C handler takes guest EAs (GUEST_PTR inside cellSpurs.c). */
+-static void hle_cellSpursInitializeWithAttribute2(ppu_context* ctx)
+-{
+-    ctx->gpr[3] = (uint64_t)(int64_t)cellSpursInitializeWithAttribute2(
+-        (CellSpurs*)(uintptr_t)(uint32_t)ctx->gpr[3],
+-        (const CellSpursAttribute*)(uintptr_t)(uint32_t)ctx->gpr[4]);
+-}
+-
++/* cellSpursInitializeWithAttribute2(spurs, attr). The generic import path has
++ * no NID entry for 0x30AA96C4, so GT6's second instance was never initialised.
++ * The C handler takes guest EAs (GUEST_PTR inside cellSpurs.c). */
++static void hle_cellSpursInitializeWithAttribute2(ppu_context* ctx)
++{
++    ctx->gpr[3] = (uint64_t)(int64_t)cellSpursInitializeWithAttribute2(
++        (CellSpurs*)(uintptr_t)(uint32_t)ctx->gpr[3],
++        (const CellSpursAttribute*)(uintptr_t)(uint32_t)ctx->gpr[4]);
++}
++
+ extern "C" void ppu_sysprx_register(void)
+ {
+     ps3_hle_register_ctx(0x15BAE46Bu, "_cellGcmInitBody", hle_cellGcmInitBody);
+-    ps3_hle_register_ctx(0x30AA96C4u, "cellSpursInitializeWithAttribute2",
+-                         hle_cellSpursInitializeWithAttribute2);
++    ps3_hle_register_ctx(0x30AA96C4u, "cellSpursInitializeWithAttribute2",
++                         hle_cellSpursInitializeWithAttribute2);
+     ps3_hle_register_ctx(0xEBE5F72Fu, "_sys_spu_image_import", hle_sys_spu_image_import);
+ 
+     /* PS3_NET_ONLINE: real host sockets (libs/network/sysNet.c). Registered

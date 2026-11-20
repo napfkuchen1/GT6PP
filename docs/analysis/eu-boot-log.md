@@ -73,6 +73,51 @@ survives the full 90 seconds with no access violation.
 `unresolved indirect call` is no longer 181 as in the first run, it keeps
 growing while the guest spins. No `draws` statistic was checked here.
 
+### Second round: patched lifter, memset entries, real lwcond
+
+Three changes on top of the table above, each checked with a headless run:
+
+1. **Relift with the patched lifter** (`patches/ps3recomp-gt6-runtime.patch`
+   also carries the lifter changes). The absolute jump-table switch generation
+   there removes the `0x009F9380` spin; the SPURS completion fix stays.
+2. **Memset entry points** (`tools/add_computed_entries.py`, see `repro-gaps.md`).
+   After this the run has 0 `unresolved indirect call` lines.
+3. **`patches/ps3recomp-lwcond-real-wait.patch`.** The stock `sys_lwcond_wait` is a
+   1 ms poll and the signal calls do nothing, so every wait returns early.
+   GT6's event wrapper (`func_00A21CBC` / `A4305C`) waits once without a
+   predicate loop. In the earlier runs the main thread (stack `0xCFE00000`)
+   left a wait too early, returned from its function and the file worker
+   (tid 14, `func_009F811C` / `9F7F94` / `9F8534`) then read the request that
+   still lived in that dead stack frame (`0xCFEFF480`): vtable slot full of
+   junk, calls into page 0, a space-filled lwmutex. With real wait/signal
+   semantics (per-lwcond semaphore keyed by the queue id at `lwcond+4`,
+   `signal_all` wakes every waiter, `ETIMEDOUT` honoured, lost signals stay lost)
+   none of that happens any more.
+
+| Observation | Value |
+|---|---|
+| Run length | 150 s headless, process alive, no access violation |
+| `null-call` lines | 0 (was several per run on tids 1 and 14) |
+| `unresolved indirect call` | 0 |
+| `pfs override` files served | 56, among them `SettingProject.gpb`, `specdb/GT6/DB0106.dat` (16 MB), `specdb/GT6/US/CarName.dat`, `database/gt6/menudb.dat` |
+| Threads created | 44 (`sys_ppu_thread_create`), SPU workers, audio, `TM_FFB_WorkerThread` x4 |
+| `cellGcmSys` | only `GetLabelAddress(0x48..0x4B)` so far, no flip, no draw |
+| `unresolved NID` (24 lines) | cellFiber (`0xA4599CF3`, `0xF6C6900C`), cellUsbd, sys_net (`0x13EFE7F5` getsockname, `0x8AF3825E`), sys_io `0x1F71ECBE`, sysPrxForUser `0xA5D06BF0`, `0xCA9A60BF` |
+
+Debug aid: `PS3_LWCOND_LOG=1` prints every lwcond wait and signal with the
+queue id, thread and return address; `PS3_LWCOND_POLL=1` brings the old poll
+back. The two stale-stack notes: the `[mainstack]` / `[hostchain]` dump scans
+raw stack words, so frames of calls that already returned show up in it
+(`func_00A4305C` under the script loader was one of those).
+
+The repo already has experimental `ps3recomp-lwcond-generation*.patch` and
+`-qid-pending` patches. This one does not cap the wait at 1 ms; it is not built
+on them and has not been tried together with them.
+
+Still open: what the guest does after `menudb.dat` (the `0xA4599CF3` NID is the
+last one reported before the stream of `GetLabelAddress` calls) and the
+`null-read` hits at `0x009791B4` / `0x00B6E950` / `0x00A03438`.
+
 ## Not covered
 
 - No windowed run, so no statement about `draws`/frame output on EU.

@@ -67,6 +67,15 @@ Update after getting a first `gt6.exe` linked from a clean clone (EU disc):
   appends the entries to the list before the relift. With it the run shows 0
   `unresolved indirect call` lines.
 
+- **The relift has to run with the patched lifter** (the one in
+  `ps3recomp-gt6-runtime.patch`). With the unpatched v0.18.0 lifter the jump
+  tables are not generated and `0x009F9380` is hit thousands of times.
+- **`sys_lwcond_wait` returns early.** The runtime implements it as a 1 ms poll
+  and the signal calls are no-ops, but GT6's event wrapper at `0x00A21CBC` waits
+  once without a loop. The result is stack-lifetime corruption in the
+  FileDevice worker. `patches/ps3recomp-lwcond-real-wait.patch` (apply after the
+  runtime patch) implements real wait/signal.
+
 With that, the EU disc boots (`BootCheck` reads `BCES01893` from PARAM.SFO,
 SPURS initialises, job images dispatch). With only the MinGW patch it then dies
 after about 6 seconds in the SPU event crash from `spu-event-crash-check.md`
