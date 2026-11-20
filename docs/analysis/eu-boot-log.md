@@ -315,3 +315,18 @@ Consolidated delta vs v0.19.0: `patches/ps3recomp-v0.19.0-gt6-eu-all.patch` (rep
 `func_00B8EC2C` (lifted in `ppu_recomp_027.cpp`) is the game's fatal-error printer: it writes through `sys_tty_write` (syscall 988/403) and then exits; `func_00BA2460` is a thin wrapper around it, called indirectly from `func_00BA2420` (a callback through a global function pointer). So the earlier abort was the game deliberately quitting after an internal error, not a runtime crash.
 
 It did not reproduce after the ps3recomp v0.19.0 upgrade and re-lift: 6 of 6 windowed runs of 100 s (6855 to 7363 flips each) plus 5 earlier runs ran to the end without `exit-chain`. It was only ever seen on the v0.18.0 build (one run at ~2075 flips, one with GT6_SCRIPT_TRACE). If it comes back, check the TTY text in `work/gt6_run.log` right before the exit; the abort log was not saved at the time.
+
+## The presents stall: main thread waits for a future that never completes
+
+Not a time source, not GCM/vblank, not trophy/netctl (all ruled out above). All threads are alive and the game flips at about 62 per second.
+
+The main PPU thread (tid 1) busy-waits in `func_00961290` (1 ms spin via `func_007DBF48`, then a locked read in `func_00A13644`) for a flag byte at `0x0164AB90`. Chain: `func_009C634C` <- `func_009C6420` <- `func_009B89D8` <- `func_009F0748` <- `func_009EEA88` <- `func_00987884` <- `func_00987A2C` <- `func_009D4680` <- `func_005A5BB0` <- `func_005C406C` <- `func_00568658`.
+
+- The flag is a one-byte "ready" field at +0x10 of an object (vtable `0x0146FA48`) that sits at `0x0164AB80`, ctor `func_00E47040` (called from `func_00A13974`). Vtable slots: 0 `func_00E46FE8`, 1 `func_00E46FB8`, 2 `func_003C0E84` (get), 3 `func_00C3FE14` (set, writes byte +0x10).
+- The name string passed to the ctor is a typeinfo name of `PDISTD::concurrent` future/worker types, so this is a future/promise.
+- `PPU_WWATCH=164AB90` with `PPU_WWATCH_LEN=1 PPU_WWATCH_MAX=0`: exactly one write, the ctor's initial 0. A temporary probe in `func_00C3FE14` (the setter) showed zero calls in a 20 s run, for any object. So nobody ever fulfils the promise.
+- The last visible event before the stall: `userdb0101.dat` (8 MB, created by the game itself) is opened four times, only the first 8 bytes are read (magic 359FC9E2), the last short "PDI" thread (tid 40) is created and joined, and it does nothing (no HLE calls).
+- The four `TM_FFB_WorkerThread` threads (tid 22 to 25, `func_00A6DF74`) just poll an empty ring queue (read idx == write idx at +0x1449/+0x144A, sleep 1 ms). Seven other threads sit in `sys_event_queue_receive`; tid 30 (queue 8) has an infinite timeout.
+- SPURS is healthy (`cellSpursJobGuardNotify`, ready-count and job dispatch keep running).
+
+Open: which task should complete this future, and why it is never queued or never runs. Candidates: the userdb read path (only the header is read), an event that never arrives on one of the infinite-timeout queues (tid 30 / queue 8), or a sysutil callback that never fires. Not fixed.
