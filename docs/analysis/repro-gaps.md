@@ -25,9 +25,15 @@ Findings from an independent setup attempt on Windows 11 with an EU disc
 Update after getting a first `gt6.exe` linked from a clean clone (EU disc):
 
 - **ps3recomp base that works:** tag `v0.18.0` + `ps3recomp-mingw-seh.patch`
-  (that is what the docs were written on). The other patches were not needed
-  to get a linking build, but see the last paragraph: the run itself crashes
-  without the SPURS fix.
+  (that is what the docs were written on). That links, but the run then crashes
+  (see the last paragraph); the fix is in `ps3recomp-gt6-runtime.patch`.
+- **`ps3recomp-gt6-runtime.patch` is UTF-16 (BOM)**, so `git apply` reads it as
+  empty ("No valid patches in input"). Converted to UTF-8 it applies on
+  `v0.18.0` except the two `rsx_d3d12_backend.{c,h}` hunks, which do not match
+  that base (another sign the real base commit is not `v0.18.0`). Use
+  `git apply --ignore-whitespace --exclude='libs/video/rsx_d3d12_backend.*'`.
+  The patch already contains the `ps3recomp-mingw-seh` hunks, so apply one or
+  the other, not both (this also answers gap 2 for these two).
 - **Gap 5 is solvable without the owner's files.** `tools/find_functions.py`
   followed by `tools/boundary_audit.py` regenerates `functions_corrected.json`
   from the decrypted ELF (70,823 functions here vs. 70,672 documented; the
@@ -50,10 +56,10 @@ Update after getting a first `gt6.exe` linked from a clean clone (EU disc):
   directory holds `PS3_GAME/` from the disc, with `USRDIR/GT.VOL` hardlinked.
 
 With that, the EU disc boots (`BootCheck` reads `BCES01893` from PARAM.SFO,
-SPURS initialises, job images dispatch) and then dies after about 6 seconds in
-the SPU event crash from `spu-event-crash-check.md` (access violation, rva
-`0xAF7FD3`). The producer-side fix lives in `ps3recomp-gt6-runtime` and was not
-part of this build; `spu_event_dispatch_guard.py --apply` alone did not help.
-See `eu-boot-log.md`.
+SPURS initialises, job images dispatch). With only the MinGW patch it then dies
+after about 6 seconds in the SPU event crash from `spu-event-crash-check.md`
+(rva `0xAF7FD3`). With `ps3recomp-gt6-runtime.patch` (converted, d3d12 hunks
+excluded) the run survives 90 seconds, serves the EU `main.adc` and passes the
+script-loader read. See `eu-boot-log.md`.
 
 Region check for the EU disc: see `eu-bces01893-compat.md`.
