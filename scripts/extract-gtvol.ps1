@@ -27,6 +27,9 @@ $ExpectSha  = "5B40B149E431CE3EB9ADACAC38114208D995BCEBF55FD11C519E8C4BDA00A746"
 $ExpectSize = 857518
 
 if (-not (Test-Path $GtVol)) { throw "GT.VOL not found: $GtVol" }
+# Files copied off a disc/ISO keep the read-only flag; GTToolsSharp opens the
+# volume read/write and fails with UnauthorizedAccessException otherwise.
+if ((Get-Item $GtVol).IsReadOnly) { Set-ItemProperty $GtVol -Name IsReadOnly -Value $false }
 New-Item -ItemType Directory -Force -Path (Split-Path $Log), $ToolDir | Out-Null
 
 $exe = Get-ChildItem $ToolDir -Recurse -Filter GTToolsSharp.exe -ErrorAction SilentlyContinue | Select-Object -First 1
