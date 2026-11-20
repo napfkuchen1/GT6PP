@@ -297,3 +297,7 @@ abort, so it is timing dependent. Not fixed yet.
 - `legal-gpb-draw-fix.md` / `first-draw-audit.md`: image changes in `PresentsRoot` are script driven (`changeImage` + `ScalarInterpolator` timers, 2 s / 2 s / 4 s). A stuck first image means the script timers never fire, not a draw problem. The EU path loads `PresentsRootSCEE.gpb` (DE folder), logged in our run right before the stall/abort.
 - `lwcond-experiment.md` is superseded; `pfs-mount-device-check.md` is about the old PFS bind patch and does not apply to the host-file override we use.
 - Next check: does `changeImage` get called a second time, and which time source drives the interpolators (sys_time / timebase / frame delta)? A 45 s run with GT6_SCRIPT_TRACE only shows script reads, no timer activity; the run ended with the PDI-thread join and `sys_process_exit(1)` again.
+
+## VBlank/flip handlers ruled out
+
+Upstream ps3recomp README/docs: `docs/DIAGNOSTICS.md` lists every debug env (`GCM_PUMP_DBG`, `MUTEX_WATCH`, `GCM_HANDLER_THREAD`, `PS3_WAITBT`, `GCM_FLIPCB_ONTICK`). GT6 registers both handlers (`SetVBlankHandler` opd 0x014E4868, `SetFlipHandler` opd 0x014E4848). With `GCM_PUMP_DBG=1` they are delivered at ~60 Hz (about 1800 vblank and 1800 flip callbacks in 30 s). So a missing vblank tick is not the cause of the presents stall; look at the guest-side timer/time source or a blocked thread next (`MUTEX_WATCH`, `PS3_WAITBT`).
