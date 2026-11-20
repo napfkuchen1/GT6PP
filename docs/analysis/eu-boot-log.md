@@ -316,17 +316,16 @@ Consolidated delta vs v0.19.0: `patches/ps3recomp-v0.19.0-gt6-eu-all.patch` (rep
 
 It did not reproduce after the ps3recomp v0.19.0 upgrade and re-lift: 6 of 6 windowed runs of 100 s (6855 to 7363 flips each) plus 5 earlier runs ran to the end without `exit-chain`. It was only ever seen on the v0.18.0 build (one run at ~2075 flips, one with GT6_SCRIPT_TRACE). If it comes back, check the TTY text in `work/gt6_run.log` right before the exit; the abort log was not saved at the time.
 
-## The presents stall: main thread waits for a future that never completes
+## The presents stall: the game shows a fatal "not enough disk space" dialog (corrects the earlier future theory)
 
-Not a time source, not GCM/vblank, not trophy/netctl (all ruled out above). All threads are alive and the game flips at about 62 per second.
+The main thread is not waiting for a lost future. It joins the dialog thread "PDI" (entry 0x014E0898 -> func_00A304D0) after `cellMsgDialogOpen2` (called from func_00A36F7C) shows: "Nicht genuegend Speicherplatz auf der Festplatte. Es werden mindestens 32MB benoetigt." (type 0x80, no buttons, so it never closes). Free-space values (fs, savedata) were ruled out.
 
-The main PPU thread (tid 1) busy-waits in `func_00961290` (1 ms spin via `func_007DBF48`, then a locked read in `func_00A13644`) for a flag byte at `0x0164AB90`. Chain: `func_009C634C` <- `func_009C6420` <- `func_009B89D8` <- `func_009F0748` <- `func_009EEA88` <- `func_00987884` <- `func_00987A2C` <- `func_009D4680` <- `func_005A5BB0` <- `func_005C406C` <- `func_00568658`.
+Trigger: on the SECOND boot, validation of an existing `USRDIR/db/userdb0101.dat` fails (guest error codes 183/151). A fresh boot (file absent) passes.
+- Fresh flow: writes a 512-byte block at pos 0 (starts B8633B64 0C25CE82), reads 100 bytes, then lseek(0) + writes 4096-byte encrypted pages from pos 0. Page 0 therefore overwrites the 512-byte block (starts 359FC9E2 A6ED500B).
+- Boot 2 reads 8 + 512 bytes at pos 0 (reader: func_00A40FBC <- 00A0AF18 <- 00A034D8 <- 00A0871C <- 009F92CC <- 009F7B3C <- 009F83D4 <- 009F8078 <- 00A304D0, thread PDI) and rejects the page-0 form.
+- Restoring the first 512 bytes from the saved block makes boot 2 pass (pagefile.sys opened, no dialog; next gap: unresolved NID 0xBE50B11E cellMusicInitialize2). Restoring only the first 8 bytes is NOT enough, so the check covers more than the magic.
+- Open: what the validator compares against (page-0 ciphertext vs. 512-byte block). Suspects: a key/salt derived from data we do not provide, or an fs semantic difference (write at pos 0 after lseek).
 
-- The flag is a one-byte "ready" field at +0x10 of an object (vtable `0x0146FA48`) that sits at `0x0164AB80`, ctor `func_00E47040` (called from `func_00A13974`). Vtable slots: 0 `func_00E46FE8`, 1 `func_00E46FB8`, 2 `func_003C0E84` (get), 3 `func_00C3FE14` (set, writes byte +0x10).
-- The name string passed to the ctor is a typeinfo name of `PDISTD::concurrent` future/worker types, so this is a future/promise.
-- `PPU_WWATCH=164AB90` with `PPU_WWATCH_LEN=1 PPU_WWATCH_MAX=0`: exactly one write, the ctor's initial 0. A temporary probe in `func_00C3FE14` (the setter) showed zero calls in a 20 s run, for any object. So nobody ever fulfils the promise.
-- The last visible event before the stall: `userdb0101.dat` (8 MB, created by the game itself) is opened four times, only the first 8 bytes are read (magic 359FC9E2), the last short "PDI" thread (tid 40) is created and joined, and it does nothing (no HLE calls).
-- The four `TM_FFB_WorkerThread` threads (tid 22 to 25, `func_00A6DF74`) just poll an empty ring queue (read idx == write idx at +0x1449/+0x144A, sleep 1 ms). Seven other threads sit in `sys_event_queue_receive`; tid 30 (queue 8) has an infinite timeout.
-- SPURS is healthy (`cellSpursJobGuardNotify`, ready-count and job dispatch keep running).
+Stopgap: move `work/gt6_hdd0/game/BCES01893/USRDIR/db/userdb0101.dat` to ARCHIV before each boot (fresh flow works).
 
-Open: which task should complete this future, and why it is never queued or never runs. Candidates: the userdb read path (only the header is read), an event that never arrives on one of the infinite-timeout queues (tid 30 / queue 8), or a sysutil callback that never fires. Not fixed.
+Diagnostics added: `PS3_FSLOG_WRITES=<fd>` logs `[fswrite] fd want got pos b0..b3` (next to `PS3_FSLOG_READS`).
