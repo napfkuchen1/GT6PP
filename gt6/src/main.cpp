@@ -302,7 +302,7 @@ static DWORD WINAPI main_stack_dump(LPVOID secs)
             live, sp, (uint32_t)g_main_ctx.lr, (uint32_t)g_main_ctx.ctr,
             (uint32_t)g_main_ctx.gpr[3], (uint32_t)g_main_ctx.gpr[31]);
     fprintf(stderr, "[mainstack] in_hle=%s rip=%p\n",
-            g_hle_inflight[0] ? g_hle_inflight[0] : "-", (void*)g_last_rip);
+            g_hle_inflight[1] ? g_hle_inflight[1] : (g_hle_inflight[0] ? g_hle_inflight[0] : "-"), (void*)g_last_rip);
     {
         static int once = 0;
         if (!once++)

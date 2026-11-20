@@ -1186,9 +1186,17 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
          * (host sleep) until another thread clears it, bounded so a lost
          * wake-up cannot hang the thread forever. */
         int waited_ms = 0;
+        const auto t0 = std::chrono::steady_clock::now();
         while (vm_read32((uint64_t)flag) != value) {
-            if (cellFiberPpuYield() == 0)
+            if (cellFiberPpuYield() == 0) {
+                /* Yielding fiber: the guest's timed-sleep loops (0x7DBF48)
+                 * park here and expect the wake-up to come from a timer
+                 * thread that does not exist in this port. Give up after a
+                 * short while; every caller re-checks its own condition. */
+                if (std::chrono::steady_clock::now() - t0 > std::chrono::milliseconds(2))
+                    break;
                 continue;
+            }
             if (waited_ms >= 5000) {
                 static int logged = 0;
                 if (!logged) {
