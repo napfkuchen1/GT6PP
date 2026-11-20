@@ -206,3 +206,17 @@ last one reported before the stream of `GetLabelAddress` calls) and the
   for was not investigated.
 - A `tools/patches/spu_event_dispatch_guard.py --apply` run on the first-attempt
   build did not help (same crash); it was not needed with the runtime patch.
+
+## Boot stall after the save check: missing guest caller
+
+After `PresentsRootSCEE.gpb` the main thread called
+`cellSaveData AutoLoad2(dir='BCJS37016-GAME6')` and the stat callback
+"returned -2" (`ERR_FAILURE`). The log never showed `dispatching funcStat`:
+`dispatch_func_stat_full` bails out when `g_ps3_guest_caller` is NULL, and
+`gt6/src/main.cpp` never installed it (the other harnesses do). Every
+HLE -> guest callback (save data, sysutil, trophy) was dead.
+
+Installing a shim around `ppu_guest_call` before `ppu_run` fixes it. The game's
+funcStat now runs and answers `ERR_NODATA` for a profile without save data,
+and the title carries on: roughly 400 to 800 `SetPrepareFlip`/`SetFlipImmediate`
+pairs in a 60-90 s run and several thousand D3D12 `draw_arrays` calls.
