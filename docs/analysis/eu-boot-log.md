@@ -290,3 +290,10 @@ a pure-virtual-style stub reached by an indirect call from `func_00BA2420`.
 It happens right after `PresentsRootSCEE.gpb` loads, three short "PDI"
 threads are joined and the guest stores 0 to NULL+0x500. A second run did not
 abort, so it is timing dependent. Not fixed yet.
+
+## Notes from the existing docs (read for the presents stall)
+
+- `rpcs3-oracle.md`: on the real disc the order is legal frame, display-area screen, epilepsy warning, intro movie, Player Name screen. So after the three presents images the game hands off to the movie, nothing else is needed in between.
+- `legal-gpb-draw-fix.md` / `first-draw-audit.md`: image changes in `PresentsRoot` are script driven (`changeImage` + `ScalarInterpolator` timers, 2 s / 2 s / 4 s). A stuck first image means the script timers never fire, not a draw problem. The EU path loads `PresentsRootSCEE.gpb` (DE folder), logged in our run right before the stall/abort.
+- `lwcond-experiment.md` is superseded; `pfs-mount-device-check.md` is about the old PFS bind patch and does not apply to the host-file override we use.
+- Next check: does `changeImage` get called a second time, and which time source drives the interpolators (sys_time / timebase / frame delta)? A 45 s run with GT6_SCRIPT_TRACE only shows script reads, no timer activity; the run ended with the PDI-thread join and `sys_process_exit(1)` again.
