@@ -36,6 +36,8 @@
  */
 #include "ppu_context.h"
 #include <stdio.h>
+#include <chrono>
+#include <thread>
 #include <stdlib.h>
 #include <string.h>
 
@@ -1179,9 +1181,25 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
     const uint32_t value = (uint32_t)ctx->gpr[4];
 
     if (flag) {
+        /* Inside a fiber: yield to the scheduler. On a plain thread Yield
+         * fails; the guest then loops on its own flag word, so block here
+         * (host sleep) until another thread clears it, bounded so a lost
+         * wake-up cannot hang the thread forever. */
+        int waited_ms = 0;
         while (vm_read32((uint64_t)flag) != value) {
-            if (cellFiberPpuYield() != 0)
+            if (cellFiberPpuYield() == 0)
+                continue;
+            if (waited_ms >= 5000) {
+                static int logged = 0;
+                if (!logged) {
+                    fprintf(stderr, "[GT6] cellFiberPpuWaitFlag(0x%08X, %u) timed out\n",
+                            flag, value);
+                    logged = 1;
+                }
                 break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            ++waited_ms;
         }
     }
     ctx->gpr[3] = 0;   /* CELL_OK */

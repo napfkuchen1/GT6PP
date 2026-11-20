@@ -134,6 +134,27 @@ loads the boot and dialog projects (`projects/gt6/boot/boot.adc`,
 still only shows `_cellGcmInitBody` and `GetLabelAddress`; no flip yet in the
 headless run.
 
+### Windowed run (90 s)
+
+Without `PS3_HEADLESS` the D3D12 backend comes up (`[rsx] backend init OK --
+window open`), but the guest still issues no flip and no draw: `cellGcm` shows
+only `_cellGcmInitBody` and the `GetLabelAddress` calls, and the last files
+served are the dialog project and `PresentsRootSCEE.gpb`. Still 0 `null-call`, 0
+`unresolved indirect call`, no access violation.
+
+What the threads do at the end of the run (counts of `[WAIT]` lines):
+`event_queue_receive(q=4, timeout 0)` ~18,000 and `q=5` ~16,900 from tid 18
+(`lr` `0x0082039C` / `0x0081FD34`), `q=7` ~16,900 from tid 21 (`lr`
+`0x00A4F784`), `q=1` (62.5 ms, tid 2) ~1,250. tid 1 only polls `q=4`. So the
+guest sits in a polling loop on those queues and never gets to the first
+present. `cellFiberPpuWaitFlag` is also in that picture (`[HOTREAD]` on
+`0x7FEE8084`, `lr` `0x00A2F44C`); the override now blocks on a plain thread
+(bounded to 5 s, never hit) instead of returning at once. It did not change the
+outcome, so it is not the blocker.
+
+Next: find out which event the loop at `0x0081FD34` / `0x0082039C` is waiting for
+(queue 4/5 owners and their senders).
+
 Still open: what the guest does after `menudb.dat` (the `0xA4599CF3` NID is the
 last one reported before the stream of `GetLabelAddress` calls) and the
 `null-read` hits at `0x009791B4` / `0x00B6E950` / `0x00A03438`.
