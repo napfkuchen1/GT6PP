@@ -220,3 +220,17 @@ Installing a shim around `ppu_guest_call` before `ppu_run` fixes it. The game's
 funcStat now runs and answers `ERR_NODATA` for a profile without save data,
 and the title carries on: roughly 400 to 800 `SetPrepareFlip`/`SetFlipImmediate`
 pairs in a 60-90 s run and several thousand D3D12 `draw_arrays` calls.
+
+### userdb open fixed (vtable guard)
+
+`gt6_guest_file_vtable_valid` (stubs.cpp) only accepted objects with open/close
+OPDs at vtable `+0x20/+0x24`. Device objects such as the `/APP_DATA` mount
+(vtable `0x0148CAA8`) keep their open method at `+0x88`, so the guard in
+`func_009F3F2C` returned success without opening. `file+0x4c` stayed NULL and
+`init_user_db` fell into its failure dialog. The guard now also accepts a valid
+`+0x88` slot. With it `userdb0101.dat` and `grim2/grim007.db` open (created on
+first use, empty read = EOF, which the guest accepts), the `[sleepmsg]` loop is
+gone and the RSX now sees `CLEAR_SURFACE` plus DATA2F quad draws and label
+fences, followed by flips. The window is still black: the clear colour is
+`0xFF000000` and the quads are untextured. `[HOTREAD]` on `0x7FEE2084` is the
+normal `cellFiberPpuWaitFlag` consumer loop.
