@@ -55,6 +55,18 @@ Update after getting a first `gt6.exe` linked from a clean clone (EU disc):
   there the HLE reports `BLES00000`. Layout used for the EU test: that
   directory holds `PS3_GAME/` from the disc, with `USRDIR/GT.VOL` hardlinked.
 
+- **The regenerated function list misses the memset entry points.** The game's
+  memset (`0xA4FDBC`, tail at `0xA4FEE8`) finishes small sizes with a computed
+  jump (`lis`/`addi`/`subf`/`mtctr`/`bctr`) into the middle of an `stb`/`std`
+  run, entries `0xA4FDE0..0xA4FE1C`, `0xA4FE68..0xA4FEA4`, `0xA4FEEC..0xA4FF24`.
+  The lifter's jump-table pass does not see this idiom, so after
+  `find_functions.py` + `boundary_audit.py` every such call ends in
+  `unresolved indirect call` and the memset stops before its tail bytes
+  (thousands of hits per run; stale/garbage memory downstream, e.g. script text
+  read as object pointers in the ADCH parser). `tools/add_computed_entries.py`
+  appends the entries to the list before the relift. With it the run shows 0
+  `unresolved indirect call` lines.
+
 With that, the EU disc boots (`BootCheck` reads `BCES01893` from PARAM.SFO,
 SPURS initialises, job images dispatch). With only the MinGW patch it then dies
 after about 6 seconds in the SPU event crash from `spu-event-crash-check.md`
