@@ -4,10 +4,9 @@
 hard-coded guest addresses, function lists and post-lift patches also apply to
 the EU disc `BCES01893`?
 
-**Short answer:** yes for `EMAIN.elf` (layout checks) and for the raw `GT.VOL`
-slices that are already hashed in the docs. File-level extraction of `GT.VOL`
-(e.g. `main.adc`) is still to be confirmed by a human, see
-`scripts/extract-gtvol.ps1`.
+**Short answer:** yes. `EMAIN.elf` layout matches, the raw `GT.VOL` slices
+hash identically, and the extracted `scripts/gt6/main.adc` is byte-identical
+to the documented US file.
 
 ## Disc facts (EU, from a user-owned dump)
 
@@ -51,16 +50,22 @@ repo docs (`boot-presents-check.md`, `pfs-wo-check.md`, `pfs-script.md`) hash
 identically on the EU file. Together with the identical file size this makes
 EU and US `GT.VOL` very likely byte-identical or near-identical.
 
+## GT.VOL extraction (run by the disc owner with GTToolsSharp 5.3.5)
+
+`scripts/extract-gtvol.ps1` unpacked the EU `GT.VOL` (PFS serial `405868366`,
+title `GT6-PISCINAS-323419048`, 4207 TOC entries, 32,591 files extracted).
+`scripts/gt6/main.adc` is **857,518 bytes, SHA-256 `5B40B149...A746`: identical
+to the US value** recorded in the docs.
+
 ## What this does not prove
 
 - No US `EMAIN.elf` hash is recorded in the repo, so byte-identity with the US
   ELF is **not** confirmed, only that the layout the port relies on matches.
   A US owner can compare their `EMAIN.elf` SHA-256 with the value above.
-- Two slices are not the whole 15.4 GB volume. Entry-level contents
-  (`scripts/gt6/main.adc`, 857,518 bytes, SHA-256 `5B40B149...A746`) are
-  untested. Extraction needs GTToolsSharp, whose repository ships an
-  `AGENTS.md` that forbids AI/LLM use, so it was not run during this
-  AI-assisted session. A human must run `scripts/extract-gtvol.ps1`.
+- Only `main.adc` was compared at file level; the other ~32,590 files were not
+  hashed against US values (no US file list is recorded in the repo).
+  GTToolsSharp's repository forbids AI/LLM use, so the extraction was run by
+  the human disc owner, not by the AI.
 - Nothing was lifted, built or run. This only covers static checks.
 
 ## Suggested next steps for someone with the EU disc
