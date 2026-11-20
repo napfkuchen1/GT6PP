@@ -200,7 +200,7 @@ def add_boot_presents_hooks(root: Path) -> int:
         for func, hook in hooks:
             key = f"void {func}(ppu_context* ctx) {{\n    PPU_MM_SNAP\n"
             call = f"        {hook}(ctx);\n"
-            if call in s:
+            if key + call in s:  # per function, not per file: two functions may share a hook
                 continue
             if s.count(key) != 1:
                 print(f"warning: {func} not found exactly once in {filename}",
