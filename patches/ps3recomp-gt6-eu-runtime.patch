@@ -1,0 +1,71 @@
+diff --git a/runtime/ppu/ppu_sysprx.cpp b/runtime/ppu/ppu_sysprx.cpp
+index 6ac7f5f..46e9138 100644
+--- a/runtime/ppu/ppu_sysprx.cpp
++++ b/runtime/ppu/ppu_sysprx.cpp
+@@ -450,18 +450,20 @@ static void sys_lwcond_create(ppu_context* ctx)
+  * 1 ms poll with no-op signals. signal_to (r4 = thread id) wakes any one
+  * waiter, who is waiting is not tracked. */
+ struct LwcSlot { uint32_t addr; HANDLE sem; long waiters; };
+-static LwcSlot g_lwc[256];
++#define LWC_N 16384
++static LwcSlot g_lwc[LWC_N];
+ static CRITICAL_SECTION g_lwc_cs;
+ static INIT_ONCE g_lwc_once = INIT_ONCE_STATIC_INIT;
+ static BOOL CALLBACK lwc_init_cb(PINIT_ONCE, PVOID, PVOID*) { InitializeCriticalSection(&g_lwc_cs); return TRUE; }
+ static LwcSlot* lwc_slot(uint32_t addr)   /* g_lwc_cs held */
+ {
+-    for (int i = 0; i < 256; i++) if (g_lwc[i].addr == addr) return &g_lwc[i];
+-    for (int i = 0; i < 256; i++) if (!g_lwc[i].addr) {
++    for (int i = 0; i < LWC_N; i++) if (g_lwc[i].addr == addr) return &g_lwc[i];
++    for (int i = 0; i < LWC_N; i++) if (!g_lwc[i].addr) {
+         g_lwc[i].addr = addr; g_lwc[i].waiters = 0;
+         g_lwc[i].sem = CreateSemaphoreA(NULL, 0, 0x7FFFFFFF, NULL);
+         return &g_lwc[i];
+     }
++    { static int w; if (!w++) fprintf(stderr, "[LWC] slot table FULL (id 0x%08X) -> signals lost\n", addr); }
+     return nullptr;
+ }
+ static int lwc_poll_mode(void)
+@@ -486,7 +488,21 @@ static void lwc_signal(ppu_context* ctx, int all)
+     }
+     LeaveCriticalSection(&g_lwc_cs);
+ }
+-static void sys_lwcond_destroy(ppu_context* ctx)    { ctx->gpr[3] = 0; }
++static void sys_lwcond_destroy(ppu_context* ctx)
++{
++    uint32_t addr = (uint32_t)ctx->gpr[3];
++    ctx->gpr[3] = 0;
++    if (lwc_poll_mode()) return;
++    InitOnceExecuteOnce(&g_lwc_once, lwc_init_cb, NULL, NULL);
++    EnterCriticalSection(&g_lwc_cs);
++    uint32_t id = vm_read32(addr + 0x04);
++    for (int i = 0; i < LWC_N; i++)
++        if (g_lwc[i].addr == id && id) {
++            if (g_lwc[i].waiters <= 0) { CloseHandle(g_lwc[i].sem); g_lwc[i].sem = NULL; g_lwc[i].addr = 0; }
++            break;
++        }
++    LeaveCriticalSection(&g_lwc_cs);
++}
+ static void sys_lwcond_signal(ppu_context* ctx)     { lwc_signal(ctx, 0); }
+ static void sys_lwcond_signal_all(ppu_context* ctx) { lwc_signal(ctx, 1); }
+ static void sys_lwcond_signal_to(ppu_context* ctx)  { lwc_signal(ctx, 0); }
+diff --git a/runtime/ppu/ppu_fs.cpp b/runtime/ppu/ppu_fs.cpp
+index 9510e14..a2f5788 100644
+--- a/runtime/ppu/ppu_fs.cpp
++++ b/runtime/ppu/ppu_fs.cpp
+@@ -1123,7 +1123,14 @@ static void cellFsGetFreeSize(ppu_context* ctx)
+ {
+     uint32_t bs = (uint32_t)ctx->gpr[4], fb = (uint32_t)ctx->gpr[5];
+     if (bs) vm_write32(bs, 4096);
+-    if (fb) vm_write64(fb, (32ULL << 30) / 4096);
++    static int n_;
++    if (PS3_LOG_FIRST(n_, 40)) {
++        char pb[128]; guest_strcpy(pb, (uint32_t)ctx->gpr[3], sizeof pb);
++        fprintf(stderr, "[fs] cellFsGetFreeSize('%s') lr=0x%08X\n", pb, (uint32_t)ctx->lr);
++    }
++    uint64_t free_bytes = 1ULL << 30;
++    { const char* e = getenv("PS3_FS_FREE_BYTES"); if (e && *e) free_bytes = strtoull(e, nullptr, 0); }
++    if (fb) vm_write64(fb, free_bytes / 4096);
+     ctx->gpr[3] = CELL_OK;
+ }
+ static void cellFsChmod(ppu_context* ctx) { ctx->gpr[3] = CELL_OK; }   /* host ignores PS3 mode bits */

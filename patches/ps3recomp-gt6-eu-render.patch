@@ -1,0 +1,54 @@
+diff --git a/libs/video/rsx_d3d12_backend.c b/libs/video/rsx_d3d12_backend.c
+index bc05a308..fa4185d8 100644
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -2645,6 +2645,11 @@ static ID3D12PipelineState* vp_get_fp_pso(int vs_idx, u32 fp_addr, u32 blend, in
+     if (getenv("FP_FORCE")) {
+         char* rp = strstr(hlsl, "return r[0];");
+         if (rp) memcpy(rp, "return float4(1,0,1,1)", 23);
++        else if ((rp = strstr(hlsl, "return (_o == _o) ? _o : (float4)0;")) != NULL) {
++            static const char rep[] = "return float4(1,0,1,1);";
++            size_t n = sizeof("return (_o == _o) ? _o : (float4)0;") - 1;
++            memcpy(rp, rep, sizeof(rep) - 1); memset(rp + sizeof(rep) - 1, 32, n - (sizeof(rep) - 1));
++        }
+     }
+     ID3DBlob* pb = NULL; ID3DBlob* e = NULL;
+     HRESULT hr = D3DCompile(hlsl, strlen(hlsl), "guest_fp", NULL, NULL,
+@@ -7016,6 +7021,9 @@ static u32 upload_strip_vp_indexed(const rsx_state* state, u32 first, u32 count,
+ 
+ static void d3d12_draw_arrays(void* ud, u32 primitive, u32 first, u32 count)
+ {
++    /* POLYGON is a convex fan; the VP path only knows FAN. GT6 draws its
++     * full-screen quads as POLYGON, and the legacy path emits no pixels. */
++    if (primitive == RSX_PRIMITIVE_POLYGON) primitive = RSX_PRIMITIVE_TRIANGLE_FAN;
+     /* RSX_LIVE_FEED_DBG=1: pair with the [feed] method counts so "the FIFO
+      * carries no draw batches" can be checked against "the backend is told
+      * to draw" in the same run. */
+@@ -7264,6 +7272,9 @@ static void d3d12_draw_arrays(void* ud, u32 primitive, u32 first, u32 count)
+ 
+ static void d3d12_draw_indexed(void* ud, u32 primitive, u32 first, u32 count)
+ {
++    /* POLYGON is a convex fan; the VP path only knows FAN. GT6 draws its
++     * full-screen quads as POLYGON, and the legacy path emits no pixels. */
++    if (primitive == RSX_PRIMITIVE_POLYGON) primitive = RSX_PRIMITIVE_TRIANGLE_FAN;
+     /* RSX_LIVE_FEED_DBG=1: pair with the [feed] method counts so "the FIFO
+      * carries no draw batches" can be checked against "the backend is told
+      * to draw" in the same run. */
+diff --git a/libs/video/rsx_commands.c b/libs/video/rsx_commands.c
+index 5e9725e..49b2488 100644
+--- a/libs/video/rsx_commands.c
++++ b/libs/video/rsx_commands.c
+@@ -581,10 +581,11 @@ static void rsx_immediate_finish(rsx_state* state)
+       } }
+ 
+     if (s_backend && s_backend->draw_arrays) {
+-        extern u32 cellGcmResolveOffset(u32);
++        extern u32 cellGcmResolveLocated(int local, u32 offset);
+         extern uint8_t* vm_base;
+         /* Big-endian float4 position, stride 16. */
+-        const u32 base = cellGcmResolveOffset(RSX_IMMEDIATE_SCRATCH);
++        /* Same resolution rsx_fetch_attrib uses for a LOCAL (bit31=0) array. */
++        const u32 base = cellGcmResolveLocated(1, RSX_IMMEDIATE_SCRATCH);
+         if (base && vm_base) {
+             for (u32 i = 0; i < count; i++) {
+                 for (u32 lane = 0; lane < 4; lane++) {

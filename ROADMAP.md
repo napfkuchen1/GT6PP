@@ -36,9 +36,9 @@ a deterministic stop with a named missing syscall/HLE function.
 - [x] Serve `/dev_bdvd/PS3_GAME/USRDIR/GT.VOL` and `PARAM.SFO` through the VFS.
 - [x] Fix the guest main stack / argv / TOC / TLS setup (`ppu_run` handles it).
 - [x] Implement `cellGcmInit`, display buffers, `cellSpurs` init/workloads.
-- [ ] Make the init flag at `0xA13644` true (current stop).
+- [x] Make the init flag at `0xA13644` true (current stop). Boot now runs past it on the EU disc (BCES01893).
 - [ ] Resolve `0x2DDBCC0A`, `0xFAA275A4`, `0x5C832BD7`.
-- [ ] Load the first `GT.VOL` assets (menus, fonts, scripts).
+- [x] Load the first `GT.VOL` assets (menus, fonts, scripts). `boot.adc`, `BootProject.gpb` and `PresentsRootSCEE.gpb` load on the EU disc.
 - [ ] Add `longjmp`/`setjmp` support if the LZ decoder stalls (GT5P required
       this).
 
@@ -49,7 +49,7 @@ set of assets.
 
 - [ ] Bring up the D3D12 backend, RSX local memory, tiles, Zcull, display
       buffers.
-- [ ] Drain the GCM FIFO and parse the first command buffer.
+- [x] Drain the GCM FIFO and parse the first command buffer. Clears, immediate draws and flips run; with `FP_FORCE=1` the backbuffer fills with geometry. Real frames are still black.
 - [ ] Translate the first RSX vertex/fragment shaders.
 - [ ] Present one frame from the game's own command stream.
 - [ ] Fix color-buffer / render-target issues as they appear.

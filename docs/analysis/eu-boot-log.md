@@ -234,3 +234,33 @@ gone and the RSX now sees `CLEAR_SURFACE` plus DATA2F quad draws and label
 fences, followed by flips. The window is still black: the clear colour is
 `0xFF000000` and the quads are untextured. `[HOTREAD]` on `0x7FEE2084` is the
 normal `cellFiberPpuWaitFlag` consumer loop.
+
+## First geometry reaches the backbuffer
+
+Two renderer bugs kept every draw invisible even though the RSX saw them:
+
+1. **Immediate-mode vertices were all zero.** `rsx_immediate_finish` wrote the
+   collected DATA2F vertices to `RSX_IMMEDIATE_SCRATCH` through
+   `cellGcmResolveOffset`, but the reader (`rsx_fetch_attrib`) resolves a LOCAL
+   (bit 31 clear) array with `cellGcmResolveLocated(1, off)`. Writer and reader
+   landed in different memory. The writer now uses the same resolution.
+2. **POLYGON fell into the legacy draw path.** GT6 draws its full-screen quads
+   as primitive 10 (POLYGON). The D3D12 vertex-program path only knows
+   TRIANGLES, STRIP, FAN and QUADS, and the legacy path emits no pixels.
+   POLYGON is a convex fan, so both draw entry points now map it to FAN.
+
+Proof: `FP_FORCE=1` (fragment program replaced by a constant magenta) turns the
+whole 1280x720 backbuffer magenta, so vertex transform, rasterisation and
+present work. `FP_FORCE` itself had a bug: it only matched `return r[0];`, but
+this title's translated programs end in `return (_o == _o) ? _o : (float4)0;`,
+so the override silently did nothing and an earlier "even magenta stays black"
+conclusion was wrong. Both endings are handled now.
+
+Normal runs still produce black frames. Open: texture contents/upload (864x128
+and 24x24 textures), the vertex shader never writing col0, and whether the scene
+is still on its fade-in.
+
+Patches: `patches/ps3recomp-gt6-eu-render.patch` (both fixes plus the FP_FORCE
+anchor) and `patches/ps3recomp-gt6-eu-runtime.patch` (lwcond slot table 256 ->
+16384 with destroy cleanup, `cellFsGetFreeSize` free-space override). Apply them
+after `ps3recomp-gt6-runtime.patch`, with `--ignore-whitespace`.
