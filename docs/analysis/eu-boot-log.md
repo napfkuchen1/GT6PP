@@ -439,3 +439,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - `PPU_RWATCH=165ADE8,4` + `PAD_SCRIPT=0.1:0x4000`: the pad manager update `func_00A39CD8` and `func_00B90614` read D2 = 0x40 (CROSS) as nonzero, so the buffer is consumed (len 0x1C, port status 0x7E, D1/D2 read per frame, then func_00A38FC4/func_00A38FE8 edge/hold processing).
 - So the input does NOT get lost before the game: the dialog's state machine ignores a delivered CROSS. Remaining suspects: widget focus/active flag never set (same cause as the missing row-1 highlight), or a gate on another sysutil event/callback.
 - Next: trace readers of the pad-manager OUTPUT (hold/press masks) and what the dialog widget update checks before acting on them.
+
+## Maus-/Timing-Experimente (2026-11-21)
+- Captures mit `-Frame 300` sind zu frueh (schwarz); Dialog erst ab ~Frame 2500 sichtbar. userdb0101.dat vor jedem Boot nach work/ARCHIV (Boot-2-Bug).
+- Pad-Press nach sichtbarem Dialog (Flip-Clock 2800-2900): keine Reaktion.
+- cellMouse: Game ruft nur `cellMouseInit(7)`, danach KEIN `cellMouseGetData` (MOUSE_TRACE=1, 3000 Frames, 0 Zeilen). MOUSE_FAKE (Patch `patches/gt6-mouse-fake.patch`) aendert das Bild nicht (cap_ms1). Maus-Hypothese damit widerlegt: Zeiger wird ohne Mausdaten gezeichnet.
+- Offen: Row-1-Highlight/Eingabe; naechster Schritt Draw-seitig pruefen (Highlight-Draw fehlt?) oder Pad-Leser func_00A39CD8 Ausgabe -> Widget-Gate.
