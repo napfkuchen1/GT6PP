@@ -41,7 +41,10 @@ Update after getting a first `gt6.exe` linked from a clean clone (EU disc):
 - **`apply_gt6_post_lift.py`:** `add_boot_presents_hooks` skipped the second
   function when two functions share a hook (`if call in s: continue` was a
   per-file check). It is now per function (`key + call in s`).
-- **SPU images are not produced by `relift-gt6.ps1`.** The link fails with
+- **SPU images (resolved):** `relift-gt6.ps1` now runs steps 8a-8c (embedded
+  ELFs, raw job images, PM) and the output is byte-identical to the previous
+  tree. The job dumps in `work/spu_jobs/dump/` remain a required input.
+  Original gap: `relift-gt6.ps1` did not produce them. The link fails with
   undefined `spu_000N_*` / `job_*` symbols until you run
   `extract_spu_images.py` + `build_spu_workloads.py` (HANDOFF.md) and
   `lift-spu-jobs.ps1`. The latter wants `work/spu_jobs/dump/spujob_<FP>_<size>.bin`

@@ -81,7 +81,21 @@ Write-Host "[7/9] post-lift verification"
 python (Join-Path $Root "tools\post_lift_fixes.py") $Generated
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "[8/9] WWS job-manager PM (SPU image id 5)"
+Write-Host "[8a/9] Embedded SPU ELFs (SPU image ids 1-4)"
+$SpuImg = Join-Path $Analysis "..\spu"
+python (Join-Path $Sdk "tools\extract_spu_images.py") $Elf --output $SpuImg
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+python (Join-Path $Sdk "tools\build_spu_workloads.py") --images $SpuImg `
+    --lifted (Join-Path $Generated "spu_lifted") `
+    --out (Join-Path $Root "gt6\src\gen\spu_workloads.c") `
+    --register-fn gt6_spu_register_all --title GT6 --relift
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "[8b/9] Raw SPURS job images (SPU image ids 6+, from captured dumps)"
+powershell -ExecutionPolicy Bypass -File (Join-Path $Root "scripts\lift-spu-jobs.ps1")
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "[8c/9] WWS job-manager PM (SPU image id 5)"
 powershell -ExecutionPolicy Bypass -File (Join-Path $Root "scripts\lift-spu-gt6.ps1") -Force
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

@@ -18,11 +18,7 @@ and `BOOT.md` has the early diagnostics.
 # - GT5P scripts in third_party/GT5P
 # - decrypted work/bin/EMAIN.elf
 
-powershell -File scripts/relift-gt6.ps1    # PPU lift + HLE NID table
-# After a PPU relift, re-lift SPU images (they live under gt6/generated):
-python third_party/ps3recomp/tools/build_spu_workloads.py `
-  --images work/analysis/spu --lifted gt6/generated/spu_lifted `
-  --out gt6/src/gen/spu_workloads.c --register-fn gt6_spu_register_all --title GT6
+powershell -File scripts/relift-gt6.ps1    # PPU lift + all SPU images + HLE NID table
 
 powershell -File scripts/build-gt6.ps1
 powershell -File scripts/run-gt6.ps1 -Seconds 30

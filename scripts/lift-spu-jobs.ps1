@@ -55,7 +55,12 @@ $CodeEndByFp = @{
 
 # Rebuild the generated tree from scratch: this directory is script-owned and a
 # stale image left behind would still be compiled by the CMake glob.
-if (Test-Path $JobsDir) { Remove-Item -Recurse -Force $JobsDir }
+if (Test-Path $JobsDir) {
+    # Never delete: park the previous tree in work\ARCHIV (outside the CMake glob).
+    $arch = Join-Path $Root ("work\ARCHIV\spu_jobs." + (Get-Date -Format yyyyMMdd-HHmmss))
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $arch) | Out-Null
+    Move-Item -Path $JobsDir -Destination $arch
+}
 New-Item -ItemType Directory -Force -Path $JobsDir, $Work | Out-Null
 
 $jobs = @()
