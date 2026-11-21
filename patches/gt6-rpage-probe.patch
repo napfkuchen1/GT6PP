@@ -1,0 +1,85 @@
+--- a/runtime/ppu/ppu_loader.cpp
++++ b/runtime/ppu/ppu_loader.cpp
+@@ -1304,7 +1304,71 @@
+     fprintf(stderr, "[GUARD] armed on guest 0x%08X (host page %p)\n", guest_ea, (void*)s_guard_page);
+     fflush(stderr);
+ }
++/* PPU_RPAGE=<hex ea>[,len] -- READ watch that also sees vector loads (lvx/lvlx
++ * go through raw host loads, invisible to PPU_RWATCH). Makes the page
++ * PAGE_NOACCESS; every access faults, accesses inside [ea, ea+len) are logged
++ * with the resolved guest function, then the page is opened for one
++ * instruction (single-step) and re-armed. Diagnostic only; slow on a hot page. */
++static uintptr_t s_rp_page = 0;
++static uint32_t  s_rp_ea = 0, s_rp_len = 0x10;
++static LONG WINAPI ppu_rpage_veh(EXCEPTION_POINTERS* ep)
++{
++    DWORD code = ep->ExceptionRecord->ExceptionCode;
++    if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2) {
++        uintptr_t fa = (uintptr_t)ep->ExceptionRecord->ExceptionInformation[1];
++        if ((fa & ~(uintptr_t)0xFFF) == s_rp_page) {
++            uint32_t g = (uint32_t)(fa - (uintptr_t)vm_base);
++            if (g >= s_rp_ea && g < s_rp_ea + s_rp_len) {
++                static unsigned long n;
++                bool rd = ep->ExceptionRecord->ExceptionInformation[0] == 0;
++                ++n;
++                /* log first 3 accesses per (kind, guest fn): distinct
++                 * readers/writers matter, not 100k repeats. */
++                uint32_t gfn = ppu_prof_resolve_host((void*)ep->ContextRecord->Rip);
++                static uint32_t k_fn[256]; static uint8_t k_rd[256], k_cnt[256]; static int k_n;
++                int ki = -1;
++                for (int q = 0; q < k_n; q++) if (k_fn[q] == gfn && k_rd[q] == (uint8_t)rd) { ki = q; break; }
++                if (ki < 0 && k_n < 256) { ki = k_n++; k_fn[ki] = gfn; k_rd[ki] = (uint8_t)rd; k_cnt[ki] = 0; }
++                if (ki >= 0 && k_cnt[ki] < 3) {
++                    k_cnt[ki]++;
++                    fprintf(stderr, "[rpage] n=%lu %s 0x%08X guest-fn=0x%08X\n",
++                            n, rd ? "READ" : "write", g, gfn);
++                    fflush(stderr);
++                }
++            }
++            DWORD old; VirtualProtect((void*)s_rp_page, 0x1000, PAGE_READWRITE, &old);
++            ep->ContextRecord->EFlags |= 0x100;
++            return EXCEPTION_CONTINUE_EXECUTION;
++        }
++    }
++    if (code == EXCEPTION_SINGLE_STEP && s_rp_page) {
++        DWORD old; VirtualProtect((void*)s_rp_page, 0x1000, PAGE_NOACCESS, &old);
++        ep->ContextRecord->EFlags &= ~0x100u;
++        return EXCEPTION_CONTINUE_EXECUTION;
++    }
++    return EXCEPTION_CONTINUE_SEARCH;
++}
++extern "C" void ppu_rpage_arm(void)
++{
++    static int done = 0;
++    if (done) return;
++    const char* e = getenv("PPU_RPAGE");
++    if (!e || !*e || !vm_base) return;
++    done = 1;
++    s_rp_ea = (uint32_t)strtoul(e, 0, 16);
++    const char* c = strchr(e, ',');
++    if (c) s_rp_len = (uint32_t)strtoul(c + 1, 0, 0);
++    if (!s_rp_len) s_rp_len = 0x10;
++    s_rp_page = ((uintptr_t)vm_base + s_rp_ea) & ~(uintptr_t)0xFFF;
++    AddVectoredExceptionHandler(1, ppu_rpage_veh);
++    VirtualAlloc((void*)(s_rp_page & ~(uintptr_t)0xFFFF), 0x10000, MEM_COMMIT, PAGE_READWRITE);
++    DWORD old;
++    VirtualProtect((void*)s_rp_page, 0x1000, PAGE_NOACCESS, &old);
++    fprintf(stderr, "[rpage] armed guest 0x%08X len 0x%X (host page %p)\n", s_rp_ea, s_rp_len, (void*)s_rp_page);
++    fflush(stderr);
++}
+ #else
++extern "C" void ppu_rpage_arm(void) {}
+ extern "C" void ppu_guard_page(uint32_t guest_ea) { (void)guest_ea; }
+ #endif
+ 
+@@ -3258,8 +3322,10 @@
+ #define PS3_SC_INFLIGHT_MAX 64
+ extern "C" uint32_t g_sc_inflight[PS3_SC_INFLIGHT_MAX] = { 0 };
+ 
++extern "C" void ppu_rpage_arm(void);
+ extern "C" void lv2_syscall(ppu_context* ctx)
+ {
++    ppu_rpage_arm();
+     /* One-shot: PPU_GUARD_EA=<hex> arms the page guard on that address without
+      * waiting for a store watch to fire. Armed here because lv2_syscall runs
+      * early and unconditionally; used to measure how far a guest block clear
