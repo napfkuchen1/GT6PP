@@ -1295,6 +1295,7 @@ static void gt6_net_inet_pton(ppu_context* ctx)
 extern "C" int32_t cellFiberPpuYield(void);
 extern "C" int32_t cellFiberPpuWaitFlagEx(uint32_t flag, uint32_t value);
 extern "C" void ppu_dump_guest_stack(ppu_context*, const char*);
+extern "C" void ppu_wwatch_arm(uint32_t ea);
 
 static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
 {
@@ -1306,6 +1307,7 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
         if (n < 40 || (n % 2000) == 0)
             fprintf(stderr, "[waitflag] tid=%u #%d flag=%08X value=%u cur=%08X lr=%08X\n",
                     (unsigned)ctx->thread_id, n, flag, value, flag ? vm_read32((uint64_t)flag) : 0u, (uint32_t)ctx->lr);
+        if (n == 0 && getenv("WAITFLAG_WW") && flag) ppu_wwatch_arm(flag + (uint32_t)(int32_t)strtol(getenv("WAITFLAG_WW"),0,0));
         if (n == 0 || n == 3) ppu_dump_guest_stack(ctx, "wf");
         ++n;
     }
