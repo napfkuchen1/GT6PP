@@ -511,3 +511,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Fresh userdb (richtiger Pfad work/gt6_hdd0/game/BCES01893/USRDIR/db/userdb0101.dat) aendert nichts.
 - Tooling: GT6_UNBUF=1 (main.cpp) setzt stdout ungepuffert. cap-gt6.ps1 -Env splittet an Kommas -> PAD_SCRIPT mit mehreren Events als Prozess-Env setzen, nicht ueber -Env.
 - Naechster Schritt: Gast-seitig verfolgen, was nach dem Dialog-Ergebnis gelesen wird (Callers von LanguageSelect-Result; WWATCH auf das Ergebnisfeld), bzw. ob das Ergebnis durch einen noch fehlenden Zustand (z.B. Sprachwert aus Profil/Param) verworfen wird.
+
+## Dialog: Pad-Press skippt nur Logos, Polling-Vergleich (2026-11-21)
+- Jeder Press (CROSS oder DOWN) fuehrt nur vom ersten Screen zur Logo-Sequenz (SCE presents ~2500, Legal ~3000); danach erscheint derselbe Dialog (~3300). Der Dialog selbst verbraucht kein Pad (Hauptbug offen). Nach dem Press: keine neuen fs-Opens, keine Sysutil/Language-HLE-Calls, keine userdb-Writes -> reine Gast-Logik.
+- Polling-Vergleich: RPCS3 Haupt-Thread pollt `cellSysmoduleIsLoaded(0x38)` (~11000x, 16 ms) aus func_00F93860; unser Lauf ruft dieselbe Funktion (Aufrufer func_00A86B38, lr A86B64, ~33/s). Kein Unterschied -> kein Diskriminator. ZWAP pollt in beiden cellMusicGetPlaybackStatus2.
+- RPCS3.log enthaelt keine Pad-/Kb-Aufrufe (nur Import-Tabelle) und endet am Dialog; keine Aussage zu Eingabe-Verhalten moeglich.
+- Naechster Hebel: Draw-Seite (158 Ops, work/cap_zw1/manifest.txt; Highlight/Row-1 als Quad evtl. vorhanden aber nicht korrekt gerendert, Text via zeta/Stencil-Pass) und Widget-Fokus im Skript-VM.
