@@ -549,3 +549,8 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - sys_mempool_create was ENOMEM stub (caller 0xA5E5D8). Implemented real pools; guest now creates event queue + "lgFF" thread + TM_FFB workers like RPCS3.
 - Result: baseline intact (Frame 4200, ops=158, work/cap_mempool1), dialog still w/o row-1 highlight, pad ignored. Hypothesis "mempool failure starves processEventLoop" NOT confirmed.
 - Next: real sys_usbd_initialize/get_device_list, sys_timer events, compare processEventLoop wake source.
+
+## 2026-11-21 — nach mempool-Fix: Pad + Sprache (2 Versuche, beide ohne Effekt)
+- PAD_SCRIPT "120:DOWN 124:CROSS" mit lgFF-Thread: Dialog bei Frame 4800 unveraendert (work/cap_lgff_pad, ops=155), Zeiger fehlt dort (Schleife press->presents->legal->Dialog, Zeitpunkt unklar).
+- PS3_LANG=en-gb: Dialog erscheint weiterhin (englisch: "Select Language", "XMB Menu Setting (English)"), Zeile 1 ohne Highlight (work/cap_lang_engb, ops=138). Dialog ist also der Erststart-Sprachdialog, nicht von der Systemsprache abhaengig.
+- Offen: Fokus/Highlight auf Zeile 1 wird nie gesetzt; Press fuehrt zu Logo-Schleife ohne Persistenz.
