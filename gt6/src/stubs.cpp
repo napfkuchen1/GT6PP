@@ -1307,6 +1307,9 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
         if (n < 40 || (n % 2000) == 0)
             fprintf(stderr, "[waitflag] tid=%u #%d flag=%08X value=%u cur=%08X lr=%08X\n",
                     (unsigned)ctx->thread_id, n, flag, value, flag ? vm_read32((uint64_t)flag) : 0u, (uint32_t)ctx->lr);
+        if (n == 0 && flag) { fprintf(stderr, "[waitflag] obj dump @%08X:", flag - 0x40);
+            for (uint32_t o = 0; o < 0x80; o += 4) fprintf(stderr, "%s%08X", (o % 16) ? " " : "\n", vm_read32((uint64_t)(flag - 0x40 + o)));
+            fprintf(stderr, "\n"); }
         if (n == 0 && getenv("WAITFLAG_WW") && flag) ppu_wwatch_arm(flag + (uint32_t)(int32_t)strtol(getenv("WAITFLAG_WW"),0,0));
         if (n == 0 || n == 3) ppu_dump_guest_stack(ctx, "wf");
         ++n;

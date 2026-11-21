@@ -473,3 +473,10 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Flag-Adresse variiert pro Lauf (7FEDA084 / 7FEDC084 / 7FEE8084), statisches PPU_WWATCH trifft daneben. Neu: `WAITFLAG_WW=<signed offset>` (mit WAITFLAG_LOG) schaltet den Write-Watch beim ersten WaitFlag dynamisch auf flag+offset scharf.
 - Ergebnis: weder Flag (obj+0x40) noch Task-Feld/Umgebung (obj+0x24..0xA4, PPU_WWATCH_LEN=0x80) werden nach dem ersten Sleep je beschrieben (60 s). Fiber ist ein Idle-Worker, dem nach den 4 Task-Laeufen keine Arbeit mehr zugestellt wird. Waker-Suche ist damit Sackgasse: Ursache liegt davor (Job-Submitter / Skript-Thread kommt nicht weiter), nicht im fehlenden Resume.
 - Naechster Hebel: Submitter des Tasks 0x568A0C (Schreiber auf obj+0x28 VOR dem ersten Sleep, Watch frueher scharf schalten, z.B. beim Create A2F93C) und Vergleich mit RPCS3-Threads CYYqg/AEIVZ/ZWAP.
+
+## Fiber-Thread = "processEventLoop" (2026-11-21)
+- Neu: `PS3_CALLTRACE_ARM=<off>` (+ `PS3_CALLTRACE_ARM_R4=1`) schaltet den Write-Watch beim ersten Treffer von `PS3_CALLTRACE_TO` auf r3/r4+off scharf; WAITFLAG_LOG dumpt das Thread-Objekt (0x80 Bytes) beim ersten WaitFlag.
+- Erzeugung: func_00A14824+0x345 ruft slot2 A2F93C auf Manager 7FFBE280, +0x46D ruft A2FC54 (r3=Manager, r4=Objekt). Objekt-Adresse variiert (7FEDA044/7FEE6044/7FEE8044), Manager 7FFBE280 stabil.
+- Objekt-Dump: vtable 0x1489E58, +4 Manager, +8 Name **"processEventLoop"**, +0x28 = 0x014BF800 (Tabelle, erster Eintrag opd 0x568A0C = Task), +0x40 Flag (=1 schlafend). Task 0x568A0C ist also die Event-Schleife, Fiber ist Event-Worker.
+- Watch r4+0x28 ab A2FC54-Eintritt: danach KEIN Schreiber auf obj+0x1C..0x9C. Event-Worker wird nach Lauf 4 nie mehr gestupst (Flag/Task-Feld unveraendert).
+- Hypothese: Wake kommt von einer Event-Quelle (Pad/Sysutil/Timer-Event -> Queue-Push -> Wake). Zu pruefen: welche Producer-Funktion in RPCS3 laeuft (Thread-/Syscall-Log), z.B. sys_event_queue_send / sys_timer / sys_event_flag in RPCS3.log vs unser Lauf.
