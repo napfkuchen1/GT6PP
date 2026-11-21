@@ -171,6 +171,21 @@ Expected: `gt6/build/gt6.exe`. The first build compiles 32 large generated
 translation units; it is the slowest build. Subsequent builds only rebuild
 changed chunks.
 
+### 7b. Alternative: clang-cl (VS 2022 Build Tools)
+
+Standard toolchain of the ps3recomp ecosystem. Needs VS 2022 Build Tools with
+the "C++ Clang tools for Windows" component
+(`winget install Microsoft.VisualStudio.2022.BuildTools`, add the C++ workload + Clang).
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build-gt6-clangcl.ps1
+```
+
+Output: `gt6/build-clangcl/gt6.exe` (separate build dir, MinGW build untouched).
+No MinGW-specific SEH patch is needed. Run it with
+`$env:GT6_BUILD_DIR="gt6\build-clangcl"` before `scripts/run-gt6.ps1` / `cap-gt6.ps1`.
+Verified: boots to the language dialog, 158 ops at frame 2500 (same as MinGW).
+
 ## 8. Run
 
 ```powershell

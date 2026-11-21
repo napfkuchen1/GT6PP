@@ -7,7 +7,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
-$Exe = Join-Path $Root "gt6\build\gt6.exe"
+$BuildDir = if ($env:GT6_BUILD_DIR) { $env:GT6_BUILD_DIR } else { "gt6\build" }   # e.g. gt6\build-clangcl
+$Exe = Join-Path $Root "$BuildDir\gt6.exe"
 $Elf = Join-Path $Root "work\bin\EMAIN.elf"
 $Log = Join-Path $Root "work\gt6_run.log"
 

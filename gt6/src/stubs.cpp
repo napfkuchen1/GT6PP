@@ -1229,11 +1229,6 @@ static void gt6_net_getsockname(ppu_context* ctx)
     static int l = 0;
     /* RPCS3: bind(0.0.0.0:0)+getsockname succeed, then the game creates its net
      * worker threads. Report an unbound IPv4 sockaddr (len 16, AF_INET). */
-    if (getenv("GETSOCKNAME_FAIL")) {
-        gt6_stub_log_once("getsockname", &l, -1);
-        ctx->gpr[3] = (uint64_t)(int64_t)-1;
-        return;
-    }
     const uint32_t addr = (uint32_t)ctx->gpr[4], plen = (uint32_t)ctx->gpr[5];
     if (addr && vm_base) { memset(vm_base + addr, 0, 16); vm_base[addr] = 16; vm_base[addr + 1] = 2; }
     if (plen && vm_base) { vm_write32(plen, 16); }
@@ -1248,7 +1243,7 @@ static void gt6_unknown_27DEDA93(ppu_context* ctx)
     ctx->gpr[3] = 0;
 }
 
-extern uint32_t g_sys_mem_bump_ptr;
+extern "C" uint32_t g_sys_mem_bump_ptr;
 extern "C" int32_t cellSysutilQueueGuestCallbackArgs(uint32_t opd, const uint64_t args[8]);
 // cellMusicInitialize2 (NID 0xBE50B11E): no music backend. CELL_OK + INITIALIZE_RESULT callback.
 static void gt6_cellMusicInitialize2(ppu_context* ctx)
@@ -1258,8 +1253,8 @@ static void gt6_cellMusicInitialize2(ppu_context* ctx)
     uint32_t func = (uint32_t)ctx->gpr[5], user = (uint32_t)ctx->gpr[6];
     printf("[GT6] cellMusicInitialize2 func=0x%08X user=0x%08X\n", func, user);
     /* RPCS3 reports INITIALIZE_RESULT(1, &CELL_OK, user) via the sysutil
-     * callback queue. MUSIC_NOCB=1 restores the old no-callback behaviour. */
-    if (func && !getenv("MUSIC_NOCB")) {
+     * callback queue. */
+    if (func) {
         /* arg2 is a pointer to the result s32 (CELL_OK); the guest waits on it. */
         static uint32_t res_addr = 0;
         if (!res_addr && vm_base) { res_addr = g_sys_mem_bump_ptr; g_sys_mem_bump_ptr += 0x10000; memset(vm_base + res_addr, 0, 16); }
@@ -1307,35 +1302,12 @@ static void gt6_net_inet_pton(ppu_context* ctx)
  * an error and WaitFlag gives up instead of spinning.
  */
 extern "C" int32_t cellFiberPpuYield(void);
-extern "C" int32_t cellFiberPpuWaitFlagEx(uint32_t flag, uint32_t value);
-extern "C" void ppu_dump_guest_stack(ppu_context*, const char*);
-extern "C" void ppu_wwatch_arm(uint32_t ea);
 
 static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
 {
     const uint32_t flag  = (uint32_t)ctx->gpr[3];
     const uint32_t value = (uint32_t)ctx->gpr[4];
 
-    if (getenv("WAITFLAG_LOG")) {
-        static int n = 0;
-        if (n < 40 || (n % 2000) == 0)
-            fprintf(stderr, "[waitflag] tid=%u #%d flag=%08X value=%u cur=%08X lr=%08X\n",
-                    (unsigned)ctx->thread_id, n, flag, value, flag ? vm_read32((uint64_t)flag) : 0u, (uint32_t)ctx->lr);
-        if (n == 0 && flag) { fprintf(stderr, "[waitflag] obj dump @%08X:", flag - 0x40);
-            for (uint32_t o = 0; o < 0x80; o += 4) fprintf(stderr, "%s%08X", (o % 16) ? " " : "\n", vm_read32((uint64_t)(flag - 0x40 + o)));
-            fprintf(stderr, "\n"); }
-        if (n == 0 && getenv("WAITFLAG_WW") && flag) ppu_wwatch_arm(flag + (uint32_t)(int32_t)strtol(getenv("WAITFLAG_WW"),0,0));
-        if (n == 0 || n == 3) ppu_dump_guest_stack(ctx, "wf");
-        ++n;
-    }
-    if (flag && getenv("WAITFLAG_CLEAR")) {   /* experiment: pretend the waker ran */
-        vm_write32((uint64_t)flag, value);
-        ctx->gpr[3] = 0;
-        return;
-    }
-    if (flag && getenv("WAITFLAG_REAL")) {   /* real wait state: RunFibers can return */
-        if (cellFiberPpuWaitFlagEx(flag, value) == 0) { ctx->gpr[3] = 0; return; }
-    }
     if (flag) {
         /* Inside a fiber: yield to the scheduler. On a plain thread Yield
          * fails; the guest then loops on its own flag word, so block here
