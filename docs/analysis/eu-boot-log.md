@@ -417,3 +417,11 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Beobachtung: ~1 `cellSysmoduleIsLoaded(NP2)` pro Frame, 179x `port_send(port=1)` aus func_00A466A4+0x771. Nicht weiter verfolgt.
 - Nächster Schritt: RPCS3 am selben Dialog mit Tastatur bedienen und beobachten, welcher Zustand folgt; dann die Event-Queue (port_send/func_00A466A4) bzw. Dialog-Zustandsmaschine untersuchen.
 - RPCS3-Gegenprobe (ohne Eingabe): Zeile 1 ist dort bereits hervorgehoben (heller Rahmen/Füllung), Cursor an gleicher Stelle. Unsere Ausgabe hat keine Hervorhebung. Draw-Liste (cap_col2, `VTX_COL=1`): nur fps 0x4E526C1/0x4E52681/0xF8FFDC1 mit konstantem col0 aus VERTEX_DATA4F, Alpha-Serie 0.5..1.0 (Fade-In) -> kein fehlender Render-Pfad erkennbar. Schluss: fehlende Hervorhebung und ignorierte Eingabe haben vermutlich dieselbe Ursache (Dialog-Zustand nicht "aktiv"/Fokus nicht gesetzt), nicht a3. GUI-Automation gegen RPCS3-Fenster ist hier unzuverlässig (Mehrmonitor-Koordinaten); lieber RPCS3-Log/PAD-Config nutzen.
+
+## ps3recomp docs check (GETTING_STARTED, FAQ, DIAGNOSTICS) + HOTREAD run
+
+- ps3recomp docs contain nothing on pad input, sysutil callbacks or menu focus; no GT6 mentions. Useful: diagnostic env knobs (`PPU_HOTREAD`, `PS3_CALLTRACE[_FROM/_TO/_LR]`, `PS3_SCENTER`, `LV2_ERRDBG`, `PS3_EVF_FORCE`, `FLOW_CONDKICK`), all already present in local third_party.
+- Run with `PPU_HOTREAD=1 PPU_SPINBT=1 LV2_ERRDBG=1` on the language-select frame: 1384x `[HOTREAD] spinning on 0x01681E80 (=0x01681E00) guest cia=0x014E0898 lr=0x00B6E52C`. 0x014E0898 = entry of dialog thread "PDI"; 0x01681E00 is the WWS `GPUSyncArray` workload data EA (wid 5, see spu-spurs.md), 0x01681E80 = its +0x80 word.
+- No `PM NOT LIFTED` line any more, no LV2 errors. Only `_cellSpursWorkloadFlagReceiver2(wid=5 set=1)` once.
+- Hypothesis (unproven): the PDI worker polls a lock-free queue word that the GPUSync SPURS job (or its completion signal) never updates, so the dialog state machine never advances -> no highlight, no input reaction.
+- Next: find the writer of 0x01681E80 (WWATCH on that address), check whether wid 5 job ever runs (`spu_run_policy_module` log), compare against RPCS3.
