@@ -528,3 +528,10 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Zeitfalle: Dialog erscheint spaet (~Frame 3300); Press bei 3 s testet nur die Logo-Phase. cap-gt6: Name wird "cap_" vorangestellt, >=90 s fuer Frame 4500.
 - Temp-Probes/Hack in ppu_recomp_018/023 zurueckgenommen (work/ppu018.bak, ppu023.bak), Build sauber.
 - Naechster Schritt: Konsument ueber Draw-/Layout-Seite suchen (Fokus-Quad-Op in cap_zw1/manifest), oder Gast-Callgraph ab GPB-Widget-Update (LanguageSelectRoot) tracen.
+
+## Menue-Run (autonom, Ergebnis: Hauptmenue NICHT erreicht)
+- Baseline bestaetigt: Frame 4200 -> black 87.4 %, ops=158 (cap_base1).
+- PAD_SCRIPT CIRCLE bei 130 s: Dialog unveraendert (cap_circ1).
+- Erneut RWATCH/CALLTRACE: Pad-Rohdaten lesen nur A39CD8 (Mapper), A390E4/B90614 (Kopie nach Listener+0x54), A395F0 (Start). Kein skalarer Konsument in der Dialogphase; A39CD8 ohne indirekte Calls. RWATCH sieht lvx-Loads nicht -> Vektor-Konsument nicht ausgeschlossen.
+- RPCS3-Orakel (tools/RPCS3, --no-gui): haengt >240 s auf "Precompiling shader interpreter variants" (leerer Balken); kein Dialog-Referenzablauf gewonnen. Verworfen.
+- Naechster Schritt: Vektor-Load-Hook (lvx/lvlx) analog ppu_rwatch_hit bauen und Listener-State 0x165B1A8+0x54 beobachten; alternativ Draw-Seite (Fokus-Quad) tracen.
