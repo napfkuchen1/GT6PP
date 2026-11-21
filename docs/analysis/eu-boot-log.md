@@ -431,3 +431,11 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - 0x01681E80 is the head word of a circular list inside the job-chain struct (init `<- 0x0` by func_00B6E278, then `<- 0x1681E00` = self pointer = empty list by func_00A6E72C). No later writer (PPU_WWATCH). The "spin" is func_00A6EBD8 (called from func_00B6E4E8 = per-frame GPU sync), a u16 counter walk: the frame loop still flips, so this is a per-frame poll, probably not THE stall.
 - Open question: PMs exit with polls=0 and never DMA wid 5's list at 0x1681E80 (wid 6 does DMA 0x1681C80). Unknown whether that is correct (empty list) or a missing PPU-side push. RPCS3 comparison of job-chain traffic would decide.
 - ps3recomp docs (local copy under third_party/ps3recomp/docs, 46 files) read: no pad/menu/sysutil material. Useful tools: `PS3_DEBUG=<file>` debug console (`threads`, `mem`, `stat`), `SPU_INTERP_STATS`, `SPURS_PM_TRACE`.
+
+## Input path traced (2026-11-21)
+
+`PAD_TRACE=1` now also prints the pad buffer EA and a guest stack on the first poll with a button set (`patches/gt6-pad-trace.patch`).
+- Pad data reaches the game: buffer EA 0x0165ADE0 (inside the pad manager struct at 0x0165AD40). The poll runs on the PDI/UI thread (tid 26, entry func_00A304D0 -> func_00A3D114), no separate pad thread.
+- `PPU_RWATCH=165ADE8,4` + `PAD_SCRIPT=0.1:0x4000`: the pad manager update `func_00A39CD8` and `func_00B90614` read D2 = 0x40 (CROSS) as nonzero, so the buffer is consumed (len 0x1C, port status 0x7E, D1/D2 read per frame, then func_00A38FC4/func_00A38FE8 edge/hold processing).
+- So the input does NOT get lost before the game: the dialog's state machine ignores a delivered CROSS. Remaining suspects: widget focus/active flag never set (same cause as the missing row-1 highlight), or a gate on another sysutil event/callback.
+- Next: trace readers of the pad-manager OUTPUT (hold/press masks) and what the dialog widget update checks before acting on them.
