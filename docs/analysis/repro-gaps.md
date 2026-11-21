@@ -43,7 +43,8 @@ Update after getting a first `gt6.exe` linked from a clean clone (EU disc):
   per-file check). It is now per function (`key + call in s`).
 - **SPU images (resolved):** `relift-gt6.ps1` now runs steps 8a-8c (embedded
   ELFs, raw job images, PM) and the output is byte-identical to the previous
-  tree. The job dumps in `work/spu_jobs/dump/` remain a required input.
+  tree. The job dumps are cut from `EMAIN.elf` by `tools/extract_spu_jobs.py`
+(manifest `scripts/spu-jobs-manifest.json`), no runtime capture needed.
   Original gap: `relift-gt6.ps1` did not produce them. The link fails with
   undefined `spu_000N_*` / `job_*` symbols until you run
   `extract_spu_images.py` + `build_spu_workloads.py` (HANDOFF.md) and

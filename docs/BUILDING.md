@@ -139,9 +139,10 @@ restoring anything: step 8a extracts the four embedded SPU ELFs from `EMAIN.elf`
 (`extract_spu_images.py`) and lifts them (`build_spu_workloads.py`, image ids 1-4,
 `gt6/src/gen/spu_workloads.c`), 8b runs `scripts/lift-spu-jobs.ps1` for the raw
 SPURS job images (ids 6+, `gt6/src/gen/spu_workloads_jobs.c`), 8c lifts the WWS
-job-manager PM (id 5). The job step needs `work/spu_jobs/dump/spujob_<FP>_<size>.bin`;
-the script checks every filename against the FNV-1a-64 of the bytes and fails
-if a dump is missing. A previous `spu_lifted/jobs` tree is moved to
+job-manager PM (id 5). The job images are cut from `EMAIN.elf` by
+`tools/extract_spu_jobs.py` using `scripts/spu-jobs-manifest.json` (offset, size,
+FNV-1a-64 per image; a mismatch fails) into `work/spu_jobs/dump/`, and
+`lift-spu-jobs.ps1` re-checks every filename against the bytes. A previous `spu_lifted/jobs` tree is moved to
 `work/ARCHIV/`, never deleted.
 The lists are not committed because they are derived from the game binary.
 

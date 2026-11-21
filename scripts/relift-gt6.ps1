@@ -91,7 +91,9 @@ python (Join-Path $Sdk "tools\build_spu_workloads.py") --images $SpuImg `
     --register-fn gt6_spu_register_all --title GT6 --relift
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "[8b/9] Raw SPURS job images (SPU image ids 6+, from captured dumps)"
+Write-Host "[8b/9] Raw SPURS job images (SPU image ids 6+, cut from EMAIN.elf)"
+python (Join-Path $Root "tools\extract_spu_jobs.py") $Elf (Join-Path $Root "work\spu_jobs\dump")
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 powershell -ExecutionPolicy Bypass -File (Join-Path $Root "scripts\lift-spu-jobs.ps1")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
