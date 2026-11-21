@@ -504,3 +504,10 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Pad wird die ganze Zeit gepollt (5602 cellPadGetData in 90 s, HLE-Trace). Frame-Zaehler != Wandzeit/Flips: PAD_CLOCK=flips taugt hier nicht, Wanduhr-Press funktioniert.
 - stdout von run-gt6 geht bei Kill verloren (gepuffert): spaete Log-Zeilen ([cellPad] PAD_SCRIPT ..., [cellFs]) fehlen -> nicht als "Press nicht gefeuert" lesen. stderr (HLETRACE) ist verlaesslich.
 - Hypothese: Sprachwahl wird nicht persistiert/uebernommen (Schreibpfad: Config/Savedata), daher fragt der Boot erneut. Naechster Schritt: stdout-Flush (setvbuf/PS3_*-Flag) und [cellFs]-Open/Write-Folge zwischen Press und Dialog 2 loggen; mit RPCS3.log (tools/RPCS3/log) vergleichen.
+
+### Dialog-Schleife: Befunde (2026-11-21, spaet)
+- Mehrfach-CROSS (alle 8 s ab 20 s, PAD_SCRIPT per Prozess-Env) -> Dialog bleibt bei Frame 4500 und 6000; jede Auswahl startet presents -> legal -> Dialog neu.
+- Nach dem Press KEINE neuen Dateizugriffe ([fs]/pfs-Trace nur bis LanguageSelectRoot.gpb + PDIPFS K/CF) und kein Sprach-/Sysutil-HLE-Call (Fenster-Histogramm: nur lwmutex/lwcond/Spurs/Gcm/Pad). Die Schleife ist reine Gast-Logik: Sprachergebnis wird nirgends persistiert.
+- Fresh userdb (richtiger Pfad work/gt6_hdd0/game/BCES01893/USRDIR/db/userdb0101.dat) aendert nichts.
+- Tooling: GT6_UNBUF=1 (main.cpp) setzt stdout ungepuffert. cap-gt6.ps1 -Env splittet an Kommas -> PAD_SCRIPT mit mehreren Events als Prozess-Env setzen, nicht ueber -Env.
+- Naechster Schritt: Gast-seitig verfolgen, was nach dem Dialog-Ergebnis gelesen wird (Callers von LanguageSelect-Result; WWATCH auf das Ergebnisfeld), bzw. ob das Ergebnis durch einen noch fehlenden Zustand (z.B. Sprachwert aus Profil/Param) verworfen wird.

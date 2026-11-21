@@ -665,6 +665,7 @@ static void gt6_set_project_cwd(void)
 
 int main(int argc, char* argv[])
 {
+    if (getenv("GT6_UNBUF")) setvbuf(stdout, NULL, _IONBF, 0);  /* keep stdout when the run is killed */
 #ifdef _WIN32
     gt6_set_project_cwd();
     /* GT6's audio/event pump legitimately calls the same handler thousands of
