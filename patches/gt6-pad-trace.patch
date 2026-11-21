@@ -1,0 +1,14 @@
+--- a/libs/input/cellPad.c	2026-11-21 03:34:30.380067600 +0100
++++ b/libs/input/cellPad.c	2026-11-21 03:34:30.450086600 +0100
+@@ -1201,6 +1201,11 @@
+      * attack firing once.
+      *
+      * PAD_ALWAYS_CHANGE=1 restores the old always-a-packet behaviour. */
++    { static int _tr = -1; static long _n = 0;
++      if (_tr < 0) _tr = getenv("PAD_TRACE") ? 1 : 0;
++      if (_tr && port_no == 0) { _n++;
++        if ((data->button[CELL_PAD_BTN_OFFSET_DIGITAL1] | data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]) || (_n % 500) == 1)
++            printf("[padtrace] n=%ld len=%d d1=%04X d2=%04X\n", _n, (int)data->len, data->button[CELL_PAD_BTN_OFFSET_DIGITAL1], data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]); } }
+     {
+         unsigned int ea = (unsigned int)(uintptr_t)data_guest;
+         vm_write32((unsigned long long)ea + 0, (unsigned int)data->len);   /* len (s32) */

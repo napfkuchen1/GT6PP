@@ -411,3 +411,8 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Unser Bild hatte eine weiß/schwarze Diagonale: Panel-/Hintergrund-Draws (fp 04E526C1/04E52681) lesen col0 aus Attribut 3, das der Guest als altes Array (fmt 0x1445, Stride 20, unzusammenhängende Mesh-Daten) aktiv lässt.
 - Fix: a3 nur für Text-Quad-VS (fp 0x4E739C1, a3.x = Palette-Index in vp_c[]) vertrauen, sonst a3 am BEGIN_END deaktivieren (vor Layout-Bau), col0 aus VERTEX_DATA4F. Env `A3KEEP=1` = altes Verhalten. Patch `patches/gt6-rsx-ignore-stale-a3.patch`, Debug-Hooks `patches/gt6-rsx-debug-hooks.patch`. Ergebnis `eu-language-select-bg.png`: blauer Titel, Panel, Zeilen, Cursor wie RPCS3.
 - Titel-Farbe-Nebenwirkung damit behoben. Offen: "Schließen" etwas dunkler als RPCS3 (evtl. Hover), weitere fps mit a3-Palette nicht gefunden.
+
+## 2026-11-21 — Eingabe an der Sprachauswahl (negativ)
+- `PAD_SCRIPT` (Leerzeichen als Trenner, Komma trennt `cap-gt6 -Env`!) mit DOWN/CROSS/CIRCLE/START/RIGHT/LEFT/TRIANGLE/SQUARE: Pad-Daten kommen an (neu: `PAD_TRACE=1`, `patches/gt6-pad-trace.patch`, len=28, ~33 Polls/s, 40 Polls gehalten), aber der Dialog reagiert nicht. Frame bei 3000 und 3500 pixelidentisch (auch Cursor statisch) -> UI-Zustand läuft nicht weiter, Ursache liegt vor der Eingabe (vermutlich wartet das Spiel auf ein Ereignis, nicht auf Tasten).
+- Beobachtung: ~1 `cellSysmoduleIsLoaded(NP2)` pro Frame, 179x `port_send(port=1)` aus func_00A466A4+0x771. Nicht weiter verfolgt.
+- Nächster Schritt: RPCS3 am selben Dialog mit Tastatur bedienen und beobachten, welcher Zustand folgt; dann die Event-Queue (port_send/func_00A466A4) bzw. Dialog-Zustandsmaschine untersuchen.
