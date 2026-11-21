@@ -23,7 +23,7 @@ FUNC = "func_00B5B260"
 MARK = "loc_FILL_B5B838"
 CALL = "ctx->lr = 0x00B5B734; func_00A26510(ctx); DRAIN_TRAMPOLINE(ctx);"
 BRANCH = "if ((!((ctx->cr >> 1) & 1))) goto loc_00B5B838;"
-TAIL_LABEL = "loc_00B5B754:\n"
+TAIL_LABEL = "loc_00B5B754:"  # lifter output mixes LF/CRLF: no newline in the anchor
 FILL = (
     "loc_FILL_B5B838:\n"
     "        { uint32_t _o=(uint32_t)ctx->gpr[30]; uint32_t _b=vm_read32(_o+0x28); uint32_t _s=vm_read32(_o+0x30);\n"
