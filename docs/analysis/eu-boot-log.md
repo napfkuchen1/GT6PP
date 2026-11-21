@@ -492,3 +492,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Ursache: cellMusicInitialize2-Callback bekam als arg2 den User-Pointer statt Zeiger auf s32 CELL_OK. Gast-Wait (func_008890A4/00889180) las 0x7FFE2000 als Fehler -> func_00889838 sprang am SetVolume2 vorbei -> ZWAP nie erzeugt.
 - Fix (stubs.cpp): arg2 = Zeiger auf Null-Wort im Gast-Heap (g_sys_mem_bump_ptr). Jetzt: SetVolume2 aufgerufen, ZWAP tid=42 erzeugt wie in RPCS3.
 - Offen: GetPlaybackStatus2 wird in 60 s noch nicht gepollt; Dialog/Pad/Focus nicht neu geprueft.
+
+### Ergebnis nach ZWAP-Fix (2026-11-21)
+- GetPlaybackStatus2 wird jetzt gepollt (HLE-Trace: NID 0x648B7611, lr 0x008888E8); SetVolume2 lr 0x00888B5C.
+- Pad-Eingabe wirkt: `PAD_SCRIPT=0.1:0x4000` (CROSS) schliesst den Sprachdialog, Frame 2500 zeigt "Sony Computer Entertainment presents" (work/cap_zw2). Ohne Eingabe bleibt der Dialog (work/cap_zw1).
+- Ursache der ignorierten Eingabe war also der fehlende Music-Init-Callback-Payload (Boot-Fortschritt), nicht der Pad-Pfad.
+- Offen: Row-1-Hervorhebung im unbedienten Dialog fehlt weiterhin (visuell, RPCS3 zeigt sie); "Schliessen" dunkel.
