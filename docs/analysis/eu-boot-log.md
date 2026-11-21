@@ -383,3 +383,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 ## cellMusicInitialize2 (2026-11-21)
 - NID 0xBE50B11E stubbed in gt6/src/stubs.cpp (returns CELL_OK, no callback). Boot continues: frames presented (3300 takeflips/40 s), no unresolved NIDs, next fs open /dev_hdd1/cache/BCES01893/game024.db.
 - Not verified: whether the game later waits for a cellMusic callback; real-frame content not checked.
+
+## Render path after boot-2 fix (2026-11-21)
+- Screen now = language-select dialog (LanguageSelectRoot.gpb loaded). Frame 2500 capture (RSX_CAP=2500:1, work/rsxcap*): 158 draws, all rt=0 (backbuffer), no CLEAR op; blue = backbuffer clear colour showing through, black triangle = one half of a quad.
+- EMPTYTEX/TEX_MARKEMPTY: every empty sampler is an offscreen surface in RSX local memory (0xC0000000 1216x684 fmt A5, 0xC0660000, 0xC0CC0000, 0xC1320000 (t3 on ALL draws), 0xC1980000 1440x1080 fmt E5 (vs=7 draws, 288 verts), 0xC2200000 1152x648). No draw in the captured frame renders into these surfaces, so they stay zero. Guest textures (SZ 8x8/128x128 glyph/atlas) are not the empty ones.
+- Experiment: binding the display-sized screen copy also for 1216x684 (SCREEN_AS_TEX_SAFE=1, env-gated hack in rsx_d3d12_backend.c, uncommitted, backup work/rsx_d3d12_backend.c.bak_safe) turns the dialog panel white and shows borders, but text is still missing and the black half-quad remains.
+- Open: who produces the 1440x1080 / 1216x684 surfaces (earlier frames? SPU/transfer?), why only a half quad draws (QUADS->tris expansion for vs=7?).
