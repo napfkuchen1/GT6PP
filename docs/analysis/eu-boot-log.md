@@ -537,3 +537,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Naechster Schritt: Vektor-Load-Hook (lvx/lvlx) analog ppu_rwatch_hit bauen und Listener-State 0x165B1A8+0x54 beobachten; alternativ Draw-Seite (Fokus-Quad) tracen.
 - PPU_RPAGE=<hex ea>[,len] (patches/gt6-rpage-probe.patch, Runtime, nur Diagnose): PAGE_NOACCESS-Lesewatch inkl. Vektor-Loads, loggt je (Art, Gast-Fn) 3 Treffer. Lauf 230 s auf 0x165B1A8,0x540 (Listener 0/1+): Leser nur A39CD8 (Mapper), A390E4/B90614 (Kopie), A3CE18 (memcpy-artiger 0xFC-Kopierer, einmalig im Boot) und HLE-memcpy (guest-fn 0). Kein Vektor-Konsument -> Hypothese "unsichtbarer lvx-Leser" widerlegt. Konsument liest nicht aus dem Listener-Block, sondern aus einer Kopie/Ableitung an anderer Stelle (oder Dialog laeuft nicht ueber diesen Pad-Pfad).
 - Baseline nach Patch: cap_base2 Frame 4200 black=87.4% ops=158 (Lauf braucht auf lastigem Rechner >200 s: -Seconds 320 nehmen).
+
+## Roadmap M2: Determinismus-Soak (2026-11-21)
+- Neu: `scripts/soak-gt6-eu.ps1` (N Boots, Fingerprint = SHA-256 der geladenen Asset-Pfade; altes `soak-gt6.ps1` ist veraltet, stdout-Verlust ohne GT6_UNBUF). `scripts/hunt-menu-branch.ps1` (bricht Runs ab, sobald Dialog-Pfad erkannt).
+- Soak 8 Boots: 7x 43 Assets (Dialog-Pfad), **1x (Run 3) 47 Assets ohne LanguageSelectRoot.gpb, stattdessen arcade/option/gtmode/garage/gtauto .mpackage** -> Boot nahm den Hauptmenue-Pfad. Soak 10 Boots: 10/10 identisch. Soak 5 Boots unter CPU-Last: 1x langsamer Lauf (42 Assets, Dialog noch nicht erreicht nach 100 s). Hunt: 40 Boots, 0 Menue-Pfad.
+- Gleiche Gast-Eingaben bis nach SettingProject.gpb (Log-Diff: nur Thread-/SPU-Reihenfolge verschieden), also Race-Verzweigung im Gast, kein Dateizustand (userdb-Hash aendert sich jeden Lauf). Ursache offen; 1 von ~70 Boots, Log des Treffers wurde vom Folge-Soak ueberschrieben (Lehre: Soak-Logs pro Soak in eigenem Ordner halten).
+- Syscall 327 (2x beim Boot, Stub OK): kein beobachteter Effekt.

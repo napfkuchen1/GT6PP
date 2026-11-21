@@ -37,16 +37,16 @@ a deterministic stop with a named missing syscall/HLE function.
 - [x] Fix the guest main stack / argv / TOC / TLS setup (`ppu_run` handles it).
 - [x] Implement `cellGcmInit`, display buffers, `cellSpurs` init/workloads.
 - [x] Make the init flag at `0xA13644` true (current stop). Boot now runs past it on the EU disc (BCES01893).
-- [ ] Resolve `0x2DDBCC0A`, `0xFAA275A4`, `0x5C832BD7`.
+- [x] Resolve `0x2DDBCC0A`, `0xFAA275A4`, `0x5C832BD7` (`gt6/src/stubs.cpp`; 0 `unresolved NID` in 8+10+5+40 boots, 2026-11-21).
 - [x] *(2026-11-21)* Boot-2 validator passes on the EU disc: root cause was an empty file cache (`B5B260`), fixed via cache-fill workaround (`patches/gt6-b5b260-cache-fill.patch.txt`).
 - [x] *(2026-11-21)* Stub `cellMusicInitialize2` (NID `0xBE50B11E`); game now reaches the language-select dialog at ~36 FPS.
-- [ ] cellMusic callback and syscall 327 are still stubbed (2x).
+- [x] *(2026-11-21)* cellMusic callback delivers a valid result pointer (ZWAP thread now created, see `docs/analysis/eu-boot-log.md`). Syscall 327 stays a logged stub returning OK (2x at boot, no observed effect); revisit only if a guest check depends on it.
 - [x] Load the first `GT.VOL` assets (menus, fonts, scripts). `boot.adc`, `BootProject.gpb` and `PresentsRootSCEE.gpb` load on the EU disc.
 - [ ] Add `longjmp`/`setjmp` support if the LZ decoder stalls (GT5P required
       this).
 
 **Exit criteria:** 8/8 identical boots that open the volume and load a stable
-set of assets.
+set of assets. *(Measured 2026-11-21 with `scripts/soak-gt6-eu.ps1`: 10/10 identical on one soak, but 1 of 8 and 1 of 5 boots in two other soaks deviated; `scripts/hunt-menu-branch.ps1` found 0 deviations in 40 boots. One deviating boot loaded the menu packages instead of the language dialog, see `docs/analysis/eu-boot-log.md`. Not yet met.)*
 
 ## M3 — RSX/GCM and first frame (next)
 
