@@ -3,7 +3,7 @@
 ## Zustand
 - Repo: `C:\Users\Daniel\Downloads\Games\GT6\ClaudeCode\GT6PP`, Branch `eu-first-build` (lokal, nicht gepusht; origin=upstream xynnpg/GT6PP, fork=napfkuchen1/GT6PP; PR #3 `eu-region-check` offen, kein PR2).
 - Letzte Commits: `0aaca4c` (Patch rsx), `eec0fc2` (rsx-Fix-Doku, cap-gt6.ps1, Screenshot), `4cd25f8`, `8053531` (cellMusicInitialize2).
-- Spiel bootet: Boot-2-Validator ok (Cache-Fill), cellMusicInitialize2 gestubbt, ~36 FPS, Sprachauswahl-Dialog sichtbar (`docs/analysis/eu-language-select-dialog.png`): Panel, Titel, 4 Menüzeilen; Text = Blöcke, Hintergrund-Verlauf (gelb/grün/cyan) vermutlich falsch.
+- Spiel bootet: Boot-2-Validator ok (Cache-Fill), cellMusicInitialize2 gestubbt, ~36 FPS, Sprachauswahl-Dialog sichtbar (`docs/analysis/eu-language-select-dialog.png`): Panel, Titel, 4 Menüzeilen; Text lesbar (Commit 34b1e2d), Hintergrund-Verlauf falsch.
 
 ## Was geändert ist (wichtig, teils nicht im Git)
 - `third_party/` ist gitignored -> Backend-Änderungen `rsx_d3d12_backend.c` liegen als `patches/gt6-rsx-display-tex-zeta.patch` (Display-Offset-Texturen bekommen Screen-Kopie; `ZETA_FILL` default an, füllt ungeschriebene Zeta-Texturen mit 0xFF). Backups: `work/rsx_d3d12_backend.c.bak_safe`, `.bak_zeta`.
@@ -23,8 +23,8 @@
 - Upstream-Doku (`rsx-first-draw-fix.md`, `d3d12-draw-readiness.md`) bestätigt Offset-Erkennung; `rpcs3-oracle.md`: RPCS3 in `tools/RPCS3` als visuelle Referenz. Upstream hat nichts Neueres (nur US-Disc, schwarz).
 
 ## Nächste Schritte (Reihenfolge)
-1. Text: Glyph-Texturen prüfen (0x88 8x8, 0x86 128x128, 0xA8 36x36) via `TEX_SAVE`/`TEXFMT`; warum Blöcke statt Glyphen.
-2. Hintergrund-Verlauf: Rückkopplung Screen-Kopie vs. echtes Bild; mit RPCS3-Referenz vergleichen.
+1. (erledigt, Commit 34b1e2d) Text lesbar: Stencil-Glyphen + Zeta-als-Textur, `patches/gt6-rsx-zeta-depth-text.patch` (nach display-tex-zeta anwenden). Neu: `TEXDUMP="86 88 A8"` dumpt Texturen, Manifest zeigt `zeta=`/`zs=`, `DS_REMAP=0` = alte Crossbar. Screenshot `eu-language-select-text.png`.
+2. Hintergrund (offen): op003/004 (vs=6/2, t0=0x04E76980/0x04EADF00 + t3=Display 0x1320000) prüfen; Inhalt variiert pro Lauf, SCREEN_AS_TEX=0 gibt magenta/schwarz/weiße Flächen. Rückkopplung Screen-Kopie vs. echtes Bild; mit RPCS3-Referenz vergleichen.
 3. Memory `project_gt6pp-eu.md` aktualisieren (Cache-Fix, cellMusic, Render-Fixes).
 4. Uncommitted Diagnosen entscheiden (committen/verwerfen).
 5. Offen: cellMusic-Callback, Syscall 327 (2x gestubbt).
