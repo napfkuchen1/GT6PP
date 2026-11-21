@@ -18,7 +18,7 @@ endif()
 # =============================================================================
 # ps3recomp runtime
 # =============================================================================
-set(PS3RECOMP_DIR "${CMAKE_SOURCE_DIR}/../ps3recomp" CACHE PATH "Path to ps3recomp")
+set(PS3RECOMP_DIR "${CMAKE_SOURCE_DIR}/../third_party/ps3recomp" CACHE PATH "Path to ps3recomp")
 
 if(NOT EXISTS "${PS3RECOMP_DIR}/CMakeLists.txt")
     message(FATAL_ERROR
@@ -32,7 +32,10 @@ add_subdirectory(${PS3RECOMP_DIR} ps3recomp EXCLUDE_FROM_ALL)
 # =============================================================================
 # Lifted PPU code
 # =============================================================================
-set(GENERATED_DIR "${CMAKE_SOURCE_DIR}/generated")
+# RECOMP_DIR: lifter output (ppu_recomp.h + chunks), same name as templates/project.
+set(RECOMP_DIR "${CMAKE_SOURCE_DIR}/generated" CACHE PATH "Directory holding the lifter output")
+get_filename_component(RECOMP_DIR "${RECOMP_DIR}" ABSOLUTE)
+set(GENERATED_DIR "${RECOMP_DIR}")
 
 file(GLOB GENERATED_SOURCES CONFIGURE_DEPENDS "${GENERATED_DIR}/ppu_recomp_*.cpp")
 if(NOT GENERATED_SOURCES)
@@ -97,7 +100,7 @@ add_executable(gt6
 target_include_directories(gt6 PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/compat      # <dirent.h>/<unistd.h> shims for ppu_fs.cpp
-    ${CMAKE_SOURCE_DIR}/generated       # ppu_recomp.h
+    ${RECOMP_DIR}                       # ppu_recomp.h
     ${PS3RECOMP_DIR}/include
     ${PS3RECOMP_DIR}/runtime/ppu
     ${PS3RECOMP_DIR}/runtime/memory
@@ -118,6 +121,7 @@ endif()
 if(WIN32)
     target_link_libraries(gt6 PRIVATE
         ws2_32 xinput ole32 bcrypt
+        dbghelp user32 gdi32 winmm
         d3d12 dxgi dxguid d3dcompiler)
 else()
     target_link_libraries(gt6 PRIVATE pthread m)
@@ -140,6 +144,21 @@ else()
         -Wall
         -Wno-unused-variable -Wno-unused-function -Wno-unused-label
         -Wno-sign-compare -Wno-parentheses -Wno-unused-but-set-variable)
+endif()
+
+# Codegen flags the ps3recomp template sets for Clang/GCC (clang-cl included):
+# the lift spells PPC arithmetic as signed C arithmetic that must wrap.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(gt6 PRIVATE -fno-strict-aliasing -fwrapv)
+endif()
+
+# Lifted translation units: machine-generated, huge. Warnings off, no FP
+# contraction (a PPC fmadd is spelt as one where the lifter means one),
+# /bigobj for the 65,536-section limit on COFF.
+if(MSVC)
+    set_source_files_properties(${GENERATED_SOURCES} PROPERTIES COMPILE_OPTIONS "/w;/bigobj")
+else()
+    set_source_files_properties(${GENERATED_SOURCES} PROPERTIES COMPILE_OPTIONS "-w;-ffp-contract=off")
 endif()
 
 install(TARGETS gt6 RUNTIME DESTINATION bin)

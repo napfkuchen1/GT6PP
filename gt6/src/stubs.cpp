@@ -1704,3 +1704,9 @@ extern "C" void gt6_hle_overrides(void)
                          gt6_cellFiberPpuCheckFlags);
 }
 
+
+/* ppu_recomp.h (current lift) declares a vector-load read-watch hook. The
+ * runtime no longer implements the watch; keep inert definitions so the
+ * generated tree links. */
+extern "C" int g_rwatch_vec_on = 0;
+extern "C" void ppu_rwatch_vec(uint64_t) {}

@@ -37,6 +37,21 @@ git -C third_party/ps3recomp apply ..\..\patches\ps3recomp-mingw-seh.patch
 
 Or edit the two spots by hand; the patch is small.
 
+## `patches/ps3recomp-v0.19.0-gt6-eu-all.patch`
+
+Single consolidated patch against ps3recomp v0.19.0 (pin
+`ae92407bb1d899e3d32143e360fe6e6d4d8fa1b5`); supersedes the per-topic stack.
+Verified: `git apply --check` on a clean checkout of the pin, and the
+resulting tree builds with LLVM-MinGW and clang-cl and boots to the language
+dialog on both. It contains functional changes only; the env-gated debug
+switches (draw probes, texture/vertex dumps, call-trace arming, lwcond log/poll
+toggles, SPURS diag) were removed. Areas: SPURS job-chain owner routing and
+`cellSpursInitializeWithAttribute2`, real lwcond, guest-window bounds checks
+(lwmutex, indirect-call reporter, 4 GB wrap), cellFiber wait flags, RSX
+immediate/inline-array draws and D3D12 depth/zeta handling, offline NetCtl,
+`cellKbRead`, lifter/jump-table fixes. The previous diag-inclusive variant is
+kept outside the repo under `work/ARCHIV/`.
+
 ## Build flag: `_WIN32_WINNT=0x0A00`
 
 `runtime/spu/spu_workload.c` calls `GetCurrentThreadStackLimits`, which MinGW
