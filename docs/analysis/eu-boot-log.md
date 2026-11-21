@@ -445,3 +445,13 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Pad-Press nach sichtbarem Dialog (Flip-Clock 2800-2900): keine Reaktion.
 - cellMouse: Game ruft nur `cellMouseInit(7)`, danach KEIN `cellMouseGetData` (MOUSE_TRACE=1, 3000 Frames, 0 Zeilen). MOUSE_FAKE (Patch `patches/gt6-mouse-fake.patch`) aendert das Bild nicht (cap_ms1). Maus-Hypothese damit widerlegt: Zeiger wird ohne Mausdaten gezeichnet.
 - Offen: Row-1-Highlight/Eingabe; naechster Schritt Draw-seitig pruefen (Highlight-Draw fehlt?) oder Pad-Leser func_00A39CD8 Ausgabe -> Widget-Gate.
+
+## Eingabe-Pfad Teil 2: Listener, Fiber, WaitFlag (2026-11-21)
+- Frame-5000-Zustand identisch zu Frame 2600 (black=87,4 %, ops=158): Dialog ist stationaer.
+- RPCS3-Log: cellMusicInitialize2 mit Callback; Stub in `stubs.cpp` queued jetzt INITIALIZE_RESULT (`MUSIC_NOCB=1` aus). Kein sichtbarer Effekt.
+- Pad-Manager 0x0165AD40: 7 Listener-Knoten (Stride 0xE0, erster 0x165B1A8, vtable 0x0148A128), `func_00A390E4` kopiert 0x80 Byte Pad-Daten nach listener+0x54. RWATCH 165B1A8,700: nur func_00A39CD8 liest +4/+0xC, KEIN Leser der kopierten Pad-Daten nach dem Boot. Das Dialog-Skript pollt also keine Eingabe.
+- Skript-VM laeuft in genau einem cellFiber (RunFibers tid 31, ea 7FF1A800, opd 014E0848), immer READY (Yield-Schleife). `PAD_LISTENERS=1`, `FIBER_DUMP=1`, `WAITFLAG_LOG=1` (Diagnose, Patch `patches/gt6-pad-listeners-fiber-dump.patch` + stubs.cpp).
+- WaitFlag-Log: einziger Waiter flag=0x7FEDA084 value=0 cur=1, lr=0x00A2F44C (func_00A2F410, Thread-lokales Objekt). Der Waker (func_00A2F8B8 "resume") wird nie aufgerufen; func_00A2FAD0 ("wake all", lr 0x567DA4) genau einmal im Boot. Beide haben keine statischen Aufrufer (nur indirekt).
+- Bewertung: die Fiber ist vermutlich ein Idle-Worker, kein Eingabe-Gate. WaitFlag-Hypothese nicht bestaetigt, nichts geaendert (2-ms-Bailout bleibt).
+- Nicht erledigt: "Schliessen"-Helligkeit, Row-1-Fokus, Eingabe. Naechster Schritt: Produzenten-Seite (wer ruft func_00A2F8B8 indirekt) per Laufzeit-Hook auf ps3_indirect_call-Ziel 0xA2F8B8 suchen, oder den Fokus-Setter im Widget-Baum (Draw-Liste cap_col2 vergleichen) direkt suchen.
+- Hinweis Tooling: cap-gt6 `-Env` ist komma-getrennt, Werte mit Komma (PPU_WWATCH=addr,len) gehen nicht. WWATCH-Ausgabe heisst `[ww]`, RWATCH `[rwatch]` (in .err).

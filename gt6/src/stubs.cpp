@@ -1238,11 +1238,20 @@ static void gt6_unknown_27DEDA93(ppu_context* ctx)
     ctx->gpr[3] = 0;
 }
 
-// cellMusicInitialize2 (NID 0xBE50B11E): no music backend. CELL_OK, no callback.
+extern "C" int32_t cellSysutilQueueGuestCallbackArgs(uint32_t opd, const uint64_t args[8]);
+// cellMusicInitialize2 (NID 0xBE50B11E): no music backend. CELL_OK + INITIALIZE_RESULT callback.
 static void gt6_cellMusicInitialize2(ppu_context* ctx)
 {
     static int l = 0;
-    gt6_stub_log_once("cellMusicInitialize2 -> CELL_OK (no callback)", &l, 0);
+    gt6_stub_log_once("cellMusicInitialize2 -> CELL_OK", &l, 0);
+    uint32_t func = (uint32_t)ctx->gpr[5], user = (uint32_t)ctx->gpr[6];
+    printf("[GT6] cellMusicInitialize2 func=0x%08X user=0x%08X\n", func, user);
+    /* RPCS3 reports INITIALIZE_RESULT(1, &CELL_OK, user) via the sysutil
+     * callback queue. MUSIC_NOCB=1 restores the old no-callback behaviour. */
+    if (func && !getenv("MUSIC_NOCB")) {
+        const uint64_t a[8] = {1, (uint64_t)user, (uint64_t)user, 0, 0, 0, 0, 0};
+        cellSysutilQueueGuestCallbackArgs(func, a);
+    }
     ctx->gpr[3] = 0;
 }
 
@@ -1272,6 +1281,13 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
     const uint32_t flag  = (uint32_t)ctx->gpr[3];
     const uint32_t value = (uint32_t)ctx->gpr[4];
 
+    if (getenv("WAITFLAG_LOG")) {
+        static int n = 0;
+        if (n < 40 || (n % 2000) == 0)
+            fprintf(stderr, "[waitflag] #%d flag=%08X value=%u cur=%08X lr=%08X\n",
+                    n, flag, value, flag ? vm_read32((uint64_t)flag) : 0u, (uint32_t)ctx->lr);
+        ++n;
+    }
     if (flag) {
         /* Inside a fiber: yield to the scheduler. On a plain thread Yield
          * fails; the guest then loops on its own flag word, so block here

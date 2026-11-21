@@ -1,0 +1,67 @@
+diff --git a/libs/input/cellPad.c b/libs/input/cellPad.c
+index 5f8a2fa2..5e074615 100644
+--- a/libs/input/cellPad.c
++++ b/libs/input/cellPad.c
+@@ -1201,6 +1201,36 @@ emit:
+      * attack firing once.
+      *
+      * PAD_ALWAYS_CHANGE=1 restores the old always-a-packet behaviour. */
++    { static int _tr = -1; static long _n = 0;
++      if (_tr < 0) _tr = getenv("PAD_TRACE") ? 1 : 0;
++      if (_tr && port_no == 0) { _n++;
++        if ((data->button[CELL_PAD_BTN_OFFSET_DIGITAL1] | data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]) || (_n % 500) == 1)
++            printf("[padtrace] n=%ld len=%d d1=%04X d2=%04X\n", _n, (int)data->len, data->button[CELL_PAD_BTN_OFFSET_DIGITAL1], data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]); } }
++    { static int _tr2 = -1, _d = 0;
++      if (_tr2 < 0) _tr2 = getenv("PAD_TRACE") ? 1 : 0;
++      if (_tr2 && !_d && (data->button[CELL_PAD_BTN_OFFSET_DIGITAL1] | data->button[CELL_PAD_BTN_OFFSET_DIGITAL2])) {
++          extern PPU_THREAD_LOCAL ppu_context* g_active_ctx;
++          extern void ppu_dump_guest_stack(ppu_context*, const char*);
++          if (g_active_ctx) { _d = 1; printf("[padtrace] buf EA=0x%08X\n", (unsigned)(uintptr_t)data_guest);
++                              ppu_dump_guest_stack(g_active_ctx, "pad"); } } }
++    { /* PAD_STRUCT=<hexbase>: diff 0x400 guest bytes at each poll once a button is held */
++      static int _ps = -1; static unsigned _base = 0; static unsigned _prev[256]; static int _have = 0, _armed = 0, _lines = 0;
++      if (_ps < 0) { const char* e = getenv("PAD_STRUCT"); _ps = (e && *e) ? 1 : 0; if (_ps) _base = (unsigned)strtoul(e, 0, 16); }
++      if (_ps && port_no == 0) {
++          if (data->button[CELL_PAD_BTN_OFFSET_DIGITAL1] | data->button[CELL_PAD_BTN_OFFSET_DIGITAL2]) _armed = 1;
++          unsigned cur[256];
++          for (int i = 0; i < 256; i++) cur[i] = vm_read32(_base + (unsigned)i * 4);
++          if (_have && _armed && _lines < 400)
++              for (int i = 0; i < 256; i++) if (cur[i] != _prev[i] && _lines < 400 && !(i*4>=0xC4 && i*4<=0x128 && (i*4==0xC4||i*4==0xC8||i*4==0x124||i*4==0x128))) { _lines++;
++                  printf("[padstruct] +%03X %08X -> %08X\n", i * 4, _prev[i], cur[i]); }
++          { static int _ch = 0; if (getenv("PAD_LISTENERS") && (_ch++ % 600) == 0) { /* listener list at mgr+0x43C -> +4 chain, next at +8 */
++              unsigned p = vm_read32(0x0165AD40u + 0x43C); unsigned n = p ? vm_read32(p + 4) : 0; int k = 0;
++              printf("[padlisten] hdr=%08X first=%08X\n", p, n);
++              for (unsigned o = 0; o < 0xA0; o += 16) printf("[padlisten] mgr+%03X: %08X %08X %08X %08X\n", o, vm_read32(0x0165AD40u+o), vm_read32(0x0165AD40u+o+4), vm_read32(0x0165AD40u+o+8), vm_read32(0x0165AD40u+o+12));
++              for (unsigned o = 0; o < 0xE0; o += 16) printf("[padlisten] L0+%03X: %08X %08X %08X %08X\n", o, vm_read32(0x0165B1A8u+o), vm_read32(0x0165B1A8u+o+4), vm_read32(0x0165B1A8u+o+8), vm_read32(0x0165B1A8u+o+12));
++              while (n && k++ < 16) { printf("[padlisten]   node=%08X +0=%08X +4=%08X +8=%08X +C=%08X\n", n, vm_read32(n), vm_read32(n+4), vm_read32(n+8), vm_read32(n+12)); n = vm_read32(n + 8); } } }
++          memcpy(_prev, cur, sizeof cur); _have = 1;
++      } }
+     {
+         unsigned int ea = (unsigned int)(uintptr_t)data_guest;
+         vm_write32((unsigned long long)ea + 0, (unsigned int)data->len);   /* len (s32) */
+diff --git a/libs/spurs/cellFiber.c b/libs/spurs/cellFiber.c
+index 3673985c..74b4ef0b 100644
+--- a/libs/spurs/cellFiber.c
++++ b/libs/spurs/cellFiber.c
+@@ -429,10 +429,20 @@ s32 cellFiberPpuRunFibers(CellFiberPpuScheduler* scheduler)
+     s->running = 1;
+ 
+     for (;;) {
++#ifdef _WIN32
++        { /* FIBER_DUMP=1: every 3 s list this scheduler's fibers (diagnostic) */
++          static int en = -1; static ULONGLONG last = 0;
++          if (en < 0) en = getenv("FIBER_DUMP") ? 1 : 0;
++          if (en && GetTickCount64() - last > 3000) { last = GetTickCount64();
++              static const char* nm[] = {"READY","RUNNING","WAIT_SIGNAL","WAIT_JOIN","DONE"};
++              fprintf(stderr, "[fibers] sched=%08X\n", s->ea);
++              for (Fiber* g = s_fibers; g; g = g->next) if (g->sched == s)
++                  fprintf(stderr, "[fibers]   ea=%08X opd=%08X prio=%u %s sigpend=%d\n", g->ea, g->opd, g->priority, nm[g->state], g->signal_pending); } }
++#endif
+         Fiber* f = pick_runnable(s);
+         if (!f) {
+             if (all_done(s)) break;
+-            WAIT();              /* its fibers wait for a signal, or a join, that another thread delivers */
++            WAIT();            /* its fibers wait for a signal, or a join, that another thread delivers */
+             continue;
+         }
+         f->state = F_RUNNING;
