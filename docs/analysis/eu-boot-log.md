@@ -379,3 +379,7 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - A26510 / event_port_send (syscall 138) is tracing/bookkeeping only. Fresh boot / 512-byte marker pass because cache size = 0 -> real reads.
 - Fix: fill cache from file (seek 0 + F7666C) after A26510 success. See patches/gt6-b5b260-cache-fill.patch.txt. Result: dialog gone, next gap NID 0xBE50B11E.
 - Open: the lift has no real filler; retail likely fills it through a path our runtime lacks (root cause unknown). Fix is a workaround in generated code (gitignored, re-apply after relift).
+
+## cellMusicInitialize2 (2026-11-21)
+- NID 0xBE50B11E stubbed in gt6/src/stubs.cpp (returns CELL_OK, no callback). Boot continues: frames presented (3300 takeflips/40 s), no unresolved NIDs, next fs open /dev_hdd1/cache/BCES01893/game024.db.
+- Not verified: whether the game later waits for a cellMusic callback; real-frame content not checked.

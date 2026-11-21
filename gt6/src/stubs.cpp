@@ -1238,6 +1238,14 @@ static void gt6_unknown_27DEDA93(ppu_context* ctx)
     ctx->gpr[3] = 0;
 }
 
+// cellMusicInitialize2 (NID 0xBE50B11E): no music backend. CELL_OK, no callback.
+static void gt6_cellMusicInitialize2(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("cellMusicInitialize2 -> CELL_OK (no callback)", &l, 0);
+    ctx->gpr[3] = 0;
+}
+
 static void gt6_net_inet_pton(ppu_context* ctx)
 {
     static int l = 0;
@@ -1646,6 +1654,7 @@ extern "C" void gt6_hle_overrides(void)
     ps3_hle_register_ctx(0x13EFE7F5u, "getsockname", gt6_net_getsockname);
     ps3_hle_register_ctx(0x8AF3825Eu, "inet_pton", gt6_net_inet_pton);
     ps3_hle_register_ctx(0x27DEDA93u, "unknown_0x27DEDA93", gt6_unknown_27DEDA93);
+    ps3_hle_register_ctx(0xBE50B11Eu, "cellMusicInitialize2", gt6_cellMusicInitialize2);
     ps3_hle_register_ctx(0xA4599CF3u, "cellFiberPpuWaitFlag",
                          gt6_cellFiberPpuWaitFlag);
     ps3_hle_register_ctx(0xF6C6900Cu, "cellFiberPpuCheckFlags",
