@@ -480,3 +480,10 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Objekt-Dump: vtable 0x1489E58, +4 Manager, +8 Name **"processEventLoop"**, +0x28 = 0x014BF800 (Tabelle, erster Eintrag opd 0x568A0C = Task), +0x40 Flag (=1 schlafend). Task 0x568A0C ist also die Event-Schleife, Fiber ist Event-Worker.
 - Watch r4+0x28 ab A2FC54-Eintritt: danach KEIN Schreiber auf obj+0x1C..0x9C. Event-Worker wird nach Lauf 4 nie mehr gestupst (Flag/Task-Feld unveraendert).
 - Hypothese: Wake kommt von einer Event-Quelle (Pad/Sysutil/Timer-Event -> Queue-Push -> Wake). Zu pruefen: welche Producer-Funktion in RPCS3 laeuft (Thread-/Syscall-Log), z.B. sys_event_queue_send / sys_timer / sys_event_flag in RPCS3.log vs unser Lauf.
+
+## Event-Producer: RPCS3.log vs unser Lauf (2026-11-21)
+- `cellFiberPpuCreateFiber` (NID 7C2F4034) wird im ganzen Lauf **einmal** gerufen (tid 1, func_00A14824+0x54 -> processEventLoop). Das ist bei uns kein Defekt: es gibt keine weiteren Fibers, die RPCS3 haette.
+- PDIPFS-Install, savedata AutoLoad2 (PDI-Threads), Trophy-Init laufen bei uns wie in RPCS3 (Reihenfolge der .fdupm identisch, wir sind weiter als das RPCS3-Log).
+- Abweichung gefunden: Netz-Init. RPCS3: `cellNetCtlGetInfo(0x15)` -> NOT_CONNECTED (0x80130108), danach legt das Spiel CYYqg/AEIVZ/XyGIK an. Bei uns lieferte GetInfo OK und `getsockname` -1 (Stub) -> CYYqg/AEIVZ fehlten. Fix: getsockname -> 0 + sockaddr_in (GETSOCKNAME_FAIL=1 = alt), GetInfo(HTTP_PROXY_CONFIG) offline -> NOT_CONNECTED (NETCTL_PROXY_OK=1 = alt). Jetzt entstehen CYYqg, AEIVZ, XyGIK wie in RPCS3.
+- Weiter offen: ZWAP (Thread, pollt cellMusicGetPlaybackStatus2 alle ~75 ms, 14106 Calls in RPCS3) wird bei uns nie angelegt; `[PlaybackStatus]` 0 Calls. Dialog-Pad-Input unveraendert (noch nicht neu geprueft).
+- Neues Tooling: PS3_SC_COUNT (Syscall-Zaehler), PS3_HLE_STACK=<nid-hex> (Gast-Stack der ersten 3 Calls). NID-Rechner: `third_party/ps3recomp/tools/nid_database.py compute_nid(name)`.

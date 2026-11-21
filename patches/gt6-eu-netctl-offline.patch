@@ -1,0 +1,17 @@
+diff --git a/libs/network/cellNetCtl.c b/libs/network/cellNetCtl.c
+index 8b002ffe..598f33a2 100644
+--- a/libs/network/cellNetCtl.c
++++ b/libs/network/cellNetCtl.c
+@@ -251,6 +251,12 @@ s32 cellNetCtlGetInfo(s32 code, CellNetCtlInfo* info)
+         break;
+ 
+     case CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG:
++        /* RPCS3 offline: GetInfo(0x15) fails with NOT_CONNECTED; GT6 only
++         * continues into its net worker threads after that. */
++        if (!netctl_online() && !getenv("NETCTL_PROXY_OK")) {
++            printf("[cellNetCtl] GetInfo(HTTP_PROXY_CONFIG) -> NOT_CONNECTED (offline)\n");
++            return CELL_NET_CTL_ERROR_NOT_CONNECTED;
++        }
+         info->http_proxy_config = 0; /* disabled */
+         break;
+ 

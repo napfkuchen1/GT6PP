@@ -1227,8 +1227,18 @@ static void gt6_sys_mempool_create(ppu_context* ctx)
 static void gt6_net_getsockname(ppu_context* ctx)
 {
     static int l = 0;
-    gt6_stub_log_once("getsockname", &l, -1);
-    ctx->gpr[3] = (uint64_t)(int64_t)-1;
+    /* RPCS3: bind(0.0.0.0:0)+getsockname succeed, then the game creates its net
+     * worker threads. Report an unbound IPv4 sockaddr (len 16, AF_INET). */
+    if (getenv("GETSOCKNAME_FAIL")) {
+        gt6_stub_log_once("getsockname", &l, -1);
+        ctx->gpr[3] = (uint64_t)(int64_t)-1;
+        return;
+    }
+    const uint32_t addr = (uint32_t)ctx->gpr[4], plen = (uint32_t)ctx->gpr[5];
+    if (addr && vm_base) { memset(vm_base + addr, 0, 16); vm_base[addr] = 16; vm_base[addr + 1] = 2; }
+    if (plen && vm_base) { vm_write32(plen, 16); }
+    gt6_stub_log_once("getsockname", &l, 0);
+    ctx->gpr[3] = 0;
 }
 
 static void gt6_unknown_27DEDA93(ppu_context* ctx)
