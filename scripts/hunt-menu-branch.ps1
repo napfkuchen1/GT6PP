@@ -14,7 +14,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $BuildDir = if ($env:GT6_BUILD_DIR) { $env:GT6_BUILD_DIR } else { "gt6\build" }
 $Exe = Join-Path $Root "$BuildDir\gt6.exe"
 $Elf = Join-Path $Root "work\bin\EMAIN.elf"
-$Out = Join-Path $Root "work\hunt"
+$Out = Join-Path $Root ("work\hunt_" + (Get-Date -Format "yyyyMMdd_HHmmss"))
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $mingw = Get-ChildItem -Path (Join-Path $Root "tools\llvm-mingw") -Directory -ErrorAction SilentlyContinue |
     ForEach-Object { Join-Path $_.FullName "bin\clang.exe" } | Where-Object { Test-Path $_ } | Select-Object -First 1
