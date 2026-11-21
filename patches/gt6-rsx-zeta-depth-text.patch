@@ -1,0 +1,160 @@
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -1685,11 +1685,11 @@
+                         r->cc[0], r->cc[1], r->cc[2], r->cc[3]);
+             else {
+                 fprintf(mf, "op%03u DRAW  rt=0x%08X mrt=0x%X/0x%X/0x%X vp=%u,%u,%ux%u fp=0x%08X vs=%d "
+-                            "n=%u cmask=%X blend=%d bk=0x%X t0=0x%08X t1=0x%08X t2=0x%08X t3=0x%08X\n",
++                            "n=%u cmask=%X blend=%d bk=0x%X t0=0x%08X t1=0x%08X t2=0x%08X t3=0x%08X zeta=0x%08X zs=0x%llX\n",
+                         d, r->rt_off, r->rt_mrt[0], r->rt_mrt[1], r->rt_mrt[2],
+                         r->vp_x, r->vp_y, r->vp_w, r->vp_h,
+                         r->fp_addr, r->vs_idx, r->vertex_count, r->cmask, r->blend, r->blend_key,
+-                        r->tex[0].raw, r->tex[1].raw, r->tex[2].raw, r->tex[3].raw);
++                        r->tex[0].raw, r->tex[1].raw, r->tex[2].raw, r->tex[3].raw, r->zeta_off, (unsigned long long)r->zs_key);
+                 for (int u = 0; u < 4; u++)
+                     if (r->tex[u].set)
+                         fprintf(mf, "      t%d off=0x%08X fmt=0x%02X (%s%s) %ux%u remap=0x%04X\n", u,
+@@ -3187,6 +3187,76 @@
+      * it by calling this rather than porting the loops again. */
+     rsx_texture_decode(mapped, pitch, vm_base + off, w, h, &tl,
+                        rsx_texture_argb_is_rgba());
++    /* TEXDUMP=<fmtlist hex, e.g. 86,88,A8>: dump the raw guest bytes of each
++     * distinct texture of those base formats (first 24) plus a DXT1/DXT5 decode
++     * to BMP (rgb + alpha) under RSX_CAP_DIR (or cwd). Diagnostic only. */
++    { static const char* td = (const char*)1;
++      if (td == (const char*)1) td = getenv("TEXDUMP");
++      if (td && _f == 0) {
++        char want[16]; snprintf(want, sizeof want, "%02X", fmt & 0x9F);
++        char wl[16]; snprintf(wl, sizeof wl, "%02X", fmt & 0xFF);
++        if (strstr(td, want) || strstr(td, wl)) {
++          static u32 seen[64]; static int ns = 0; int known = 0;
++          u32 sz = dxt ? blkrow * blkrows : w * h * (bpp ? bpp : 1);
++          u32 key = off ^ (w << 20) ^ h ^ (fmt << 24);
++          for (int k = 0; k < ns; k++) if (seen[k] == key) known = 1;
++          if (!known && ns < 24) { seen[ns++] = key;
++            const char* dir = getenv("RSX_CAP_DIR"); char pn[400];
++            snprintf(pn, sizeof pn, "%s/texraw_%08X_%ux%u_f%02X_p%u.bin", dir ? dir : ".", off, w, h, fmt, pitch_arg);
++            FILE* f = fopen(pn, "wb"); if (f) { fwrite(vm_base + off, 1, sz, f); fclose(f); }
++            fprintf(stderr, "[TEXDUMP] %s sz=%u pitch_arg=%u row_bytes=%u dxt=%d swz=%d%c", pn, sz, pitch_arg, tl.row_bytes, dxt, tl.swizzled, 10);
++            if (dxt && ((fmt & 0x9F) == 0x86 || (fmt & 0x9F) == 0x88)) {
++              int d5 = (fmt & 0x9F) == 0x88; u32 bs = d5 ? 16 : 8;
++              u32 bw = (w + 3) / 4, bh = (h + 3) / 4;
++              u8* rgb = (u8*)calloc((size_t)w * h, 4);
++              for (u32 by = 0; by < bh; by++) for (u32 bx = 0; bx < bw; bx++) {
++                const u8* b = vm_base + off + (u64)by * tl.row_bytes + bx * bs;
++                u8 al[8] = {0}; u8 ai[16] = {0};
++                if (d5) { al[0]=b[0]; al[1]=b[1];
++                  if (al[0] > al[1]) for (int i=1;i<7;i++) al[1+i] = (u8)(((7-i)*al[0] + i*al[1]) / 7);
++                  else { for (int i=1;i<5;i++) al[1+i] = (u8)(((5-i)*al[0] + i*al[1]) / 5); al[6]=0; al[7]=255; }
++                  /* al[0],al[1] are endpoints; rebuild indices 2..7 above wrote into al[2..] */
++                  u64 bits = 0; for (int i=0;i<6;i++) bits |= (u64)b[2+i] << (8*i);
++                  for (int i=0;i<16;i++) ai[i] = (u8)((bits >> (3*i)) & 7); }
++                const u8* cb = b + (d5 ? 8 : 0);
++                u16 c0 = (u16)(cb[0] | cb[1] << 8), c1 = (u16)(cb[2] | cb[3] << 8);
++                u8 col[4][4];
++                u8 r0=(c0>>11)*255/31, g0=((c0>>5)&63)*255/63, b0=(c0&31)*255/31;
++                u8 r1=(c1>>11)*255/31, g1=((c1>>5)&63)*255/63, b1=(c1&31)*255/31;
++                col[0][0]=r0;col[0][1]=g0;col[0][2]=b0;col[0][3]=255;
++                col[1][0]=r1;col[1][1]=g1;col[1][2]=b1;col[1][3]=255;
++                if (c0 > c1 || d5) {
++                  col[2][0]=(2*r0+r1)/3;col[2][1]=(2*g0+g1)/3;col[2][2]=(2*b0+b1)/3;col[2][3]=255;
++                  col[3][0]=(r0+2*r1)/3;col[3][1]=(g0+2*g1)/3;col[3][2]=(b0+2*b1)/3;col[3][3]=255;
++                } else {
++                  col[2][0]=(r0+r1)/2;col[2][1]=(g0+g1)/2;col[2][2]=(b0+b1)/2;col[2][3]=255;
++                  col[3][0]=col[3][1]=col[3][2]=0;col[3][3]=0;
++                }
++                u32 ix = cb[4] | cb[5] << 8 | cb[6] << 16 | (u32)cb[7] << 24;
++                for (int py = 0; py < 4; py++) for (int px = 0; px < 4; px++) {
++                  u32 x = bx * 4 + px, y = by * 4 + py; if (x >= w || y >= h) continue;
++                  int ci = (ix >> (2 * (py * 4 + px))) & 3; u8* o = rgb + ((u64)y * w + x) * 4;
++                  o[0]=col[ci][0]; o[1]=col[ci][1]; o[2]=col[ci][2];
++                  o[3] = d5 ? al[ai[py*4+px]] : col[ci][3];
++                }
++              }
++              for (int pass = 0; pass < 2; pass++) {
++                char bn[400]; snprintf(bn, sizeof bn, "%s/texdec_%08X_%ux%u_f%02X_%s.bmp", dir ? dir : ".", off, w, h, fmt, pass ? "a" : "rgb");
++                FILE* g = fopen(bn, "wb"); if (!g) continue;
++                u32 rowb = w * 3, rowp = (rowb + 3) & ~3u, fsz = 54 + rowp * h;
++                u8 hd[54] = {'B','M'}; hd[2]=(u8)fsz; hd[3]=(u8)(fsz>>8); hd[4]=(u8)(fsz>>16); hd[5]=(u8)(fsz>>24);
++                hd[10]=54; hd[14]=40; hd[18]=(u8)w; hd[19]=(u8)(w>>8); hd[22]=(u8)h; hd[23]=(u8)(h>>8); hd[26]=1; hd[28]=24;
++                fwrite(hd, 1, 54, g);
++                for (int y = (int)h - 1; y >= 0; y--) { for (u32 x = 0; x < w; x++) { const u8* p = rgb + ((u64)y*w + x)*4; u8 px[3];
++                    if (pass) px[0]=px[1]=px[2]=p[3]; else { px[0]=p[2]; px[1]=p[1]; px[2]=p[0]; }
++                    fwrite(px, 1, 3, g); } for (u32 z = rowb; z < rowp; z++) fputc(0, g); }
++                fclose(g);
++              }
++              free(rgb);
++            }
++          }
++        }
++      } }
+ 
+     /* The diagnostics below only apply to the linear 8-bit case (Bink video
+      * planes); they used to sit inside that branch of the conversion. */
+@@ -3998,6 +4068,19 @@
+     r->st = to;
+ }
+ 
++/* 1 when any draw of this frame samples the depth surface at `off` as a texture
++ * (GT6 text: glyphs write stencil, a later cover pass reads it back). */
++static int zeta_sampled(u32 off, u32* pw, u32* ph)
++{
++    for (u32 d = 0; d < s_d3d.draw_count && d < MAX_DRAWS; d++) {
++        const D3D12DrawRecord* r = &s_d3d.draws[d];
++        if (!r->is_vp || r->is_clear) continue;
++        for (int u = 0; u < 16; u++)
++            if (r->tex[u].set && r->tex[u].raw == off) { *pw = r->tex[u].w; *ph = r->tex[u].h; return 1; }
++    }
++    return 0;
++}
++
+ static int off_ds_find(u32 off)
+ {
+     if (!off) return -1;
+@@ -4849,6 +4932,10 @@
+                 off_rt_get(dr->rt_mrt[_m], dr->rt_w, dr->rt_h, dr->rt_fmt);
+         if (dr->is_vp && dr->zeta_off && (dr->rt_off || dr->no_color))
+             off_ds_get(dr->zeta_off, dr->rt_w, dr->rt_h);
++        u32 _zw = 0, _zh = 0;
++        if (0) {}
++        else if (dr->is_vp && !dr->is_clear && dr->zeta_off && !dr->rt_off && zeta_sampled(dr->zeta_off, &_zw, &_zh))
++            off_ds_get(dr->zeta_off, _zw > s_d3d.width ? _zw : s_d3d.width, _zh > s_d3d.height ? _zh : s_d3d.height);   /* display pass whose depth is sampled later */
+         for (int _u = 0; _u < 16; _u++) dr->tex_ds[_u] = -1;   /* set below for draws */
+     }
+     for (u32 _d = 0; _d < s_d3d.draw_count && _d < MAX_DRAWS; _d++) {
+@@ -4963,8 +5050,14 @@
+                 if (crt >= 0) {
+                     dr->tex_rt[_u] = crt;
+                     dr->tex_ds[_u] = ds;
+-                    srv_write(wslot, s_d3d.off_rt[crt].res, (DXGI_FORMAT)s_d3d.off_rt[crt].dxgi,
+-                              D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING);
++                    /* The copy holds real A,R,G,B (A = depth high byte, B =
++                     * stencil), so the guest's crossbar applies as for any
++                     * A8R8G8B8 texture (GT6 text reads it through 0xAAFF). */
++                    { static int dm = -1;
++                      if (dm < 0) { const char* e = getenv("DS_REMAP"); dm = e ? atoi(e) : 1; }
++                      srv_write(wslot, s_d3d.off_rt[crt].res, (DXGI_FORMAT)s_d3d.off_rt[crt].dxgi,
++                                dm ? rsx_remap_to_d3d(dr->tex[_u].ctrl1, 0x85)
++                                   : D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING); }
+                     continue;
+                 }
+             }
+@@ -5270,7 +5363,8 @@
+                 if (!dr->is_vp) continue;
+                 for (int _u = 0; _u < 16; _u++) {
+                     const int ds = dr->tex_ds[_u];
+-                    if (ds < 0 || ds == cur_z || s_d3d.off_ds[ds].conv_gen == s_d3d.off_ds[ds].gen)
++                    if (ds < 0 || (ds == cur_z && (dr->zs_key & (2u | (1u << 5)))) ||
++                        s_d3d.off_ds[ds].conv_gen == s_d3d.off_ds[ds].gen)
+                         continue;
+                     ds_convert(ds, dr->tex_rt[_u]);
+                     s_d3d.cmd_list->lpVtbl->SetGraphicsRootSignature(s_d3d.cmd_list, s_d3d.vp_root_sig);
+@@ -5309,7 +5403,7 @@
+                     wantm[_m] = (dr->rt_mrt[_m] && !dr->no_color) ? off_rt_find(dr->rt_mrt[_m]) : -1;
+                 /* The draw's own depth surface, or the shared buffer for a pass
+                  * without one (and for display targets, as before). */
+-                const int wantz = (dr->zeta_off && (want >= 0 || dr->no_color))
++                const int wantz = (dr->zeta_off && (want >= 0 || dr->no_color || !dr->rt_off))
+                                 ? off_ds_find(dr->zeta_off) : -1;
+                 if (want != cur_rt || wantm[0] != cur_m[0] ||
+                     wantm[1] != cur_m[1] || wantm[2] != cur_m[2] ||

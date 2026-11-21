@@ -397,3 +397,11 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Result (`docs/analysis/eu-language-select-dialog.png`, frame 2500): dialog panel, title bar, 4 menu rows, highlighted row; text is still solid grey/blue glyph blocks (8x8/128x128 atlas content wrong) and the backdrop gradient (yellow/green/cyan) is likely wrong.
 - Test tooling: `scripts/cap-gt6.ps1 -Name x -Env "K=V,K=V"` = one call run + frame capture + PNG + pixel stats. DRAW_LIMIT bisect is unreliable (frame content differs per run); use RT_OFFDBG / TEX_MARKEMPTY / TEXEMPTY logs first.
 - Upstream comparison: no new upstream commits; US-disc docs stuck at black window; ROADMAP M2 items already done here. Useful: `rpcs3-oracle.md` (RPCS3 in tools/RPCS3 as visual reference), `host-font-sync-fix.md` (fonts load here via pfs override, OK).
+
+## Text blocks = stencil glyphs + depth-as-texture (2026-11-21)
+- Glyph textures (DXT1 128x128, DXT5 36x36, DXT5 8x8) are fine: `TEXDUMP="86 88 A8"` hook dumps raw bytes + decoded BMPs, pitch == row bytes everywhere. Not the cause.
+- Manifest now prints `zeta=` / `zs=`. Glyph passes (op005..036: vs=0, cmask=0) have zeta 0x1980000, stencil test ALWAYS + INVERT/INCR/DECR on bit 7 (stencil-then-cover). Cover passes (op037/057, vs=7, cmask=F, zs=0) sample the zeta as 1440x1080 fmt 0xE5 texture, crossbar 0xAAFF.
+- Old behaviour: OffDS (depth -> colour copy via ds_convert) only for off-screen RT / depth-only passes; GT6 draws to the display buffer, so ZETA_FILL=0xFF made solid blocks.
+- Fix (patches/gt6-rsx-zeta-depth-text.patch, apply after gt6-rsx-display-tex-zeta.patch): display-target draws whose zeta is sampled later in the frame get an OffDS (sized >= guest texture 1440x1080, `zeta_sampled()`); ds_convert also runs when the sampling draw does not write depth/stencil; the colour copy SRV applies the guest crossbar (`DS_REMAP=0` = old default mapping).
+- Result: `docs/analysis/eu-language-select-text.png` — readable text ("Sprache auswählen", "Schließen", Ελληνικά, Čeština, Magyar).
+- Still wrong: backdrop gradient (black/white diagonal, differs per run = screen-copy feedback), stray blue blob right of row 1.
