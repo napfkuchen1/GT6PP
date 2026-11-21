@@ -556,3 +556,14 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Offen: Fokus/Highlight auf Zeile 1 wird nie gesetzt; Press fuehrt zu Logo-Schleife ohne Persistenz.
 - KORREKTUR: der erste Pad-Test oben war ungueltig (PAD_SCRIPT kennt nur `<sek>:<hexmaske>`, keine Namen -> 256 Nullpresses). Gueltige Wiederholung: `PAD_SCRIPT="120:0x0040 126:0x4000"` (Log bestaetigt beide Presses) -> Dialog bei Frame 4800 unveraendert, ops=158 (work/cap_lgff_pad2). Kein AdjustScreenRoot, keine neuen Dateizugriffe.
 - Kontext aus movie-sequence-trace: display_sequence_gt6 = presents -> save-gate -> sequence-gate -> optionales LanguageSelectRoot.open -> AdjustScreenRoot. Der Dialog sitzt also NACH den Logos; der Press muss ihn schliessen. Savedata BCJS37016-GAME6/BKUP6 liefern isNew=1/-4 (erwartet beim Erststart).
+
+## Script-VM-Seite des Sprachdialogs (ADCH-Disassembly)
+
+Quelle: `work/boot_adc.txt` (tools/adch_disasm.py auf boot.adc), Modul `LanguageSelectRoot`.
+
+- `onFocusNotify(context,new_index,old_index)`: holt `getItemWidget(new_index)` und ruft `LanguageSelectRoot.setFocus(item)`.
+- `onActivate(context)`: spielt `main.sound.play("ok")`, liest `item.language` des `focus_index`. Bei `SYSTEM`: Option zuruecksetzen, dann `LanguageSelectRoot.close(context)`. Sonst `DialogUtil.openConfirmDialog(DEFAULT_NO)`; bei Ja `pdistd.SetLanguage`, `LangUtil.apply`, danach `close`.
+- Beide Handler werden nativ vom ListBox-Widget aufgerufen (Registrierung der Event-Namen `onVisibleNotify`/`onFocusNotify` bei EMAIN 0x600900..0x600A24, Widget-Felder +0x22c/+0x240/+0x24c). `onActivate` hat keine lis/addi-Referenz in EMAIN (Name wird anders geladen).
+- Konsequenz: Fehlende Zeile-1-Hervorhebung = `onFocusNotify` kommt nie an (oder `focus_index` bleibt -1). Pad-Eingang wird vom Mapper geliefert (siehe oben), erreicht aber das ListBox-Fokussystem nicht.
+- Offen: Aufrufer der Fokus-/Decide-Pfade in 0x600A50 (setzt +0x24c = +0x240, Fokus-Tauglichkeitspruefung) per `PS3_CALLTRACE_TO=600A50` + `PS3_CALLTRACE_AFTER=<sek>` tracen und pruefen, ob die Funktion nach Dialog-Erscheinen jemals laeuft.
+- Neu: `PS3_CALLTRACE_AFTER=<sek>` (patches/gt6-calltrace-after.patch) schaltet den Calltrace erst nach N s Wandzeit scharf.

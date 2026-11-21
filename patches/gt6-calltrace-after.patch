@@ -1,0 +1,20 @@
+diff --git a/runtime/ppu/ppu_loader.cpp b/runtime/ppu/ppu_loader.cpp
+index ea7de18a..8167e29a 100644
+--- a/runtime/ppu/ppu_loader.cpp
++++ b/runtime/ppu/ppu_loader.cpp
+@@ -21,4 +21,5 @@
+ /* Hoisted: code below was added above the original include block, so these
+  * have to be visible from here rather than 160 lines further down. */
++#include <chrono>
+ #include <stdint.h>
+ #include <stdio.h>
+@@ -2687,4 +2759,9 @@ static void ps3_indirect_call_impl(ppu_context* ctx)
+                            only_to = e ? (int64_t)strtoul(e, 0, 16) : -1; }
+       if (only_to >= 0 && addr != (uint32_t)only_to) goto skip_calltrace;
++      /* PS3_CALLTRACE_AFTER=<sec>: arm the trace only after this much wall time
++       * (reach the dialog phase without burning the N budget on boot). */
++      { static double after = -2; static std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
++        if (after == -2) { const char* e = getenv("PS3_CALLTRACE_AFTER"); after = e ? atof(e) : -1; }
++        if (after > 0 && std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < after) goto skip_calltrace; }
+       static int64_t only_from = -2;
+       if (only_from == -2) { const char* e = getenv("PS3_CALLTRACE_FROM");
