@@ -518,3 +518,13 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - RPCS3.log enthaelt keine Pad-/Kb-Aufrufe (nur Import-Tabelle) und endet am Dialog; keine Aussage zu Eingabe-Verhalten moeglich.
 - Naechster Hebel: Draw-Seite (158 Ops, work/cap_zw1/manifest.txt; Highlight/Row-1 als Quad evtl. vorhanden aber nicht korrekt gerendert, Text via zeta/Stencil-Pass) und Widget-Fokus im Skript-VM.
 - Linker Stick voll aus (PAD_STICK=255,255,128,128,15,1000) bewegt den Zeiger nicht (cap_stk2 == cap_zw1). cellMouseGetInfo/KbGetInfo/PadGetInfo2/KbRead werden je Frame gepollt (2487x), cellMouseGetData nie, auch nicht mit MOUSE_FAKE (Port 0 connected). Zeiger sitzt fest am rechten Rand von Row 1 (~830,340); Eingabequelle des Zeigers unbekannt.
+
+## Dialog-Eingabepfad: Pad-Konsumenten (2026-11-21)
+- cellPadGetData (NID 0x8B72CDA1) 1x/Frame aus tid-26-Kette A304D0->A3D114->A37E2C->A1C1F8->2F94F8->A21E40; schreibt len+button[] direkt nach Gast 0x165ADE0. Pad-Manager 0x165AD40, 7 Listener (Stride 0xE0, ab 0x165B1A8, vtable 0x148A128, Index bei +0x40, Erzeuger func_00A3938C).
+- func_00A390E4 kopiert 0x80 Byte nach listener+0x54 (Button-Wort +0x58). Listener 0 bekommt Presses korrekt (+0x58=0x40 bei DOWN).
+- func_00A395F0 (Decoder) nur aus func_00811370 (tid 29, pro Frame) mit Listener 6 (0x165B6E8, nie Daten) -> vermutlich Debug-/Tastensequenz-Detektor, NICHT der Dialog-Konsument. Hack "Listener 6 -> 0" aendert den Dialog nicht (cap_exp*, alle == cap_zw1).
+- RWATCH auf Listener-0-State: waehrend der Dialogphase (100 s, DOWN alle 3 s) liest kein Gast-Code +0x40..0x58. Dialog-Eingabepfad bleibt unbekannt.
+- Per-Frame-HLE-NIDs identifiziert: 0x5BAF30FB cellMouseGetInfo, 0x2F1774D5 cellKbGetInfo, 0xACEE8542 cellGcmSetFlipImmediate, 0x189A74DA cellSysutilCheckCallback, 0x1573DC3F sys_lwmutex_lock; 0xFF0A21B7 = Legacy-SDK-Stub. Nur Info-Polls, keine Datenabfrage.
+- Zeitfalle: Dialog erscheint spaet (~Frame 3300); Press bei 3 s testet nur die Logo-Phase. cap-gt6: Name wird "cap_" vorangestellt, >=90 s fuer Frame 4500.
+- Temp-Probes/Hack in ppu_recomp_018/023 zurueckgenommen (work/ppu018.bak, ppu023.bak), Build sauber.
+- Naechster Schritt: Konsument ueber Draw-/Layout-Seite suchen (Fokus-Quad-Op in cap_zw1/manifest), oder Gast-Callgraph ab GPB-Widget-Update (LanguageSelectRoot) tracen.
