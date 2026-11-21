@@ -1217,13 +1217,89 @@ static void gt6_sys_prx_get_module_list(ppu_context* ctx)
     ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010003; /* ENOSYS */
 }
 
+/*
+ * sys_mempool (sysPrxForUser): fixed-size block pool over a guest chunk.
+ * create(r3=u32* out_id, r4=chunk, r5=chunk_size, r6=block_size, r7=ralign).
+ * RPCS3 implements it; GT6's wheel/FFB manager (func_00A5E5D8 area) creates one
+ * and, when create fails, skips the "lgFF" thread + timer setup RPCS3 boots with.
+ */
+#include <mutex>
+#include <vector>
+namespace {
+struct Gt6MemPool { bool used = false; std::vector<uint32_t> free_blocks; uint32_t total = 0; };
+Gt6MemPool g_mempools[32];
+std::mutex g_mempool_mx;
+}
 static void gt6_sys_mempool_create(ppu_context* ctx)
 {
-    static int l = 0;
-    gt6_stub_log_once("sys_mempool_create", &l, 0x80010004L);
-    ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010004; /* ENOMEM */
+    const uint32_t out = (uint32_t)ctx->gpr[3], chunk = (uint32_t)ctx->gpr[4];
+    const uint64_t csize = ctx->gpr[5], bsize = ctx->gpr[6];
+    uint64_t al = ctx->gpr[7]; if (al < 1) al = 1;
+    int64_t rc = 0;
+    if (!out || !chunk || !bsize || bsize > csize) rc = (int32_t)0x80010002; /* EINVAL */
+    else {
+        std::lock_guard<std::mutex> lk(g_mempool_mx);
+        int id = -1;
+        for (int i = 0; i < 32; i++) if (!g_mempools[i].used) { id = i; break; }
+        if (id < 0) rc = (int32_t)0x80010004;
+        else {
+            Gt6MemPool& p = g_mempools[id];
+            p.used = true; p.free_blocks.clear();
+            uint64_t a = (chunk + al - 1) / al * al, end = (uint64_t)chunk + csize;
+            const uint64_t step = (bsize + al - 1) / al * al;
+            for (; a + bsize <= end; a += step) p.free_blocks.push_back((uint32_t)a);
+            p.total = (uint32_t)p.free_blocks.size();
+            vm_write32(out, 0x6D500000u | (uint32_t)id);
+        }
+    }
+    fprintf(stderr, "[GT6] sys_mempool_create chunk=0x%X size=0x%llX block=0x%llX -> %lld\n", chunk, (unsigned long long)csize, (unsigned long long)bsize, (long long)rc);
+    ctx->gpr[3] = (uint64_t)rc;
 }
-
+static Gt6MemPool* gt6_mempool_get(uint32_t h)
+{
+    if ((h & 0xFFFF0000u) != 0x6D500000u || (h & 0xFFFFu) >= 32) return nullptr;
+    Gt6MemPool* p = &g_mempools[h & 0xFFFFu];
+    return p->used ? p : nullptr;
+}
+static void gt6_sys_mempool_allocate_block(ppu_context* ctx)
+{
+    for (int spin = 0; spin < 20000; spin++) {
+        { std::lock_guard<std::mutex> lk(g_mempool_mx);
+          Gt6MemPool* p = gt6_mempool_get((uint32_t)ctx->gpr[3]);
+          if (!p) { ctx->gpr[3] = 0; return; }
+          if (!p->free_blocks.empty()) { ctx->gpr[3] = p->free_blocks.back(); p->free_blocks.pop_back(); return; } }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    ctx->gpr[3] = 0;
+}
+static void gt6_sys_mempool_try_allocate_block(ppu_context* ctx)
+{
+    std::lock_guard<std::mutex> lk(g_mempool_mx);
+    Gt6MemPool* p = gt6_mempool_get((uint32_t)ctx->gpr[3]);
+    if (!p || p->free_blocks.empty()) { ctx->gpr[3] = 0; return; }
+    ctx->gpr[3] = p->free_blocks.back(); p->free_blocks.pop_back();
+}
+static void gt6_sys_mempool_free_block(ppu_context* ctx)
+{
+    std::lock_guard<std::mutex> lk(g_mempool_mx);
+    Gt6MemPool* p = gt6_mempool_get((uint32_t)ctx->gpr[3]);
+    if (!p) { ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x80010002; return; }
+    p->free_blocks.push_back((uint32_t)ctx->gpr[4]);
+    ctx->gpr[3] = 0;
+}
+static void gt6_sys_mempool_get_count(ppu_context* ctx)
+{
+    std::lock_guard<std::mutex> lk(g_mempool_mx);
+    Gt6MemPool* p = gt6_mempool_get((uint32_t)ctx->gpr[3]);
+    ctx->gpr[3] = p ? (uint64_t)p->free_blocks.size() : 0;
+}
+static void gt6_sys_mempool_destroy(ppu_context* ctx)
+{
+    std::lock_guard<std::mutex> lk(g_mempool_mx);
+    Gt6MemPool* p = gt6_mempool_get((uint32_t)ctx->gpr[3]);
+    if (p) { p->used = false; p->free_blocks.clear(); }
+    ctx->gpr[3] = 0;
+}
 static void gt6_net_getsockname(ppu_context* ctx)
 {
     static int l = 0;
@@ -1687,6 +1763,11 @@ extern "C" void gt6_hle_overrides(void)
     ps3_hle_register_ctx(0x1F71ECBEu, "cellKbGetConfiguration", gt6_cellKbGetConfiguration);
     ps3_hle_register_ctx(0xA5D06BF0u, "sys_prx_get_module_list", gt6_sys_prx_get_module_list);
     ps3_hle_register_ctx(0xCA9A60BFu, "sys_mempool_create", gt6_sys_mempool_create);
+    ps3_hle_register_ctx(0xA146A143u, "sys_mempool_allocate_block", gt6_sys_mempool_allocate_block);
+    ps3_hle_register_ctx(0x05C65656u, "sys_mempool_try_allocate_block", gt6_sys_mempool_try_allocate_block);
+    ps3_hle_register_ctx(0x608212FCu, "sys_mempool_free_block", gt6_sys_mempool_free_block);
+    ps3_hle_register_ctx(0x25596F51u, "sys_mempool_get_count", gt6_sys_mempool_get_count);
+    ps3_hle_register_ctx(0x9D3C0F81u, "sys_mempool_destroy", gt6_sys_mempool_destroy);
     ps3_hle_register_ctx(0x13EFE7F5u, "getsockname", gt6_net_getsockname);
     ps3_hle_register_ctx(0x8AF3825Eu, "inet_pton", gt6_net_inet_pton);
     ps3_hle_register_ctx(0x27DEDA93u, "unknown_0x27DEDA93", gt6_unknown_27DEDA93);
