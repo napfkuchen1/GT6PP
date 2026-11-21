@@ -543,3 +543,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Soak 8 Boots: 7x 43 Assets (Dialog-Pfad), **1x (Run 3) 47 Assets ohne LanguageSelectRoot.gpb, stattdessen arcade/option/gtmode/garage/gtauto .mpackage** -> Boot nahm den Hauptmenue-Pfad. Soak 10 Boots: 10/10 identisch. Soak 5 Boots unter CPU-Last: 1x langsamer Lauf (42 Assets, Dialog noch nicht erreicht nach 100 s). Hunt: 40 Boots, 0 Menue-Pfad.
 - Gleiche Gast-Eingaben bis nach SettingProject.gpb (Log-Diff: nur Thread-/SPU-Reihenfolge verschieden), also Race-Verzweigung im Gast, kein Dateizustand (userdb-Hash aendert sich jeden Lauf). Ursache offen; 1 von ~70 Boots, Log des Treffers wurde vom Folge-Soak ueberschrieben (Lehre: Soak-Logs pro Soak in eigenem Ordner halten).
 - Syscall 327 (2x beim Boot, Stub OK): kein beobachteter Effekt.
+
+## 2026-11-21 — sys_mempool + lgFF
+- Hunt "menu path" hit was false positive (arcade.mpackage loads in every boot before LanguageSelectRoot).
+- sys_mempool_create was ENOMEM stub (caller 0xA5E5D8). Implemented real pools; guest now creates event queue + "lgFF" thread + TM_FFB workers like RPCS3.
+- Result: baseline intact (Frame 4200, ops=158, work/cap_mempool1), dialog still w/o row-1 highlight, pad ignored. Hypothesis "mempool failure starves processEventLoop" NOT confirmed.
+- Next: real sys_usbd_initialize/get_device_list, sys_timer events, compare processEventLoop wake source.
