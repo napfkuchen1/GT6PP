@@ -455,3 +455,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Bewertung: die Fiber ist vermutlich ein Idle-Worker, kein Eingabe-Gate. WaitFlag-Hypothese nicht bestaetigt, nichts geaendert (2-ms-Bailout bleibt).
 - Nicht erledigt: "Schliessen"-Helligkeit, Row-1-Fokus, Eingabe. Naechster Schritt: Produzenten-Seite (wer ruft func_00A2F8B8 indirekt) per Laufzeit-Hook auf ps3_indirect_call-Ziel 0xA2F8B8 suchen, oder den Fokus-Setter im Widget-Baum (Draw-Liste cap_col2 vergleichen) direkt suchen.
 - Hinweis Tooling: cap-gt6 `-Env` ist komma-getrennt, Werte mit Komma (PPU_WWATCH=addr,len) gehen nicht. WWATCH-Ausgabe heisst `[ww]`, RWATCH `[rwatch]` (in .err).
+
+## WaitFlag real wait state (2026-11-21)
+- Korrektur: Der Fiber (sched 7FED9600, ea 7FF1A800) ist kein reiner Idle-Worker. tid 31 fuehrt die UI/Script-Update-Kette aus und haengt danach in cellFiberPpuRunFibers.
+- Experiment `WAITFLAG_REAL=1`: neuer Zustand F_WAIT_FLAG in cellFiber.c (`cellFiberPpuWaitFlagEx`), RunFibers kehrt zurueck wenn nur Flag-Waiter uebrig sind. Default aus.
+- Ergebnis: nur 1 WaitFlag-Aufruf (flag=7FEE8084 value=0 cur=1, lr=00A2F44C), Fiber bleibt geparkt, Waker (A2F8B8/A2FAD0) feuert nie. Bild schlechter (black=99 %, ops=17 statt 158). Hypothese "RunFibers-Rueckkehr allein loest Fokus/Input" widerlegt.
+- Offen: wer ruft A2F8B8/A2FAD0 auf (Timer/Event-Quelle fehlt vermutlich). WAITFLAG_LOG/WAITFLAG_CLEAR/WAITFLAG_REAL sind reine Diagnose-Schalter.

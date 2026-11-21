@@ -1275,6 +1275,8 @@ static void gt6_net_inet_pton(ppu_context* ctx)
  * an error and WaitFlag gives up instead of spinning.
  */
 extern "C" int32_t cellFiberPpuYield(void);
+extern "C" int32_t cellFiberPpuWaitFlagEx(uint32_t flag, uint32_t value);
+extern "C" void ppu_dump_guest_stack(ppu_context*, const char*);
 
 static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
 {
@@ -1284,9 +1286,18 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
     if (getenv("WAITFLAG_LOG")) {
         static int n = 0;
         if (n < 40 || (n % 2000) == 0)
-            fprintf(stderr, "[waitflag] #%d flag=%08X value=%u cur=%08X lr=%08X\n",
-                    n, flag, value, flag ? vm_read32((uint64_t)flag) : 0u, (uint32_t)ctx->lr);
+            fprintf(stderr, "[waitflag] tid=%u #%d flag=%08X value=%u cur=%08X lr=%08X\n",
+                    (unsigned)ctx->thread_id, n, flag, value, flag ? vm_read32((uint64_t)flag) : 0u, (uint32_t)ctx->lr);
+        if (n == 3) ppu_dump_guest_stack(ctx, "wf");
         ++n;
+    }
+    if (flag && getenv("WAITFLAG_CLEAR")) {   /* experiment: pretend the waker ran */
+        vm_write32((uint64_t)flag, value);
+        ctx->gpr[3] = 0;
+        return;
+    }
+    if (flag && getenv("WAITFLAG_REAL")) {   /* real wait state: RunFibers can return */
+        if (cellFiberPpuWaitFlagEx(flag, value) == 0) { ctx->gpr[3] = 0; return; }
     }
     if (flag) {
         /* Inside a fiber: yield to the scheduler. On a plain thread Yield
