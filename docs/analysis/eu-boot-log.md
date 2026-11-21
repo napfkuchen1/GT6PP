@@ -405,3 +405,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Fix (patches/gt6-rsx-zeta-depth-text.patch, apply after gt6-rsx-display-tex-zeta.patch): display-target draws whose zeta is sampled later in the frame get an OffDS (sized >= guest texture 1440x1080, `zeta_sampled()`); ds_convert also runs when the sampling draw does not write depth/stencil; the colour copy SRV applies the guest crossbar (`DS_REMAP=0` = old default mapping).
 - Result: `docs/analysis/eu-language-select-text.png` — readable text ("Sprache auswählen", "Schließen", Ελληνικά, Čeština, Magyar).
 - Still wrong: backdrop gradient (black/white diagonal, differs per run = screen-copy feedback), stray blue blob right of row 1.
+
+## 2026-11-21 — Sprachauswahl-Hintergrund (RPCS3-Vergleich)
+- RPCS3 (Firmware installiert, `tools/RPCS3`) zeigt: einheitlich dunkler Hintergrund, dunkles transluzentes Panel, weißer Text.
+- Unser Bild hatte eine weiß/schwarze Diagonale: Panel-/Hintergrund-Draws (fp 04E526C1/04E52681) lesen col0 aus Attribut 3, das der Guest als altes Array (fmt 0x1445, Stride 20, unzusammenhängende Mesh-Daten) aktiv lässt.
+- Fix: a3-Arrays beim Format-Schreiben ignorieren (`rsx_commands.c`), col0 kommt dann aus VERTEX_DATA4F. Env `A3KEEP=1` stellt altes Verhalten her. Patch `patches/gt6-rsx-ignore-stale-a3.patch`. Ergebnis `eu-language-select-bg.png` (cap: 87 % schwarz, 0 % blau/weiß).
+- Nebenwirkung: Titel weiß statt blau, Auswahlzeile ohne Hervorhebung, "Schließen" dunkel. Draw-Zeit-Variante (nur Panel-fps) scheitert, weil das Layout schon in set_vertex_attribs gebaut wird.

@@ -38,6 +38,9 @@ a deterministic stop with a named missing syscall/HLE function.
 - [x] Implement `cellGcmInit`, display buffers, `cellSpurs` init/workloads.
 - [x] Make the init flag at `0xA13644` true (current stop). Boot now runs past it on the EU disc (BCES01893).
 - [ ] Resolve `0x2DDBCC0A`, `0xFAA275A4`, `0x5C832BD7`.
+- [x] *(2026-11-21)* Boot-2 validator passes on the EU disc: root cause was an empty file cache (`B5B260`), fixed via cache-fill workaround (`patches/gt6-b5b260-cache-fill.patch.txt`).
+- [x] *(2026-11-21)* Stub `cellMusicInitialize2` (NID `0xBE50B11E`); game now reaches the language-select dialog at ~36 FPS.
+- [ ] cellMusic callback and syscall 327 are still stubbed (2x).
 - [x] Load the first `GT.VOL` assets (menus, fonts, scripts). `boot.adc`, `BootProject.gpb` and `PresentsRootSCEE.gpb` load on the EU disc.
 - [ ] Add `longjmp`/`setjmp` support if the LZ decoder stalls (GT5P required
       this).
@@ -52,6 +55,11 @@ set of assets.
 - [x] Drain the GCM FIFO and parse the first command buffer. Clears, immediate draws and flips run; with `FP_FORCE=1` the backbuffer fills with geometry. Real frames are still black.
 - [ ] Translate the first RSX vertex/fragment shaders.
 - [x] Present one frame from the game's own command stream. *(EU disc: the "Sony Computer Entertainment presents" legal screen renders, see `docs/analysis/first-frame-sce.png`.)*
+- [x] *(2026-11-21)* Display-offset textures get a screen copy; unwritten zeta textures are filled (`patches/gt6-rsx-display-tex-zeta.patch`).
+- [x] *(2026-11-21)* Language-select dialog renders: panel, title, 4 menu rows. Text is readable via stencil glyphs plus zeta-as-texture (`patches/gt6-rsx-zeta-depth-text.patch`).
+- [x] *(2026-11-21)* Debug tooling: `scripts/cap-gt6.ps1` (one-call render experiments), `TEXDUMP`, zeta fields in the capture manifest.
+- [x] *(2026-11-21)* Dialog background fixed: stale attribute-3 (col0) array ignored, matches the RPCS3 reference (dark uniform background, translucent panel) (`patches/gt6-rsx-ignore-stale-a3.patch`, `docs/analysis/eu-language-select-bg.png`).
+- [ ] Title colour (blue in RPCS3) and selected-row highlight differ; they need a3 for some draws, so a per-draw rule instead of the global a3 ignore is open.
 - [ ] Fix color-buffer / render-target issues as they appear.
 
 **Exit criteria:** a stable menu or attract-mode frame from the game's own

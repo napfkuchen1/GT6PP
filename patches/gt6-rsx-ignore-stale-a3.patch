@@ -1,0 +1,15 @@
+diff --git a/libs/video/rsx_commands.c b/libs/video/rsx_commands.c
+index 786caa9..cba810e 100644
+--- a/libs/video/rsx_commands.c
++++ b/libs/video/rsx_commands.c
+@@ -340,6 +340,10 @@ static int process_vertex_attrib_method(rsx_state* state, u32 method, u32 data)
+          * it is NOT using -- so the input layout was built from 16 attributes of
+          * which most were degenerate, and the draws rasterized nothing. */
+         attr->enabled   = (attr->size != 0);
++        /* EU language-select: the guest leaves a stale enabled a3 (col0) array (unrelated interleaved mesh data) for the
++         * panel/background draws; RPCS3 shows a uniform dark colour there, i.e. VERTEX_DATA4F. Ignore a3 arrays by default;
++         * A3KEEP=1 restores them. (Costs the blue title colour, see eu-boot-log.) */
++        { static int _o = -1; if (_o < 0) _o = getenv("A3KEEP") ? 0 : 1; if (_o && index == 3) attr->enabled = 0; }
+         attr->format    = data;
+         state->vertex_dirty = 1;
+         return 0;
