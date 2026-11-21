@@ -23,3 +23,16 @@ Findings from an independent setup attempt on Windows 11 with an EU disc
    BUILDING.md lets owners verify their decrypt step.
 
 Region check for the EU disc: see `eu-bces01893-compat.md`.
+
+## Status
+
+| # | Gap | State |
+|---|-----|-------|
+| 1 | unpinned base | fixed: `third_party.lock` pins v0.19.0 / `ae92407` |
+| 2 | implicit patch order | fixed: one canonical patch, applied by `scripts/setup-third-party.ps1` (`-Check` verifies) |
+| 3 | broken hunk header | fixed: the canonical patch is generated with `git diff` and applies cleanly to a fresh clone |
+| 4 | CRLF vs patches | fixed: `.gitattributes` (`*.patch -text`) |
+| 5 | function lists not committed | open |
+| 6 | no EMAIN.elf hash | open |
+| - | disc path hardcoded in scripts | open |
+| - | `B5B260` cache fill is a manual edit of generated code | open (`patches/gt6-b5b260-cache-fill.patch.txt`) |
