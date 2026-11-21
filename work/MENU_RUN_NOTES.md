@@ -19,3 +19,4 @@ Offen: Dialog verbraucht Pad scheinbar nicht (kein Reader auf listener+0x54); Po
 
 ## 2026-11-21 ADCH-Analyse LanguageSelectRoot
 onFocusNotify/onActivate gelesen (siehe docs/analysis/eu-boot-log.md). Naechster Schritt: PS3_CALLTRACE_TO=600A50 + PS3_CALLTRACE_AFTER=150. Zyklusbudget ueberschritten, Stopp.
+ct_listbox: 0 Zeilen, Calltrace sieht nur indirekte Calls; direkte Entry-Probe noetig.

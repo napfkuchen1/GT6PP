@@ -567,3 +567,5 @@ Quelle: `work/boot_adc.txt` (tools/adch_disasm.py auf boot.adc), Modul `Language
 - Konsequenz: Fehlende Zeile-1-Hervorhebung = `onFocusNotify` kommt nie an (oder `focus_index` bleibt -1). Pad-Eingang wird vom Mapper geliefert (siehe oben), erreicht aber das ListBox-Fokussystem nicht.
 - Offen: Aufrufer der Fokus-/Decide-Pfade in 0x600A50 (setzt +0x24c = +0x240, Fokus-Tauglichkeitspruefung) per `PS3_CALLTRACE_TO=600A50` + `PS3_CALLTRACE_AFTER=<sek>` tracen und pruefen, ob die Funktion nach Dialog-Erscheinen jemals laeuft.
 - Neu: `PS3_CALLTRACE_AFTER=<sek>` (patches/gt6-calltrace-after.patch) schaltet den Calltrace erst nach N s Wandzeit scharf.
+
+- Lauf ct_listbox (PS3_CALLTRACE_TO=600A50, _AFTER=150, 200 s, Dialog erreicht, usercmd #3584): 0 Trace-Zeilen. Calltrace erfasst nur indirekte Aufrufe; 0x600A50 wird per direktem bl erreicht -> Ergebnis NICHT aussagekraeftig. Naechster Schritt: PPU_CALLTRACE auf Lifter-Ebene fuer direkte Aufrufe (Funktions-Entry-Probe) oder PS3_CALLTRACE_FROM/Caller der Widget-Klasse (vtable) statt Zieladresse.
