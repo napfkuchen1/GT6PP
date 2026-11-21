@@ -1,8 +1,8 @@
 # Building GT6PP
 
-These are the exact steps used on this machine. Paths assume the project root is
-`C:\Users\xynnp\Documents\Projects\GT6PP`; adjust as needed. Nothing here
-downloads or distributes game data.
+Paths are relative to the project root. Nothing here downloads or distributes
+game data. Target disc: EU `BCES01893` (the dump folder may be labelled "USA";
+the runtime reads the title id from `PARAM.SFO`).
 
 ## 1. Prerequisites
 
@@ -13,8 +13,8 @@ downloads or distributes game data.
 | CMake | 3.20+ | `python -m cmake` works |
 | Ninja | 1.10+ | `python -m ninja` works |
 | LLVM-MinGW | 20261020 (Clang 23.1.4, UCRT) | portable; extract to `tools/llvm-mingw/` |
-| ps3recomp | `master` | clone to `third_party/ps3recomp` |
-| GT5P | `master` | reference sibling port; clone to `third_party/GT5P` |
+| ps3recomp | v0.19.0, pin `ae92407bb1d899e3d32143e360fe6e6d4d8fa1b5` | clone to `third_party/ps3recomp`, then apply `patches/ps3recomp-v0.19.0-gt6-eu-all.patch` |
+| GT5P | `65c75d61ade58efb4f6af5f099c3b78b64c0a8e6` | reference sibling port; clone to `third_party/GT5P` (only `scripts/gen_hle_stubs.py` is used) |
 | GTToolsSharp | 5.3.5 | volume extractor |
 | RPCS3 | 0.0.43+ | only for offline SELF decryption here |
 
@@ -23,15 +23,16 @@ upstream GT5P uses. The instructions below use the portable LLVM-MinGW
 toolchain because it needs no Visual Studio install.
 
 ```powershell
-git clone --depth 1 https://github.com/sp00nznet/ps3recomp.git third_party/ps3recomp
-git clone --depth 1 https://github.com/sp00nznet/GT5P.git third_party/GT5P
+git clone https://github.com/sp00nznet/ps3recomp.git third_party/ps3recomp
+git -C third_party/ps3recomp checkout ae92407bb1d899e3d32143e360fe6e6d4d8fa1b5
+git -C third_party/ps3recomp apply ..\..\patches\ps3recomp-v0.19.0-gt6-eu-all.patch
 
-# Required on Windows/MinGW: two MSVC-isms in ppu_loader.cpp.
-git -C third_party/ps3recomp apply ..\patches\ps3recomp-mingw-seh.patch
+git clone https://github.com/sp00nznet/GT5P.git third_party/GT5P
+git -C third_party/GT5P checkout 65c75d61ade58efb4f6af5f099c3b78b64c0a8e6
 ```
 
-If you use Visual Studio + clang-cl instead of LLVM-MinGW, the patch is not
-needed (MSVC supports `__try`/`__except`), but applying it is harmless.
+The consolidated patch covers the MinGW SEH fixes and the functional EU/GT6
+changes (see [docs/PATCHES.md](PATCHES.md)); it works for both toolchains.
 
 ## 2. Decrypt the executables
 
@@ -47,7 +48,10 @@ tools\RPCS3\rpcs3.exe --decrypt work\bin\EBOOT.BIN
 tools\RPCS3\rpcs3.exe --decrypt work\bin\EMAIN.SELF
 ```
 
-Expected: `EBOOT.elf` (143,064 bytes) and `EMAIN.elf` (22,371,400 bytes). The
+Expected: `EBOOT.elf` (143,064 bytes) and `EMAIN.elf` (22,371,400 bytes,
+SHA-256 `ACB00C19...A47A9B`, full value in `scripts/inputs.json`). Verify with
+`powershell -File scripts/verify-inputs.ps1` (also run by the lift scripts; a
+wrong region or stale decrypt fails here, not after a 30-minute lift). The
 first four bytes of each are `7F 45 4C 46` (`\x7fELF`). The decryptor also
 writes `boot.elf` into RPCS3's data directory; ignore it.
 
@@ -114,21 +118,22 @@ python third_party/ps3recomp/tools/ppu_lifter.py work/bin/EMAIN.elf `
 This writes `gt6/generated/ppu_recomp.h`, 32 `ppu_recomp_*.cpp` chunks, and a
 function table. It is CPU-heavy and can take a long time for 33k functions.
 
-The first bootable lift only needs the OPD list. If the boot log shows
-`unresolved indirect call`, run `find_functions.py` with the OPD list as a seed,
-add the reported targets (especially multi-entry memset/memcpy families), and
-relift. The GT6PP tree's final list is
-`work/analysis/emain/functions_final3.json` (68,149 explicit boundaries); it is
-not committed because it is derived from the game binary.
-
-If you need better function coverage, run `find_functions.py` with the OPD list
-as a seed and merge the results before lifting:
+The lift list is **not** the raw OPD table. It is generated reproducibly:
 
 ```powershell
-python third_party/ps3recomp/tools/find_functions.py work/bin/EMAIN.elf `
-  --seed-json work/analysis/emain/EMAIN.functions.json `
-  --output work/analysis/emain/functions_found.json
+powershell -ExecutionPolicy Bypass -File scripts/gen-functions-gt6.ps1
 ```
+
+Pipeline: `ppu_loader` (OPD) -> `find_functions` (seeded with the OPD list) ->
+`tools/boundary_audit.py` -> `tools/add_computed_entries.py` ->
+`work/analysis/emain/functions_corrected.json` (70,870 functions). The script
+checks the intermediate and final lists against the SHA-256 values in
+`scripts/inputs.json`, so a different result is caught immediately.
+`scripts/relift-gt6.ps1` runs it automatically when the list is missing and
+applies all post-lift patches (including `tools/b5b260_cache_fill_patch.py`,
+which fills the file cache so an existing userdb loads; it fails loudly if its
+anchors disappear). Prefer `relift-gt6.ps1` over the manual lifter call above.
+The lists are not committed because they are derived from the game binary.
 
 Do not blindly lift every branch target above `0xF908C4`; the R-X segment runs
 into read-only data.
@@ -209,6 +214,7 @@ Useful environment variables:
 | `GT6_NO_PRESENT=1` | do not start the present thread |
 | `GT6_NO_FAULT_COMMIT=1` | let guest page faults crash instead of committing |
 | `PS3_VFS_ROOT=...` | override the root for relative guest paths |
+| `GT6_GAME_ROOT=...` | disc folder (default: `PS3-Version/Gran Turismo 6 (USA) (En,Ja,Fr)`; else the first `PS3-Version/<dir>` with `PS3_GAME/PARAM.SFO`) |
 
 ## Troubleshooting
 
@@ -217,7 +223,7 @@ runtime and the port (the provided CMake does this; the manual command above
 also passes it).
 
 **`__try` / `__except` undeclared, or `ppu_resv_break` linkage error.** Apply
-`patches/ps3recomp-mingw-seh.patch` to `third_party/ps3recomp` (see
+`patches/ps3recomp-v0.19.0-gt6-eu-all.patch` to `third_party/ps3recomp` (see
 [docs/PATCHES.md](PATCHES.md)). These are MSVC-only constructs that MinGW/Clang
 does not parse.
 

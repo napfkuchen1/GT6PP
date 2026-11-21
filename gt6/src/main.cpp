@@ -19,7 +19,6 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <tlhelp32.h>
 #endif
 
 #if defined(_MSC_VER)
@@ -64,9 +63,9 @@ void ppu_fs_register(void);
 uint32_t ppu_load_elf(const char* path);   /* ELF -> guest RAM, returns entry OPD */
 int  ppu_run(uint32_t entry_opd, uint32_t stack_top);
 uint64_t ppu_guest_call(uint32_t opd, uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3,
-                       uint64_t a4, uint64_t a5, uint64_t a6, uint64_t a7);
+                        uint64_t a4, uint64_t a5, uint64_t a6, uint64_t a7);
 extern void (*g_ps3_guest_caller)(uint32_t, uint64_t, uint64_t, uint64_t, uint64_t,
-                                      uint64_t, uint64_t, uint64_t, uint64_t);
+                                  uint64_t, uint64_t, uint64_t, uint64_t);
 static void gt6_guest_caller(uint32_t opd, uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3,
                              uint64_t a4, uint64_t a5, uint64_t a6, uint64_t a7)
 { ppu_guest_call(opd, a0, a1, a2, a3, a4, a5, a6, a7); }
@@ -96,7 +95,6 @@ void vm_write64(uint64_t a, uint64_t v);
 void vm_write8(uint64_t a, uint8_t v);
 void vm_write16(uint64_t a, uint16_t v);
 uint64_t vm_read64(uint64_t a);
-extern "C" uint32_t g_lwc_armed_addr;
 extern const char* g_hle_inflight[64];    /* per-thread: HLE currently executing */
 void gt6_spu_register_all(void);         /* generated: src/gen/spu_workloads.c */
 void gt6_spu_register_pm_clean(void);    /* WWS job-manager PM, image id 5 */
@@ -108,10 +106,16 @@ void gt6_start_present_thread(void);     /* src/gt6_present.cpp */
 #define GT6_LOCAL_MEM_BASE 0xC0000000u
 #define GT6_LOCAL_MEM_SIZE 0x10000000u
 
-/* This dump's extracted disc tree, relative to the project root. */
-#define GT6_GAME_ROOT "PS3-Version/Gran Turismo 6 (USA) (En,Ja,Fr)"
-#define GT6_GAME_DIR  GT6_GAME_ROOT "/PS3_GAME"
-#define GT6_USRDIR    GT6_GAME_DIR "/USRDIR"
+/* Extracted disc tree, relative to the project root (override: GT6_GAME_ROOT
+ * env var, absolute or relative). If the default folder is missing, the first
+ * PS3-Version/<dir> containing PS3_GAME/PARAM.SFO is used. The folder name does
+ * not matter (the EU dump sits in a folder labelled "USA"); the title id comes
+ * from PARAM.SFO. */
+#define GT6_GAME_ROOT_DEFAULT "PS3-Version/Gran Turismo 6 (USA) (En,Ja,Fr)"
+static char g_game_root[512], g_game_dir[544], g_usrdir[560];
+#define GT6_GAME_ROOT g_game_root
+#define GT6_GAME_DIR  g_game_dir
+#define GT6_USRDIR    g_usrdir
 
 /* GCM control/label page. cellGcmSys keeps put/get/ref and the label slots
  * here, and the RSX pump reads them every frame. */
@@ -151,6 +155,51 @@ static void gt6_add_mapping(const char* ps3_prefix, const char* host)
              (n && abs[n - 1] == '/') ? "" : "/");
     cellfs_add_path_mapping(ps3_prefix, with_slash);
     printf("[GT6] map %-28s -> %s\n", ps3_prefix, with_slash);
+}
+
+static int gt6_file_exists(const char* path)
+{
+#ifdef _WIN32
+    return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+#else
+    FILE* f = fopen(path, "rb");
+    if (f) fclose(f);
+    return f != NULL;
+#endif
+}
+
+/* Pick the disc root: GT6_GAME_ROOT env, the default folder, or the first
+ * PS3-Version/<dir> that holds PS3_GAME/PARAM.SFO. Fills g_game_root/dir/usrdir. */
+static void gt6_resolve_game_root(void)
+{
+    const char* env = getenv("GT6_GAME_ROOT");
+    char sfo[700];
+    snprintf(g_game_root, sizeof g_game_root, "%s",
+             (env && *env) ? env : GT6_GAME_ROOT_DEFAULT);
+    snprintf(sfo, sizeof sfo, "%s/PS3_GAME/PARAM.SFO", g_game_root);
+#ifdef _WIN32
+    if (!(env && *env) && !gt6_file_exists(sfo)) {
+        char pat[600];
+        WIN32_FIND_DATAA fd;
+        snprintf(pat, sizeof pat, "PS3-Version/*");
+        HANDLE h = FindFirstFileA(pat, &fd);
+        if (h != INVALID_HANDLE_VALUE) {
+            do {
+                if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || fd.cFileName[0] == '.')
+                    continue;
+                snprintf(sfo, sizeof sfo, "PS3-Version/%s/PS3_GAME/PARAM.SFO", fd.cFileName);
+                if (gt6_file_exists(sfo)) {
+                    snprintf(g_game_root, sizeof g_game_root, "PS3-Version/%s", fd.cFileName);
+                    break;
+                }
+            } while (FindNextFileA(h, &fd));
+            FindClose(h);
+        }
+    }
+#endif
+    snprintf(g_game_dir, sizeof g_game_dir, "%s/PS3_GAME", g_game_root);
+    snprintf(g_usrdir, sizeof g_usrdir, "%s/USRDIR", g_game_dir);
+    printf("[GT6] disc root: %s\n", g_game_root);
 }
 
 /* Main thread stack. The runtime hands ppu_thread stacks out of its own
@@ -299,87 +348,12 @@ static DWORD WINAPI main_stack_dump(LPVOID secs)
         }
     }
 
-    if (getenv("GT6_ALLTHREADS")) {
-        /* Sample every other host thread: suspend, unwind, map frames to guest
-         * functions. Shows which fibers/workers are executing guest code
-         * versus parked in a host wait. */
-        HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-        THREADENTRY32 te; te.dwSize = sizeof te;
-        DWORD me = GetCurrentThreadId(), pid = GetCurrentProcessId();
-        if (snap != INVALID_HANDLE_VALUE && Thread32First(snap, &te)) do {
-            if (te.th32OwnerProcessID != pid || te.th32ThreadID == me) continue;
-            HANDLE th = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT, FALSE, te.th32ThreadID);
-            if (!th) continue;
-            CONTEXT c; c.ContextFlags = CONTEXT_FULL;
-            if (SuspendThread(th) != (DWORD)-1) {
-                char buf[700]; int p = 0; buf[0] = 0; int guest = 0;
-                if (GetThreadContext(th, &c)) {
-                    for (int f = 0; f < 40 && c.Rip && p < 640; f++) {
-                        uint32_t g = ppu_prof_resolve_host((void*)c.Rip);
-                        if (g) { guest++; p += snprintf(buf + p, sizeof buf - p, " %08X", g); }
-                        DWORD64 ib = 0;
-                        PRUNTIME_FUNCTION rf = RtlLookupFunctionEntry(c.Rip, &ib, nullptr);
-                        if (!rf) break;
-                        PVOID hd = nullptr; DWORD64 est = 0;
-                        RtlVirtualUnwind(UNW_FLAG_NHANDLER, ib, c.Rip, rf, &c, &hd, &est, nullptr);
-                    }
-                }
-                ResumeThread(th);
-                if (guest) {
-                    int ti = -1; uint32_t tsp = 0;
-                    for (int i = 0; i < PPU_THREAD_MAX; i++)
-                        if (g_ppu_threads[i].state != PPU_THREAD_STATE_FREE && g_ppu_threads[i].host_tid == te.th32ThreadID) { ti = i; tsp = (uint32_t)g_ppu_threads[i].ctx.gpr[1]; }
-                    fprintf(stderr, "[thr %lu tid=%d sp=%08X]%s\n", (unsigned long)te.th32ThreadID, ti, tsp, buf);
-                    if (strstr(buf, "007DBF48") && tsp) {
-                        uint32_t sb = ti >= 0 ? g_ppu_threads[ti].stack_addr : 0, ss = ti >= 0 ? g_ppu_threads[ti].stack_size : 0;
-                        fprintf(stderr, "[stkinfo] base=%08X size=%X\n", sb, ss);
-                        {
-                            extern uint8_t* vm_base;
-                            static const uint32_t rg[][2] = { {0xD0000000u, 0xD0400000u}, {0x10000000u, 0x80000000u}, {0xE0000000u, 0xF0000000u} };
-                            int found = 0;
-                            for (int r = 0; r < 3 && !found; r++)
-                                for (uint32_t a = rg[r][0]; a < rg[r][1]; a += 4) {
-                                    uint32_t w = __builtin_bswap32(*(volatile uint32_t*)(vm_base + a));
-                                    if (w == 0x00961648u) {
-                                        uint32_t slot = a + 0x8c;
-                                        fprintf(stderr, "[sleepslot] ra@%08X slot=%08X val=%08X\n", a, slot, vm_read32(slot));
-                                        { char tx[260]; int n = 0; for (; n < 256; n++) { uint8_t ch = vm_base[slot + 8 + n]; if (!ch) break; tx[n] = (ch >= 32 && ch < 127) ? (char)ch : '.'; } tx[n] = 0; fprintf(stderr, "[sleepmsg] %s\n", tx); fprintf(stderr, "[sleepwords]"); for (int k = -4; k < 12; k++) fprintf(stderr, " %08X", vm_read32(slot + k * 4)); fprintf(stderr, "\n"); }
-                                        {   /* reliable guest back-chain: 961290's frame is a-0x14, each frame's back chain is a u64 at sp */
-                                            uint32_t gsp = a - 0x14;
-                                            fprintf(stderr, "[sleepchain] sp=%08X", gsp);
-                                            for (int k = 0; k < 40 && gsp > 0x10000; k++) {
-                                                uint32_t nsp = vm_read32(gsp + 4);
-                                                if (nsp <= gsp || nsp - gsp > 0x10000) break;
-                                                fprintf(stderr, " %08X", vm_read32(nsp + 0x10 + 4));
-                                                gsp = nsp;
-                                            }
-                                            fprintf(stderr, "\n");
-                                        }
-                                        found = 1; break;
-                                    }
-                                }
-                        }
-                    }
-                }
-            }
-            CloseHandle(th);
-        } while (Thread32Next(snap, &te));
-        if (snap != INVALID_HANDLE_VALUE) CloseHandle(snap);
-    }
     uint32_t sp = (uint32_t)g_main_ctx.gpr[1];
     fprintf(stderr, "[mainstack] in=func_%08X sp=0x%08X lr=0x%08X ctr=0x%08X r3=0x%08X r31=0x%08X\n",
             live, sp, (uint32_t)g_main_ctx.lr, (uint32_t)g_main_ctx.ctr,
             (uint32_t)g_main_ctx.gpr[3], (uint32_t)g_main_ctx.gpr[31]);
     fprintf(stderr, "[mainstack] in_hle=%s rip=%p\n",
-            g_hle_inflight[1] ? g_hle_inflight[1] : (g_hle_inflight[0] ? g_hle_inflight[0] : "-"), (void*)g_last_rip);
-    {
-        /* Every thread that is inside an HLE call right now, by name. Shows who
-         * is parked where without a debugger. */
-        char ib[2048]; int ip = snprintf(ib, sizeof ib, "[inflight]");
-        for (int t = 0; t < 64; t++)
-            if (g_hle_inflight[t] && ip < 1900) ip += snprintf(ib + ip, sizeof ib - ip, " %d:%s", t, g_hle_inflight[t]);
-        fprintf(stderr, "%s\n", ib);
-    }
+            g_hle_inflight[0] ? g_hle_inflight[0] : "-", (void*)g_last_rip);
     {
         static int once = 0;
         if (!once++)
@@ -388,7 +362,6 @@ static DWORD WINAPI main_stack_dump(LPVOID secs)
                     (void*)&ppu_stwcx32, (void*)&ps3_indirect_call,
                     (void*)&ps3_hle_call, (void*)&vm_read32, (void*)&vm_write32);
     }
-    if (g_lwc_armed_addr) { uint32_t m = g_lwc_armed_addr - 0x30; fprintf(stderr, "[mgrstate] mgr=0x%08X state48=%u +4c=%02X +4d=%02X\n", m, vm_read32(m + 0x48), vm_read32(m + 0x4c) >> 24, (vm_read32(m + 0x4c) >> 16) & 0xFF); }
     fprintf(stderr, "[mainregs]");
     for (int r = 0; r < 32; r++)
         fprintf(stderr, " r%d=%08X", r, (uint32_t)g_main_ctx.gpr[r]);
@@ -665,7 +638,6 @@ static void gt6_set_project_cwd(void)
 
 int main(int argc, char* argv[])
 {
-    if (getenv("GT6_UNBUF")) setvbuf(stdout, NULL, _IONBF, 0);  /* keep stdout when the run is killed */
 #ifdef _WIN32
     gt6_set_project_cwd();
     /* GT6's audio/event pump legitimately calls the same handler thousands of
@@ -730,6 +702,7 @@ int main(int argc, char* argv[])
      * GT.VOL live under PS3_GAME/USRDIR. Keep the game directory and its
      * USRDIR separate so absolute /dev_bdvd paths and unqualified relative
      * opens (GT.VOL) both resolve. */
+    gt6_resolve_game_root();
     {
         const char* vfs = getenv("PS3_VFS_ROOT");
         if (!vfs || !*vfs) vfs = GT6_USRDIR;
@@ -771,10 +744,12 @@ int main(int argc, char* argv[])
         /* Give cellGame the real ids. Without this the HLE answers every
          * cellGame/cellDiscGame query with its built-in fallback, and this
          * title's boot was being told its id is "BLES00000" when PARAM.SFO
-         * says BCUS98296 -- which matters the moment anything builds a path
+         * says BCUS98296 (the US folder name) -- which matters the moment anything builds a path
          * from it (/dev_hdd0/game/<id>/...). */
         {
-            cellGame_init_from_paramsfo(GT6_GAME_DIR "/PARAM.SFO");
+            char sfo_path[600];
+            snprintf(sfo_path, sizeof sfo_path, "%s/PARAM.SFO", GT6_GAME_DIR);
+            cellGame_init_from_paramsfo(sfo_path);
         }
     }
 

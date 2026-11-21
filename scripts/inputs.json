@@ -1,0 +1,6 @@
+{
+  "_comment": "SHA-256 of the inputs/derived lists the lift pipeline expects (EU disc BCES01893). Hashes only, no game data.",
+  "work/bin/EMAIN.elf": "ACB00C19259F10EE5F802B23734C53CDF1E1AAEB5DB5C8FC58CA140AD7A47A9B",
+  "work/analysis/emain/functions_found.json": "CC678EC2F46D756E6BCD387B9C80BB565A9EEB182B155AB25BBB01BCD589EDC9",
+  "work/analysis/emain/functions_corrected.json": "CB7FC9866862A57402583756CC6EA40DFA1F7C82ECF76E4DFA14172E60231799"
+}

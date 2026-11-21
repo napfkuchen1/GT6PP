@@ -3,8 +3,8 @@
 #
 # The lift list is not the raw .opd table. It must include the heuristic and
 # explicit boundaries that make indirect calls resolvable (see docs/STATUS.md).
-# Prefer work/analysis/emain/functions_corrected.json when the boundary audit
-# has produced it; otherwise fall back to functions_final3.json.
+# work/analysis/emain/functions_corrected.json is generated reproducibly by
+# scripts/gen-functions-gt6.ps1 (auto-run here if it is missing).
 param(
     [int]$Jobs = 8,
     [int]$Chunks = 40,
@@ -26,12 +26,17 @@ if (-not (Test-Path (Join-Path $Sdk "tools\ppu_lifter.py"))) {
     throw "Missing ps3recomp checkout at $Sdk."
 }
 
+& (Join-Path $PSScriptRoot "verify-inputs.ps1") -Files "work/bin/EMAIN.elf"
 New-Item -ItemType Directory -Force -Path $Analysis, $Generated | Out-Null
 
 if (-not $Functions) {
     $corrected = Join-Path $Analysis "functions_corrected.json"
-    $Functions = if (Test-Path $corrected) { $corrected }
-                 else { Join-Path $Analysis "functions_final3.json" }
+    if (-not (Test-Path $corrected)) {
+        & (Join-Path $PSScriptRoot "gen-functions-gt6.ps1")
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+    $Functions = $corrected
+    & (Join-Path $PSScriptRoot "verify-inputs.ps1") -Files "work/analysis/emain/functions_corrected.json"
 }
 if (-not (Test-Path $Functions)) { throw "Missing function list $Functions" }
 Write-Host "Lift list: $Functions"
@@ -66,6 +71,10 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "[6/9] .ctors walker r31 preservation"
 python (Join-Path $Root "tools\ctor_walk_patch.py") $Generated
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "[6b/9] B5B260 file-cache fill (EU userdb boot)"
+python (Join-Path $Root "tools\b5b260_cache_fill_patch.py") $Generated
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "[7/9] post-lift verification"
