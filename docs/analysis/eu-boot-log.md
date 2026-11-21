@@ -487,3 +487,8 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Abweichung gefunden: Netz-Init. RPCS3: `cellNetCtlGetInfo(0x15)` -> NOT_CONNECTED (0x80130108), danach legt das Spiel CYYqg/AEIVZ/XyGIK an. Bei uns lieferte GetInfo OK und `getsockname` -1 (Stub) -> CYYqg/AEIVZ fehlten. Fix: getsockname -> 0 + sockaddr_in (GETSOCKNAME_FAIL=1 = alt), GetInfo(HTTP_PROXY_CONFIG) offline -> NOT_CONNECTED (NETCTL_PROXY_OK=1 = alt). Jetzt entstehen CYYqg, AEIVZ, XyGIK wie in RPCS3.
 - Weiter offen: ZWAP (Thread, pollt cellMusicGetPlaybackStatus2 alle ~75 ms, 14106 Calls in RPCS3) wird bei uns nie angelegt; `[PlaybackStatus]` 0 Calls. Dialog-Pad-Input unveraendert (noch nicht neu geprueft).
 - Neues Tooling: PS3_SC_COUNT (Syscall-Zaehler), PS3_HLE_STACK=<nid-hex> (Gast-Stack der ersten 3 Calls). NID-Rechner: `third_party/ps3recomp/tools/nid_database.py compute_nid(name)`.
+
+### ZWAP-Gate gefunden (2026-11-21)
+- Ursache: cellMusicInitialize2-Callback bekam als arg2 den User-Pointer statt Zeiger auf s32 CELL_OK. Gast-Wait (func_008890A4/00889180) las 0x7FFE2000 als Fehler -> func_00889838 sprang am SetVolume2 vorbei -> ZWAP nie erzeugt.
+- Fix (stubs.cpp): arg2 = Zeiger auf Null-Wort im Gast-Heap (g_sys_mem_bump_ptr). Jetzt: SetVolume2 aufgerufen, ZWAP tid=42 erzeugt wie in RPCS3.
+- Offen: GetPlaybackStatus2 wird in 60 s noch nicht gepollt; Dialog/Pad/Focus nicht neu geprueft.

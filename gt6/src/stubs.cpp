@@ -1248,6 +1248,7 @@ static void gt6_unknown_27DEDA93(ppu_context* ctx)
     ctx->gpr[3] = 0;
 }
 
+extern uint32_t g_sys_mem_bump_ptr;
 extern "C" int32_t cellSysutilQueueGuestCallbackArgs(uint32_t opd, const uint64_t args[8]);
 // cellMusicInitialize2 (NID 0xBE50B11E): no music backend. CELL_OK + INITIALIZE_RESULT callback.
 static void gt6_cellMusicInitialize2(ppu_context* ctx)
@@ -1259,7 +1260,10 @@ static void gt6_cellMusicInitialize2(ppu_context* ctx)
     /* RPCS3 reports INITIALIZE_RESULT(1, &CELL_OK, user) via the sysutil
      * callback queue. MUSIC_NOCB=1 restores the old no-callback behaviour. */
     if (func && !getenv("MUSIC_NOCB")) {
-        const uint64_t a[8] = {1, (uint64_t)user, (uint64_t)user, 0, 0, 0, 0, 0};
+        /* arg2 is a pointer to the result s32 (CELL_OK); the guest waits on it. */
+        static uint32_t res_addr = 0;
+        if (!res_addr && vm_base) { res_addr = g_sys_mem_bump_ptr; g_sys_mem_bump_ptr += 0x10000; memset(vm_base + res_addr, 0, 16); }
+        const uint64_t a[8] = {1, (uint64_t)res_addr, (uint64_t)user, 0, 0, 0, 0, 0};
         cellSysutilQueueGuestCallbackArgs(func, a);
     }
     ctx->gpr[3] = 0;
