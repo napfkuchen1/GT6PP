@@ -1,0 +1,17 @@
+diff --git a/libs/spurs/cellSpurs.c b/libs/spurs/cellSpurs.c
+index 56c8282..a2bed3a 100644
+--- a/libs/spurs/cellSpurs.c
++++ b/libs/spurs/cellSpurs.c
+@@ -2054,6 +2054,12 @@ static DWORD WINAPI spurs_kernel_thread(LPVOID p)
+             for (u32 checked = 0; checked < nwid; checked++) {
+                 u32 wid = si->cursor % nwid;
+                 si->cursor = (wid + 1) % nwid;
++                if (getenv("SPURS_W5DIAG") && wid == 5 && sn == 0 && (si->pass_no % 400) == 1)
++                    fprintf(stderr, "[w5diag] en=%d state=%u in_use=%d ea_ok=%d prio=%u maxc=%u act=%u ready=%u sig=0x%x flag=0x%x recv=%u\n",
++                        !!(enabled & (0x80000000u >> wid)), vm_read8(ea + wkl_state_off(wid)), s_workloads[wid].in_use,
++                        s_workloads[wid].spurs_ea == ea, vm_read8(ea + wkl_info_off(wid) + 0x18 + sn),
++                        wkl_count_get(ea, SPURS_WKL_MAXCONT, wid, si->is2), si->active[wid], vm_read8(ea + wkl_ready_off(wid)),
++                        vm_read16(ea + wkl_signal_off(wid)), vm_read32(ea + SPURS_WKL_FLAG_WORD), vm_read8(ea + SPURS_WKL_FLAG_RECV));
+                 if (!(enabled & (0x80000000u >> wid)) ||
+                     vm_read8(ea + wkl_state_off(wid)) != 2 ||
+                     !s_workloads[wid].in_use || s_workloads[wid].spurs_ea != ea)

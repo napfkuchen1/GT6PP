@@ -425,3 +425,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - No `PM NOT LIFTED` line any more, no LV2 errors. Only `_cellSpursWorkloadFlagReceiver2(wid=5 set=1)` once.
 - Hypothesis (unproven): the PDI worker polls a lock-free queue word that the GPUSync SPURS job (or its completion signal) never updates, so the dialog state machine never advances -> no highlight, no input reaction.
 - Next: find the writer of 0x01681E80 (WWATCH on that address), check whether wid 5 job ever runs (`spu_run_policy_module` log), compare against RPCS3.
+
+### Follow-up: GPUSyncArray hypothesis mostly refuted
+- All 8 WWS workloads (wid 0-7) are admitted and run the PM repeatedly (`SPURS_PM_TRACE`): wid 5 = 61 runs, each `END status=0x2 pc=0x9C0 polls=0 exited=1`. wid 5 is the workload-flag receiver (recv=5, flag word 0xFFFFFFFF = not raised; `SPURS_W5DIAG` patch `patches/gt6-spurs-w5diag.patch`). No scheduling starvation.
+- 0x01681E80 is the head word of a circular list inside the job-chain struct (init `<- 0x0` by func_00B6E278, then `<- 0x1681E00` = self pointer = empty list by func_00A6E72C). No later writer (PPU_WWATCH). The "spin" is func_00A6EBD8 (called from func_00B6E4E8 = per-frame GPU sync), a u16 counter walk: the frame loop still flips, so this is a per-frame poll, probably not THE stall.
+- Open question: PMs exit with polls=0 and never DMA wid 5's list at 0x1681E80 (wid 6 does DMA 0x1681C80). Unknown whether that is correct (empty list) or a missing PPU-side push. RPCS3 comparison of job-chain traffic would decide.
+- ps3recomp docs (local copy under third_party/ps3recomp/docs, 46 files) read: no pad/menu/sysutil material. Useful tools: `PS3_DEBUG=<file>` debug console (`threads`, `mem`, `stat`), `SPU_INTERP_STATS`, `SPURS_PM_TRACE`.
