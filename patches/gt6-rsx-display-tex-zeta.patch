@@ -1,0 +1,42 @@
+--- a/libs/video/rsx_d3d12_backend.c	2026-11-21 01:21:38.654832700 +0100
++++ b/libs/video/rsx_d3d12_backend.c	2026-11-21 01:35:50.327818500 +0100
+@@ -3446,6 +3446,22 @@
+                         off, w, h, fmt, 10); }
+         }
+       } }
++    /* ZETA_FILL (default on, ZETA_FILL=0 disables): the guest samples its depth
++     * buffer (zeta offset) as a texture before anything wrote it. An empty
++     * buffer reads depth 0.0 = black; a freshly cleared depth buffer is 1.0.
++     * Fill never-written zeta-offset textures with 0xFF so they read as 1.0. */
++    { static int zf = -1;
++      if (zf < 0) { const char* e = getenv("ZETA_FILL"); zf = e ? atoi(e) : 1; }
++      const rsx_state* _zs = s_d3d.current_rsx_state;
++      if (zf && !dxt && _zs && _zs->surface_zeta_offset && (off & 0x0FFFFFFFu) == _zs->surface_zeta_offset) {
++        u32 nz = 0, sz = w * h * bpp;
++        for (u32 i2 = 0; i2 < sz && i2 < 0x40000u; i2 += 61) if (vm_base[off + i2]) nz++;
++        if (!nz) {
++            for (u32 y = 0; y < h; y++) memset((u8*)mapped + (u64)y * pitch, 0xFF, (size_t)w * bpp);
++            { static int _n = 0; if (PS3_LOG_FIRST(_n, 3))
++                fprintf(stderr, "[ZETAFILL] off=0x%08X %ux%u fmt=0x%02X -> 0xFF%c", off, w, h, fmt, 10); }
++        }
++      } }
+     }   /* end per-face conversion */
+     off = _off0; mapped = _map0;
+     if (up_res != s_d3d.tex_ring) t->up->lpVtbl->Unmap(t->up, 0, NULL);
+@@ -3682,6 +3698,7 @@
+     dr->no_color = st->color_target == 0 && dr->zeta_off != 0;
+ }
+ 
++extern int cellGcmOffsetIsDisplay(u32 offset);
+ /* Which offscreen surface (if any) does the current RSX state render to?
+  * Returns 0 for a display buffer (backbuffer), else the surface's RAW RSX
+  * offset. RTs are keyed by raw offset -- a texture bound at the same raw
+@@ -4953,7 +4970,7 @@
+             }
+             /* Display-sized sampler source -> the rendered frame. */
+             if (dr->tex[_u].set && s_screen_copy &&
+-                dr->tex[_u].w == s_d3d.width && dr->tex[_u].h == s_d3d.height) {
++                ((dr->tex[_u].w == s_d3d.width && dr->tex[_u].h == s_d3d.height) || cellGcmOffsetIsDisplay(dr->tex[_u].raw))) {
+                 static int en = -1;
+                 if (en < 0) { const char* e = getenv("SCREEN_AS_TEX"); en = e ? atoi(e) : 1; }
+                 if (en) {
