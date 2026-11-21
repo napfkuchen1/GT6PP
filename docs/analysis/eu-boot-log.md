@@ -498,3 +498,9 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 - Pad-Eingabe wirkt: `PAD_SCRIPT=0.1:0x4000` (CROSS) schliesst den Sprachdialog, Frame 2500 zeigt "Sony Computer Entertainment presents" (work/cap_zw2). Ohne Eingabe bleibt der Dialog (work/cap_zw1).
 - Ursache der ignorierten Eingabe war also der fehlende Music-Init-Callback-Payload (Boot-Fortschritt), nicht der Pad-Pfad.
 - Offen: Row-1-Hervorhebung im unbedienten Dialog fehlt weiterhin (visuell, RPCS3 zeigt sie); "Schliessen" dunkel.
+
+### Dialog-Schleife nach Auswahl (2026-11-21)
+- CROSS auf dem Sprachdialog (PAD_SCRIPT=20:0x4000) -> Frame 2500 "Sony Computer Entertainment presents", ~3000 Legal-Text (Polyphony-Logo, Fade), ~3300 Sprachdialog wieder da (identisch). Reproduzierbar (work/cap_zwq3000, cap_zwq3300).
+- Pad wird die ganze Zeit gepollt (5602 cellPadGetData in 90 s, HLE-Trace). Frame-Zaehler != Wandzeit/Flips: PAD_CLOCK=flips taugt hier nicht, Wanduhr-Press funktioniert.
+- stdout von run-gt6 geht bei Kill verloren (gepuffert): spaete Log-Zeilen ([cellPad] PAD_SCRIPT ..., [cellFs]) fehlen -> nicht als "Press nicht gefeuert" lesen. stderr (HLETRACE) ist verlaesslich.
+- Hypothese: Sprachwahl wird nicht persistiert/uebernommen (Schreibpfad: Config/Savedata), daher fragt der Boot erneut. Naechster Schritt: stdout-Flush (setvbuf/PS3_*-Flag) und [cellFs]-Open/Write-Folge zwischen Press und Dialog 2 loggen; mit RPCS3.log (tools/RPCS3/log) vergleichen.
