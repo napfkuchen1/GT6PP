@@ -1,15 +1,22 @@
 diff --git a/libs/video/rsx_commands.c b/libs/video/rsx_commands.c
-index 786caa9..cba810e 100644
+index 786caa9..8fa2b1e 100644
 --- a/libs/video/rsx_commands.c
 +++ b/libs/video/rsx_commands.c
-@@ -340,6 +340,10 @@ static int process_vertex_attrib_method(rsx_state* state, u32 method, u32 data)
-          * it is NOT using -- so the input layout was built from 16 attributes of
-          * which most were degenerate, and the draws rasterized nothing. */
-         attr->enabled   = (attr->size != 0);
-+        /* EU language-select: the guest leaves a stale enabled a3 (col0) array (unrelated interleaved mesh data) for the
-+         * panel/background draws; RPCS3 shows a uniform dark colour there, i.e. VERTEX_DATA4F. Ignore a3 arrays by default;
-+         * A3KEEP=1 restores them. (Costs the blue title colour, see eu-boot-log.) */
-+        { static int _o = -1; if (_o < 0) _o = getenv("A3KEEP") ? 0 : 1; if (_o && index == 3) attr->enabled = 0; }
-         attr->format    = data;
-         state->vertex_dirty = 1;
-         return 0;
+@@ -1061,6 +1061,17 @@ int rsx_process_method(rsx_state* state, u32 method, u32 data)
+             state->begin_epoch++;
+             rsx_inline_reset(state);
+             rsx_immediate_reset();
++            /* EU language-select: the guest leaves a stale enabled a3 (col0) array (unrelated mesh data) on some draws.
++             * A3 (fmt 0x1445, s16x4) is a valid palette index only for the text-quad VS (fp 0x4E739C1: floor(v[3].x) indexes vp_c[]); for panel/background VS it is stale mesh data and col0 comes from
++             * VERTEX_DATA4F. A3KEEP=1 trusts every enabled a3 (old behaviour). */
++            {
++                static int _keep = -1; if (_keep < 0) _keep = getenv("A3KEEP") ? 1 : 0;
++                rsx_vertex_attrib* a0 = &state->vertex_attribs[0];
++                rsx_vertex_attrib* a3 = &state->vertex_attribs[3];
++                u8 want = (a3->size != 0);
++                if (want && !_keep && state->shader_program != 0x4E739C1 /* text quads: a3.x = palette index into vp_c[] */) want = 0;
++                if (a3->enabled != want) { a3->enabled = want; state->vertex_dirty = 1; }
++            }
+ 
+             /* Flush dirty state to backend before drawing */
+             if (s_backend) {

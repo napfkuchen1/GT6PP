@@ -409,5 +409,5 @@ Update 2026-11-21 (writes): hypothesis (a) tested and refuted for the first 40 s
 ## 2026-11-21 — Sprachauswahl-Hintergrund (RPCS3-Vergleich)
 - RPCS3 (Firmware installiert, `tools/RPCS3`) zeigt: einheitlich dunkler Hintergrund, dunkles transluzentes Panel, weißer Text.
 - Unser Bild hatte eine weiß/schwarze Diagonale: Panel-/Hintergrund-Draws (fp 04E526C1/04E52681) lesen col0 aus Attribut 3, das der Guest als altes Array (fmt 0x1445, Stride 20, unzusammenhängende Mesh-Daten) aktiv lässt.
-- Fix: a3-Arrays beim Format-Schreiben ignorieren (`rsx_commands.c`), col0 kommt dann aus VERTEX_DATA4F. Env `A3KEEP=1` stellt altes Verhalten her. Patch `patches/gt6-rsx-ignore-stale-a3.patch`. Ergebnis `eu-language-select-bg.png` (cap: 87 % schwarz, 0 % blau/weiß).
-- Nebenwirkung: Titel weiß statt blau, Auswahlzeile ohne Hervorhebung, "Schließen" dunkel. Draw-Zeit-Variante (nur Panel-fps) scheitert, weil das Layout schon in set_vertex_attribs gebaut wird.
+- Fix: a3 nur für Text-Quad-VS (fp 0x4E739C1, a3.x = Palette-Index in vp_c[]) vertrauen, sonst a3 am BEGIN_END deaktivieren (vor Layout-Bau), col0 aus VERTEX_DATA4F. Env `A3KEEP=1` = altes Verhalten. Patch `patches/gt6-rsx-ignore-stale-a3.patch`, Debug-Hooks `patches/gt6-rsx-debug-hooks.patch`. Ergebnis `eu-language-select-bg.png`: blauer Titel, Panel, Zeilen, Cursor wie RPCS3.
+- Titel-Farbe-Nebenwirkung damit behoben. Offen: "Schließen" etwas dunkler als RPCS3 (evtl. Hover), weitere fps mit a3-Palette nicht gefunden.

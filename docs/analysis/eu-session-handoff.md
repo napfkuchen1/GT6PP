@@ -32,3 +32,9 @@
 
 ## Regeln
 Deutsch, knapp. Commits als `-c user.name=napfkuchen1 -c user.email=122364471+napfkuchen1@users.noreply.github.com`, KEINE Trailer/Co-Authored-By. Nie löschen (archivieren), additive Änderungen, live verifizieren, Abschluss mit "Offene Punkte". Nie Credentials anfordern.
+
+## Update 2026-11-21 (spät)
+- Hintergrund + Titel-Farbe gelöst (a3-Regel pro fp, siehe eu-boot-log). Patches: `gt6-rsx-ignore-stale-a3.patch`, `gt6-rsx-debug-hooks.patch` (nach display-tex-zeta + zeta-depth-text anwenden).
+- Diagnosen: Root-`*.hlsl`-Dumps nach `ARCHIV/diag-hlsl/` verschoben. `gt6/src/gen/*` nicht committet (CRLF-Rauschen + generierte NIDs passend zu lokalem third_party). `ppu_fs.cpp`/`ppu_loader.cpp` Diagnose bleiben lokal in third_party.
+- cellMusic-Callback / Syscall 327: kein Blocker beobachtet (Boot läuft bis Sprachauswahl) -> kein Quick Win, offen dokumentiert.
+- RPCS3 mit Firmware in `tools/RPCS3` einsatzbereit (Referenz).

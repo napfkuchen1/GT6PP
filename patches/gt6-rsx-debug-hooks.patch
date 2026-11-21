@@ -1,0 +1,86 @@
+diff --git a/libs/video/rsx_d3d12_backend.c b/libs/video/rsx_d3d12_backend.c
+index 80be01c..43078f1 100644
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -1942,6 +1942,8 @@ static int vp_get_vs(const rsx_state* st)
+     static char hlsl[262144];
+     int ni = rsx_vp_decompile(vuc, vlen, hlsl, sizeof hlsl);
+     if (ni <= 0) return -1;
++    if (getenv("VP_DUMPALL")) { char _n[96]; snprintf(_n, sizeof _n, "work/vsdump_%d.hlsl", s_d3d.vp_vs_n);
++        FILE* _f = fopen(_n, "w"); if (_f) { fwrite(hlsl, 1, strlen(hlsl), _f); fclose(_f); } }
+     if (getenv("VP_DUMP")) { static int _d=0; if (PS3_LOG_FIRST(_d, 4)) {
+         FILE* f = fopen("vp2_dump.hlsl", _d==1 ? "w" : "a");
+         if (f) { fprintf(f, "/* per-draw VS hash pending, %d instrs */%s%s", ni, hlsl, "\n"); fclose(f); } } }
+@@ -3657,7 +3659,7 @@ static void vp_record_cb(u32 slot, int vs_idx, const D3D12DrawRecord* dr)
+                   fputc(10, stderr); }
+               /* distinct fragment programs seen -- if every draw shares one,
+                * SET_SHADER_PROGRAM is not being tracked per draw. */
+-              if (fk) { static u32 seen[16]; static int ns = 0; int f = 0;
++              if (fk) { static u32 seen[64]; static int ns = 0; int f = 0;
+                   for (int q = 0; q < ns; q++) if (seen[q] == dr->fp_addr) f = 1;
+                   if (!f && ns < 16) { seen[ns++] = dr->fp_addr;
+                       fprintf(stderr, "[FPK] distinct fp #%d = 0x%08X%c", ns, dr->fp_addr, 10); } } }
+@@ -5025,7 +5027,7 @@ static void render_frame(void)
+           if (sd) for (int _u = 0; _u < 16; _u++)
+               if (dr->tex[_u].set && dr->tex[_u].w == s_d3d.width &&
+                   dr->tex[_u].h == s_d3d.height) {
+-                  static u32 seen[16]; static int ns = 0; int known = 0;
++                  static u32 seen[64]; static int ns = 0; int known = 0;
+                   for (int k = 0; k < ns; k++) if (seen[k] == dr->fp_addr) known = 1;
+                   if (!known && ns < 16) { seen[ns++] = dr->fp_addr;
+                       fprintf(stderr, "[SCREENTEX] unit=%d raw=0x%08X %ux%u fmt=0x%02X"
+@@ -6577,6 +6579,20 @@ static void read_vp_vertex(const rsx_state* state, u32 vi, VPSlot* out16)
+             rsx_vtx_pos_dbg(state, out16[0].v, n);
+         }
+     }
++    { static int _c = -1, _cn = 0; if (_c < 0) _c = getenv("VTX_COL") ? 1 : 0; if (_c && vi == 0 && _cn < 400) { _cn++; fprintf(stderr, "[VTXCOL] fp=0x%X a3en=%d d4f=(%g,%g,%g,%g) out=(%g,%g,%g,%g)\n", state->shader_program, state->vertex_attribs[3].enabled, state->vertex_data4f[3][0], state->vertex_data4f[3][1], state->vertex_data4f[3][2], state->vertex_data4f[3][3], out16[3].v[0], out16[3].v[1], out16[3].v[2], out16[3].v[3]); } }
++    { static int _n2 = 0; if (getenv("VTX_A3RAW") && _n2 < 12 && state->vertex_attribs[3].enabled && state->shader_program == 0x4E526C1) { _n2++;
++        extern uint8_t* vm_base; extern u32 cellGcmResolveLocated(int, u32);
++        const rsx_vertex_attrib* a0 = &state->vertex_attribs[3];
++        u32 ao = (a0->offset & 0x7FFFFFFFu) + vi * a0->stride;
++        const u8* q = vm_base + ((a0->offset & 0x80000000u) ? cellGcmResolveLocated(0, ao) : cellGcmResolveLocated(1, ao));
++        fprintf(stderr, "[A3RAW] vi=%u fp=0x%X a0off=0x%X a3off=0x%X stride=%u:", vi, state->shader_program, a0->offset, state->vertex_attribs[3].offset, a0->stride);
++        for (int b = 0; b < 24; b++) fprintf(stderr, " %02X", q[b]); fprintf(stderr, "\n"); } }
++    { static int _on = -1, _n = 0; if (_on < 0) _on = getenv("VTX_A3") ? 1 : 0;
++      if (_on && _n < 400 && state->vertex_attribs[3].enabled && (state->shader_program == 0x4E739C1)) { _n++;
++        fprintf(stderr, "[VTXA3] fp=0x%X vi=%u a0=(%g,%g,%g,%g) a3=(%g,%g,%g,%g) a8=(%g,%g) a3t=%u/%u\n", state->shader_program, vi,
++                out16[0].v[0],out16[0].v[1],out16[0].v[2],out16[0].v[3],
++                out16[3].v[0],out16[3].v[1],out16[3].v[2],out16[3].v[3], out16[8].v[0],out16[8].v[1],
++                state->vertex_attribs[3].type, state->vertex_attribs[3].size); } }
+ }
+ 
+ /* Per-draw vertex cache for the paths that expand one guest vertex into
+@@ -6653,9 +6669,9 @@ static void vp_attrs_dbg(const rsx_state* state)
+      * register instead -- which is exactly the case worth seeing. */
+     { u32 mask = 0;
+       for (int i = 0; i < 16; i++) if (state->vertex_attribs[i].enabled) mask |= 1u << i;
+-      static u32 seen[16]; static int ns = 0;
++      static u32 seen[64]; static int ns = 0;
+       for (int i = 0; i < ns; i++) if (seen[i] == mask) return;
+-      if (ns >= 16) return;
++      if (ns >= 64) return;
+       seen[ns++] = mask; }
+     fprintf(stderr, "[VPATTR] --- fp=0x%X ---%c", state->shader_program, 10);
+     fprintf(stderr, "[VPATTR] divider_op=0x%08X\n", state->frequency_divider_op);
+@@ -7246,7 +7262,7 @@ static u32 upload_tris_vp_indexed(const rsx_state* state, u32 first, u32 count)
+       if (cap < 0) { const char* e = getenv("IDX_DBG"); cap = e ? atoi(e) : 0; }
+       if (cap && n < cap && count >= 3) { n++;
+         extern u32 cellGcmResolveOffset(u32);
+-        const rsx_vertex_attrib* a0 = &state->vertex_attribs[0];
++        const rsx_vertex_attrib* a0 = &state->vertex_attribs[3];
+         u32 vbase = cellGcmResolveOffset(a0->offset & 0x7FFFFFFFu);
+         u32 nz = 0; for (u32 q = 0; q < 0x1000u; q += 29) if (vm_base[vbase + q]) nz++;
+         fprintf(stderr, "[IDX] idxoff=0x%X idx: %u %u %u | a0 off=0x%08X(->0x%08X nz=%u/142)"
+diff --git a/libs/video/rsx_commands.c b/libs/video/rsx_commands.c
+index 8fa2b1e..ace5495 100644
+--- a/libs/video/rsx_commands.c
++++ b/libs/video/rsx_commands.c
+@@ -340,6 +340,8 @@ static int process_vertex_attrib_method(rsx_state* state, u32 method, u32 data)
+          * it is NOT using -- so the input layout was built from 16 attributes of
+          * which most were degenerate, and the draws rasterized nothing. */
+         attr->enabled   = (attr->size != 0);
++        { static int _d = -1; static int _n = 0; if (_d < 0) _d = getenv("A3FMT_DBG") ? 1 : 0;
++          if (_d && index == 3 && _n < 300) { _n++; fprintf(stderr, "[A3FMT] data=0x%08X epoch=%u\n", data, (unsigned)state->begin_epoch); } }
+         attr->format    = data;
+         state->vertex_dirty = 1;
+         return 0;

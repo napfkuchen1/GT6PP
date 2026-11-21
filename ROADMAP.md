@@ -59,7 +59,7 @@ set of assets.
 - [x] *(2026-11-21)* Language-select dialog renders: panel, title, 4 menu rows. Text is readable via stencil glyphs plus zeta-as-texture (`patches/gt6-rsx-zeta-depth-text.patch`).
 - [x] *(2026-11-21)* Debug tooling: `scripts/cap-gt6.ps1` (one-call render experiments), `TEXDUMP`, zeta fields in the capture manifest.
 - [x] *(2026-11-21)* Dialog background fixed: stale attribute-3 (col0) array ignored, matches the RPCS3 reference (dark uniform background, translucent panel) (`patches/gt6-rsx-ignore-stale-a3.patch`, `docs/analysis/eu-language-select-bg.png`).
-- [ ] Title colour (blue in RPCS3) and selected-row highlight differ; they need a3 for some draws, so a per-draw rule instead of the global a3 ignore is open.
+- [x] Title colour (blue) and cursor: a3 is only trusted for the text-quad VS (fp 0x4E739C1, a3.x = palette index); all other draws take col0 from VERTEX_DATA4F. Rule applied at BEGIN_END (before layout build), `patches/gt6-rsx-ignore-stale-a3.patch`. Debug hooks in `patches/gt6-rsx-debug-hooks.patch`. Row-1 hover highlight vs RPCS3 not verified.
 - [ ] Fix color-buffer / render-target issues as they appear.
 
 **Exit criteria:** a stable menu or attract-mode frame from the game's own
