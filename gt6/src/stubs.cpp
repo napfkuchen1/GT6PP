@@ -1255,6 +1255,24 @@ static void gt6_cellMusicInitialize2(ppu_context* ctx)
     ctx->gpr[3] = 0;
 }
 
+// cellMusic*2 utility calls (RPCS3: CELL_OK; GetPlaybackStatus2 writes STOP=0).
+// The game polls GetPlaybackStatus2 from its own worker thread; unresolved
+// imports left r3 undefined and thread creation stopped early.
+static void gt6_cellMusicGetPlaybackStatus2(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("cellMusicGetPlaybackStatus2 -> STOP", &l, 0);
+    uint32_t st = (uint32_t)ctx->gpr[3];
+    if (st) { if (vm_base) memset(vm_base + st, 0, 4); }
+    ctx->gpr[3] = 0;
+}
+static void gt6_cellMusicOk(ppu_context* ctx)
+{
+    static int l = 0;
+    gt6_stub_log_once("cellMusic*2 -> CELL_OK", &l, 0);
+    ctx->gpr[3] = 0;
+}
+
 static void gt6_net_inet_pton(ppu_context* ctx)
 {
     static int l = 0;
@@ -1288,7 +1306,7 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
         if (n < 40 || (n % 2000) == 0)
             fprintf(stderr, "[waitflag] tid=%u #%d flag=%08X value=%u cur=%08X lr=%08X\n",
                     (unsigned)ctx->thread_id, n, flag, value, flag ? vm_read32((uint64_t)flag) : 0u, (uint32_t)ctx->lr);
-        if (n == 3) ppu_dump_guest_stack(ctx, "wf");
+        if (n == 0 || n == 3) ppu_dump_guest_stack(ctx, "wf");
         ++n;
     }
     if (flag && getenv("WAITFLAG_CLEAR")) {   /* experiment: pretend the waker ran */
@@ -1682,6 +1700,13 @@ extern "C" void gt6_hle_overrides(void)
     ps3_hle_register_ctx(0x8AF3825Eu, "inet_pton", gt6_net_inet_pton);
     ps3_hle_register_ctx(0x27DEDA93u, "unknown_0x27DEDA93", gt6_unknown_27DEDA93);
     ps3_hle_register_ctx(0xBE50B11Eu, "cellMusicInitialize2", gt6_cellMusicInitialize2);
+    ps3_hle_register_ctx(0x648B7611u, "cellMusicGetPlaybackStatus2", gt6_cellMusicGetPlaybackStatus2);
+    ps3_hle_register_ctx(0x4014C246u, "cellMusicSetVolume2", gt6_cellMusicOk);
+    ps3_hle_register_ctx(0x7BE4DC31u, "cellMusicFinalize2", gt6_cellMusicOk);
+    ps3_hle_register_ctx(0x2BDC5D6Bu, "cellMusicSetSelectionContext2", gt6_cellMusicOk);
+    ps3_hle_register_ctx(0x8793EF97u, "cellMusicGetSelectionContext2", gt6_cellMusicOk);
+    ps3_hle_register_ctx(0x98947A6Eu, "cellMusicSetPlaybackCommand2", gt6_cellMusicOk);
+    ps3_hle_register_ctx(0xAD04CDDDu, "cellMusicSelectContents2", gt6_cellMusicOk);
     ps3_hle_register_ctx(0xA4599CF3u, "cellFiberPpuWaitFlag",
                          gt6_cellFiberPpuWaitFlag);
     ps3_hle_register_ctx(0xF6C6900Cu, "cellFiberPpuCheckFlags",
