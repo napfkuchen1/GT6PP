@@ -1790,7 +1790,8 @@ extern "C" void gt6_menu_project_sync_pump(ppu_context* ctx)
     if (!gt6_guest_ptr_ok(mgr)) return;
     g_menu_manager = mgr;
     uint32_t last = 0xFFFFFFFFu;
-    for (int i = 0; i < 4000; i++) {
+    int maxit = 4000; if (const char* e = getenv("GT6_PUMP_ITERS")) maxit = atoi(e);
+    for (int i = 0; i < maxit; i++) {
         uint32_t st = vm_read32((uint64_t)mgr + 0x48u);
         if (st == 0u || st > 6u) break;
         if (st != last && gt6_boot_trace())

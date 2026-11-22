@@ -33,9 +33,10 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Hyp. 42: NULL-Crash in A21D50 war r29=0 durch pending g_trampoline_fn nach dem Sync-Pump (Tick drainte nicht). Fix in gt6_menu_project_tick (stubs.cpp). Rueckweg MGOM.start laeuft.
 - Hyp. 42: danach exit(-1) aus 7F9520 (lr 7F9588): A13644-Flag gesetzt -> Zeitstempel +0x960, nach ~0x97FDF Ticks exit. 0x164AB90 ist ein QUIT/Abbruch-Flag, KEIN Load-Done. Force-Flag = Sackgasse.
 - Hyp. 43: +0x91 setzt nur Finalizer 5C3EC4 (aus 5C406C bei +0x90, oder Shutdown 5FBAF0 Schleife). Das ist Quit-Pfad: 568800-Schleife ist die Haupt-Game-Loop, kein 'Warten auf Fertig'.
+- Hyp. 44: Pump-Limit weg (GT6_PUMP_ITERS): 15600+ Iter stabil, ~2193 Flips, Bild bleibt Legal/Logo. Track-Opens laufen im Consumer 5FA730->568784 + Kette 009F79D8<-008C1540.
 
 ## Naechster Schritt (EINER)
-**Hyp. 44: Was tut die Game-Loop pro Tick (5C406C State-Handler +0x88)?** Warum kein Menue-Frame: State-Handler der 3 Objekte + Render/Flip-Aufrufe (cellGcmSetFlip) im Tick zaehlen (loganalyze), Snapshot +0x88 pro Objekt lesen.
+**Hyp. 45: Was haelt die Track-Preload-Schleife (Caller 008C1540 / 009F79D8-Kette) am Laufen?** Snapshot snap_223439640: +0x88 der 3 Objekte + Opens pro Tick.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

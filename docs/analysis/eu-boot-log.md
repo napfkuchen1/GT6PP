@@ -738,3 +738,8 @@ Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot
 
 ## Hyp. 43
 5C3EC4 (Finalizer) setzt +0x91=1; Aufrufer: 5C406C (nur wenn +0x90 durch A13644/Quit) und Shutdown 5FBAF0. Schleife 568800 = Haupt-Game-Loop, endet nur bei Quit. Hang = kein Menue-Rendering im Tick, nicht fehlendes Done.
+
+## Hyp. 44 (Game-Loop, Pump unbegrenzt)
+- GT6_PUMP_ITERS=2000000: >15600 Iter, State 3/4, ~2193 Flips/320 s, frame_00 = Legal+Logo+Spinner (probe_pump44b). Kein Menue-Frame.
+- Back-Trace Track-Opens (009F8E40, probe_bt44): 009F7204<-009F73D0<-009F7420<-009F79D8<-008C70C8/008C1540 (11/40); 009F418C<-009BB16C<-005F3FE8<-005FA4D0<-005FA730<-568784 (Consumer).
+- Ursache Dauerschleife offen.
