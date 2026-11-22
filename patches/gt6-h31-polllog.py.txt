@@ -1,0 +1,12 @@
+p='gt6/generated/ppu_recomp_022.cpp'
+s=open(p,encoding='latin-1').read()
+nl=chr(92)+'n'
+a1="        ctx->lr = 0x009EEC40; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);\n"
+assert s.count(a1)==1
+filt="uint32_t t_=vm_read32(ctx->gpr[31]+4); int k_=(t_==0x40007A10)?0:(t_==0x40007C90)?1:(t_==0x40007990)?2:-1;"
+pre=("        { static int pc_[3]={0,0,0}; "+filt+"\n"
+"          if(k_>=0 && pc_[k_]<60){ pc_[k_]++; fprintf(stderr,\"[P31] pre task=%08X ip=%08X op=%02X h=%08X o24=%d o28=%d"+nl+"\",t_,(unsigned)vm_read32(ctx->gpr[31]+0x1C),(unsigned)vm_read8(ctx->gpr[10]),(unsigned)ctx->ctr,(int)vm_read32(t_+0x24),(int)vm_read32(t_+0x28)); } }\n")
+post=("        { static int qc_[3]={0,0,0}; "+filt+"\n"
+"          if(k_>=0 && qc_[k_]<60){ qc_[k_]++; fprintf(stderr,\"[P31] post task=%08X o24=%d o28=%d ip=%08X"+nl+"\",t_,(int)vm_read32(t_+0x24),(int)vm_read32(t_+0x28),(unsigned)vm_read32(ctx->gpr[31]+0x1C)); } }\n")
+s=s.replace(a1,pre+a1+post)
+open(p,'w',encoding='latin-1',newline='').write(s)
