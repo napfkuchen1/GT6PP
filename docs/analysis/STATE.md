@@ -30,12 +30,13 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Hyp. 37 Snapshot-Auswertung: haengender Script-Opcode 0x06 ruft Wrapper 4037A844 (vt 0x1483EC8+0xdc=9B0918) mit Arg "gtmode" -> 9C625C -> 9C6184 -> OPD 014CD330 = MGOM.start (6C54DC).
 - MGOM.start("gtmode") ist nur Queue: manager 7FF01FC4 +0x48=1 (pending), +0x50="gtmode" noch bei 200 s. Der Engine-Consumer von manager+0x48 (-> Projekt-Loader 5FA338) laeuft nicht.
 - Nebenspuren, nicht verfolgt: `[mfc] REJECTED malformed transfer` (ea=0x7FFFFFFF, img=19, pc=0xF0C) in ~1/3 Laeufen; blauer Block auf AdjustScreen (M3).
+- Hyp. 38 (offline): Consumer = processEventLoop 0x568658 (OPD 014BF800), signalisiert Waiter manager+0x18 (0xA21E04@5689D8). Hauptthread blockt in MGOM.start (568CC8 bl A21D50).
+- Kein Thread hat 0x568658 auf dem Stack. Vorhandener Pump (gt6_menu_project_tick) laeuft nur pro Worker-Schleife 0xA12170, Worker schlafen aber in A187CC/lwcond_wait -> Hook feuert nie.
+- Signal vor Wait geht nicht verloren (A21D8C setzt +0x29=1) -> synchroner Pump vor 568CC8 im Hauptthread ist zulaessig.
 
 ## Naechster Schritt (EINER)
-**Consumer von manager+0x48 finden (offline).** Manager im Snapshot `work/snap_run2`: 7FF01FC4 (+0x48=1, +0x50="gtmode").
-1. Code-Stellen suchen, die manager+0x48 lesen (`lwz rX,0x48(..)`/`cmpwi 1`; Ketten 0x568C94, 5FA338, 5F0424, boot-presents-fix.md 2.2/2.3) per capstone-Scan ueber EMAIN.elf.
-2. Pruefen, welcher Thread/Update-Tick diesen Consumer aufruft und warum er nicht laeuft (Thread in lwcond_wait? Queue-Handoff).
-Kein Einzelfeld-Log-Lauf, bevor das offline geklaert ist.
+**Hyp. 39: synchroner Pump im Hauptthread.** Vor `bl 0xA21D50` (568CC8, func_00568C94) `func_00568658` bis manager+0x48==0 aufrufen (Limit ~2000, Sleep 1 ms), per apply_gt6_post_lift.py.
+Probe: probe.ps1 -Boot notut -Seconds 220; erwarte gtmode-Projektload (5FA338) + Ende des Ladebildschirms. Failt das: Zustand 3/5 im Consumer pruefen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
