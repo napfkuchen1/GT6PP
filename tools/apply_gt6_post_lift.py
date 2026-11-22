@@ -255,6 +255,32 @@ def add_menu_project_pump(root: Path) -> int:
     return changed
 
 
+def add_menu_sync_pump(root: Path) -> int:
+    """Hyp. 39: pump processEventLoop synchronously before MGOM.start blocks."""
+    path = root / "ppu_recomp_012.cpp"
+    if not path.exists():
+        return 0
+    s = path.read_text(encoding="latin-1")
+    decl = 'extern "C" void gt6_menu_project_sync_pump(ppu_context* ctx);\n'
+    inc = '#include "ppu_recomp.h"\n'
+    site = "        ctx->lr = 0x00568CCC; func_00A21D50(ctx);"
+    call = "        gt6_menu_project_sync_pump(ctx);\n"
+    changed = 0
+    if decl not in s and inc in s:
+        s = s.replace(inc, inc + decl, 1)
+        changed += 1
+    if call + site in s:
+        pass
+    elif s.count(site) == 1:
+        s = s.replace(site, call + site, 1)
+        changed += 1
+    else:
+        print("warning: 568CCC wait site not found exactly once", file=sys.stderr)
+    if changed:
+        path.write_text(s, encoding="latin-1")
+    return changed
+
+
 def add_host_open_wrapper(root: Path) -> int:
     """Wrap 0x9F8E40 so the host open is keyed by its returned FileObject.
 
@@ -363,7 +389,7 @@ def main(argv: list[str]) -> int:
     device_guards = add_file_device_guards(root)
     package_guard = add_package_null_guard(root)
     boot_hooks = add_boot_presents_hooks(root)
-    pump = add_menu_project_pump(root)
+    pump = add_menu_project_pump(root) + add_menu_sync_pump(root)
     host_open = add_host_open_wrapper(root)
     adch = patch_adch_switch(root)
     filedev_changes = patch_filedevice_flush(root)

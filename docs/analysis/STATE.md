@@ -33,10 +33,11 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Hyp. 38 (offline): Consumer = processEventLoop 0x568658 (OPD 014BF800), signalisiert Waiter manager+0x18 (0xA21E04@5689D8). Hauptthread blockt in MGOM.start (568CC8 bl A21D50).
 - Kein Thread hat 0x568658 auf dem Stack. Vorhandener Pump (gt6_menu_project_tick) laeuft nur pro Worker-Schleife 0xA12170, Worker schlafen aber in A187CC/lwcond_wait -> Hook feuert nie.
 - Signal vor Wait geht nicht verloren (A21D8C setzt +0x29=1) -> synchroner Pump vor 568CC8 im Hauptthread ist zulaessig.
+- Hyp. 39 (probe_sync39): synchroner Pump vor 568CC8 (gt6_menu_project_sync_pump) wirkt: gtmode.mproject wird geladen (5FA338), States 1->3->4. Danach bleibt manager+0x48=4 (4000 Iter, 3500x state_after=4).
 
 ## Naechster Schritt (EINER)
-**Hyp. 39: synchroner Pump im Hauptthread.** Vor `bl 0xA21D50` (568CC8, func_00568C94) `func_00568658` bis manager+0x48==0 aufrufen (Limit ~2000, Sleep 1 ms), per apply_gt6_post_lift.py.
-Probe: probe.ps1 -Boot notut -Seconds 220; erwarte gtmode-Projektload (5FA338) + Ende des Ladebildschirms. Failt das: Zustand 3/5 im Consumer pruefen.
+**Hyp. 40: State 4 haengt (Sequenz-Objekte r28+0x1d4, +0x91 nie 1).** Snapshot mit `PS3_SNAP_AT=100` im Sync-Pump-Build, offline: Sequenz-Objekte des gtmode-Projekts lesen, welches Script/Child-Job pending bleibt.
+Pump-Limit (4000x1ms) ggf. erhoehen, nur falls offline zeigt, dass Fortschritt vorhanden ist.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

@@ -1775,6 +1775,30 @@ extern "C" void gt6_menu_project_tick(ppu_context* ctx, uint32_t worker_arg)
                 (unsigned)vm_read8((uint64_t)mgr + 0x4Du));
 }
 
+/* Hyp. 39: synchronous pump.  The worker-loop hook never fires (workers sleep
+ * in lwcond_wait).  Called from func_00568C94 right before it blocks in
+ * 0xA21D50 waiting for processEventLoop to signal manager+0x18; drive the
+ * consumer on the calling (main) thread until manager+0x48 is consumed.
+ * The signal-before-wait is kept by 0xA21D8C (+0x29 pending flag). */
+extern "C" void gt6_menu_project_sync_pump(ppu_context* ctx)
+{
+    const uint32_t mgr = (uint32_t)ctx->gpr[27];
+    if (!gt6_guest_ptr_ok(mgr)) return;
+    g_menu_manager = mgr;
+    uint32_t last = 0xFFFFFFFFu;
+    for (int i = 0; i < 4000; i++) {
+        uint32_t st = vm_read32((uint64_t)mgr + 0x48u);
+        if (st == 0u || st > 6u) break;
+        if (st != last && gt6_boot_trace())
+            fprintf(stderr, "[GT6] sync pump i=%d state=%u\n", i, st);
+        last = st;
+        gt6_menu_project_tick(ctx, 0u);
+        if (vm_read32((uint64_t)mgr + 0x48u) == st) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    g_menu_manager = 0u;
+    fprintf(stderr, "[GT6] sync pump done state=%u\n", (unsigned)vm_read32((uint64_t)mgr + 0x48u));
+}
+
 extern "C" void gt6_hle_overrides(void)
 {
     ps3_hle_register_ctx(0xC765B995u, "cellSpursGetWorkloadFlag",

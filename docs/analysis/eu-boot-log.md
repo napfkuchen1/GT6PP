@@ -711,3 +711,8 @@ Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot
 - Workers tid 28/35/43: lr=00A121F0 -> Rueckkehr aus A187CC (lwcond wait in Worker-Schleife 0xA12170). Tick-Hook sitzt bei loc_00A121AC (Schleifenanfang) und feuert nur nach Wakeup.
 - Kein Thread mit 0x568658 auf dem Stack; Pump-Request-Hook (func_00568C94 Eintritt) ok, aber Tick wird nie getrieben.
 - A21E04 (signal) -> A21D8C: ist Waiter-Flag +0x28 gesetzt -> A42FFC (signal), sonst +0x29=1 (pending). Pre-Signal bleibt erhalten.
+
+## Hyp. 39 (probe_sync39_20261122_220806_1, notut, 220 s)
+- Sync-Pump vor 568CC8: "boot" (state 1->3->4->done, `sync pump done state=0` L7829), danach "gtmode": project load gtmode.mproject, states 1,3,4,3,4...
+- gtmode: `sync pump done state=4` (L29752) nach 4000 Iter; state_after=3 3729x, =4 3538x, flag4C=1 load4D=1 -> Sequenz wird getickt, wird nie fertig (+0x91).
+- Patches: gt6/src/stubs.cpp gt6_menu_project_sync_pump; tools/apply_gt6_post_lift.py add_menu_sync_pump (backup work/_bk_h39/ppu_recomp_012.cpp).
