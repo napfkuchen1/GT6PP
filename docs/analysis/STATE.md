@@ -29,6 +29,7 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 45/46 FIX (patches/gt6-h46-spurs-jc-gen.patch, cellSpurs.c): SPURS-Chain gen+alive, Shutdown stoppt Walker, Join wartet. q4 Pushes 226 -> 187k.
 - Hyp. 47: 27-Track-Schleife = BGM-Playlist (soc-job = Audio-Decode), Symptom. Frame 1500 notut = Legal+Logo+Spinner.
 - Hyp. 48a: Captures 4200 orig/noadj + 9000 noadj: kein Menue; noadj 9000 weiter nur dunkles Logo+Spinner (Frame 9000 ~7 min Laufzeit).
+- SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
 
 ## Naechster Schritt (EINER)
 **Hyp. 48b:** orig Frame 9000 (Lauf h48orig9k) auswerten; ggf. PAD_SCRIPT durch Dialoge. Danach "Menue sichtbar/fehlerfrei" definieren, dann Legal-Overlay-Exit.
