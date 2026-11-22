@@ -22,8 +22,8 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 ## Erledigt / widerlegt (Einzeiler)
 - Pad/Dialog-Kette (Hyp. 1-14): Maus, Analog, Xbox-Pad, Vektor-Leser, Queues, Timer, LEN-Konstanten, mempool, Fokus-Setter, Event-Dispatch: alles ohne Wirkung. Durch Umgehung (15) hinfaellig.
 - RPCS3 `--no-gui` als Orakel: haengt im Shader-Precompile. Manueller GUI-Lauf waere moeglich (User).
-- Race/Determinismus: 17/18 Boots identisch. Sound-Schleife = Symptom, nicht Ursache (Hyp. 19/20: 7E90F0 failen, Boot endet gleich).
-- WaitFlag/Fiber-Idle, lwcond-Livelock (Hyp. 21-23): normales Worker-Verhalten, Hauptthread dreht in Track-Preload-Tick.
+- Race/Determinismus: 17/18 Boots identisch. Sound-Schleife = Symptom (Hyp. 19/20).
+- Hyp. 21-23: WaitFlag/lwcond-Livelock = normales Worker-Verhalten.
 - SPU: 0 dispatch-MISS, 0 unresolved NID in den Hyp.-29-35-Laeufen -> kein fehlendes SPU-Image.
 - Hyp. 36 Snapshot-Werkzeug (patches/gt6-snap-at.patch, scripts/snap_walk.py): geht. Workers alle in lwcond_wait, 0 Mutex-Owner, 0 Sem-Waiter, kein cancelled evq. Details eu-boot-log.md.
 - Hyp. 37 Snapshot-Auswertung: haengender Script-Opcode 0x06 ruft Wrapper 4037A844 (vt 0x1483EC8+0xdc=9B0918) mit Arg "gtmode" -> 9C625C -> 9C6184 -> OPD 014CD330 = MGOM.start (6C54DC).
@@ -35,8 +35,11 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Hyp. 43: +0x91 setzt nur Finalizer 5C3EC4 (aus 5C406C bei +0x90, oder Shutdown 5FBAF0 Schleife). Das ist Quit-Pfad: 568800-Schleife ist die Haupt-Game-Loop, kein 'Warten auf Fertig'.
 - Hyp. 44: Pump-Limit weg (GT6_PUMP_ITERS): 15600+ Iter stabil, ~2193 Flips, Bild bleibt Legal/Logo. Track-Opens laufen im Consumer 5FA730->568784 + Kette 009F79D8<-008C1540.
 
+- Hyp. 45/46: soc-job = pro Track Create->Run->Shutdown->Join. Shutdown setzte nur running=0, Walker blieb bis 20 s in jg_wait, Join kehrte sofort zurueck -> 2 Walker, Credits gestohlen.
+- Hyp. 46 FIX (patches/gt6-h46-spurs-jc-gen.patch, cellSpurs.c): gen+alive je Chain, Shutdown stoppt Walker, Join wartet auf alive=0. Vorher q4 226 Pushes, nachher 187k; Track-Opens 3950/320s -> 9248/220s. Menue weiter nicht da.
+
 ## Naechster Schritt (EINER)
-**Hyp. 45: Was treibt die Track-Schleife?** Pro Track 1 SPURS-Chain "soc-job" (3754 RunJobChain/320 s, nur 8 JobGuardNotify geloggt). Main-Thread steckt im Pump (lr 568CB4). Pruefen: soc-job-Ergebnis/Completion.
+**Hyp. 47: Track-Schleife laeuft jetzt 3x schneller, endet aber nie (27 Tracks 0435/0445...).** Pruefen: wer ruft pro Track Chain neu (Consumer 5FA730->568784) und welche Abbruchbedingung (Job-Ergebnis/Listenende) fehlt. Snapshot mit Fix nehmen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

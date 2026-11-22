@@ -1,0 +1,113 @@
+--- a/libs/spurs/cellSpurs.c	2026-11-22 23:50:03.389522000 +0100
++++ b/libs/spurs/cellSpurs.c	2026-11-22 23:50:17.798503000 +0100
+@@ -2576,6 +2576,8 @@
+     u16 max_grab;
+     int run_count;
+     volatile long running;   /* 1 while a host thread walks this chain */
++    volatile long gen;       /* bumped by Shutdown/Create: walkers of an older gen must exit */
++    volatile long alive;     /* host walker threads still executing (Join waits for 0) */
+ };
+ static struct JcSlot s_jobchains[MAX_JOBCHAINS];
+ 
+@@ -2903,11 +2905,25 @@
+  * chain then gives up this pass rather than spinning the walker thread
+  * forever). An unknown guard opens immediately -- a chain guarded by something
+  * we never saw initialised must not deadlock the walker. */
++#if defined(_MSC_VER)
++#  define SPURS_JOB_TLS __declspec(thread)
++#else
++#  define SPURS_JOB_TLS __thread
++#endif
++/* Walker identity (Hyp. 46): a walker of an outdated generation must stop. */
++static SPURS_JOB_TLS int  t_jc_slot = -1;
++static SPURS_JOB_TLS long t_jc_gen  = 0;
++static int jc_stopped(void)
++{
++    return t_jc_slot >= 0 && s_jobchains[t_jc_slot].gen != t_jc_gen;
++}
++
+ static int jg_wait(u32 ea)
+ {
+     int i = jg_find(ea);
+     if (i < 0) return 1;
+     for (int spin = 0; spin < 20000; spin++) {     /* ~20 s at 1 ms */
++        if (jc_stopped()) return 0;
+         if (s_jobguards[i].pending >= s_jobguards[i].reset) {
+             /* Consume exactly one release worth of credits, so notifies that
+              * arrived during the previous lap still count. */
+@@ -3062,6 +3078,7 @@
+     int idle = 0;
+     for (;; idle++) {
+         if (idle > 4096) break;
++        if (jc_stopped()) return;
+         u64 cmd = vm_read64(pc);
+         u32 op  = (u32)(cmd & 7);
+         u32 ext = (u32)(cmd & 127);
+@@ -3113,7 +3130,9 @@
+ 
+ static DWORD WINAPI jc_thread(LPVOID p)
+ {
+-    int slot = (int)(intptr_t)p;
++    int slot = (int)((intptr_t)p & 0xFF);
++    t_jc_slot = slot;
++    t_jc_gen  = (long)((intptr_t)p >> 8);
+     ps3_thread_name("spurs jc %d", slot);
+     /* TIMING PROBE (SPURS_JC_DELAY=ms): the real jm2 chain walker is async and
+      * picks up jobs as the PPU appends them + fills their descriptors. Our walk
+@@ -3124,10 +3143,19 @@
+       if (d && *d) Sleep((unsigned)atoi(d)); }
+     jc_execute(s_jobchains[slot].entry_ea, s_jobchains[slot].jc_ea,
+                s_jobchains[slot].size_desc);
+-    s_jobchains[slot].running = 0;
+-    /* Tell the application the chain is done. Without this the walk finishes
+-     * in silence and a thread waiting on the attached queue never runs again. */
+-    jc_signal_done(s_jobchains[slot].jc_ea, -1);
++    {
++        const int was_stopped = jc_stopped();
++        /* Only the current-generation walker owns `running`; a stopped (stale)
++         * walker must neither clear it nor emit a spurious chain-level event. */
++        if (!was_stopped) {
++            s_jobchains[slot].running = 0;
++            /* Tell the application the chain is done. Without this the walk
++             * finishes in silence and a thread waiting on the attached queue
++             * never runs again. */
++            jc_signal_done(s_jobchains[slot].jc_ea, -1);
++        }
++        _InterlockedDecrement(&s_jobchains[slot].alive);
++    }
+     return 0;
+ }
+ 
+@@ -3160,9 +3188,11 @@
+         if (s_off || !s_jobchains[i].entry_ea) return CELL_OK;
+         /* Coalesce: a chain already being walked must not start twice. */
+         if (_InterlockedCompareExchange(&s_jobchains[i].running, 1, 0) == 0) {
+-            HANDLE th = CreateThread(NULL, 1u << 20, jc_thread, (LPVOID)(intptr_t)i, 0, NULL);
++            _InterlockedIncrement(&s_jobchains[i].alive);
++            HANDLE th = CreateThread(NULL, 1u << 20, jc_thread,
++                (LPVOID)(intptr_t)(((intptr_t)s_jobchains[i].gen << 8) | i), 0, NULL);
+             if (th) CloseHandle(th);
+-            else s_jobchains[i].running = 0;
++            else { _InterlockedDecrement(&s_jobchains[i].alive); s_jobchains[i].running = 0; }
+         }
+         return CELL_OK;
+     }
+@@ -3194,7 +3224,8 @@
+     if (PS3_LOG_FIRST(_n, 8)) printf("[cellSpurs] ShutdownJobChain(jc=0x%08X)\n", (u32)jc_ea);
+     for (int i = 0; i < MAX_JOBCHAINS; i++) {
+         if (s_jobchains[i].jc_ea == (u32)jc_ea) {
+-            s_jobchains[i].running = 0;   /* stop the walker; Join can now succeed */
++            _InterlockedIncrement(&s_jobchains[i].gen);   /* walker sees it and exits */
++            s_jobchains[i].running = 0;
+             return CELL_OK;
+         }
+     }
+@@ -3217,7 +3248,7 @@
+      * so that frame's data was never written at all. */
+     for (int i = 0; i < MAX_JOBCHAINS; i++) {
+         if (s_jobchains[i].jc_ea != (u32)jc_ea) continue;
+-        while (s_jobchains[i].running) {
++        while (s_jobchains[i].running || s_jobchains[i].alive) {
+ #ifdef _WIN32
+             Sleep(0);
+ #else
