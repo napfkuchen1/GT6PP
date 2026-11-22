@@ -1384,6 +1384,33 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
     const uint32_t flag  = (uint32_t)ctx->gpr[3];
     const uint32_t value = (uint32_t)ctx->gpr[4];
 
+    {   /* Hyp. 22 probe: log distinct (flag,value,lr) pairs, bounded */
+        static const bool on = getenv("GT6_FLAGLOG") != nullptr;
+        static int n = 0;
+        if (on && n < 40) {
+            static uint64_t seen[64]; static int ns = 0;
+            const uint64_t key = ((uint64_t)flag << 32) ^ ((uint64_t)value << 8) ^ (uint32_t)ctx->lr;
+            bool dup = false; for (int i = 0; i < ns; ++i) if (seen[i] == key) { dup = true; break; }
+            if (!dup && ns < 64) { seen[ns++] = key; ++n;
+                fprintf(stderr, "[FLAGLOG] WaitFlag flag=0x%08X value=%u cur=%u lr=0x%08X tid=%u\n",
+                        flag, value, flag ? vm_read32((uint64_t)flag) : 0u, (uint32_t)ctx->lr, (uint32_t)ctx->thread_id); }
+        }
+    }
+    {   /* Hyp. 22b: guest stack walk once after 100 s (GT6_FLAGLOG) */
+        static const bool on = getenv("GT6_FLAGLOG") != nullptr;
+        static const auto t_start = std::chrono::steady_clock::now();
+        static int done = 0;
+        if (on && done < 3 && std::chrono::steady_clock::now() - t_start > std::chrono::seconds(100 + 30 * done)) {
+            ++done;
+            fprintf(stderr, "[FLAGLOG] stack tid=%u flag=0x%08X:", (uint32_t)ctx->thread_id, flag);
+            uint64_t sp = ctx->gpr[1];
+            for (int i = 0; i < 400; ++i) {
+                uint32_t w = vm_read32(sp + 8 * i + 4);
+                if (vm_read32(sp + 8 * i) == 0 && w >= 0x10000 && w < 0xF00000 && !(w & 3)) fprintf(stderr, " %08X", w);
+            }
+            fprintf(stderr, "\n");
+        }
+    }
     if (flag) {
         /* Inside a fiber: yield to the scheduler. On a plain thread Yield
          * fails; the guest then loops on its own flag word, so block here

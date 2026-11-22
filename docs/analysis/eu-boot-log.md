@@ -657,3 +657,6 @@ Neuer Hook PS3_FAIL_ICALL=<hex> in ppu_loader.cpp (indirect call skip, r3=0); cl
 
 ## 2026-11-22 - Hyp. 21 (Watchdog, Hauptthread-Wartepunkt)
 probe wd21 (PS3_WD_AT=120,240; PS3_EVQSTAT=40; 2 gueltige Laeufe): tid 1 in cellFiberPpuWaitFlag (GT6-Stub stubs.cpp:1382; Yield-Schleife max 2 ms in Fiber, sonst 5 s), tid 32 in cellFiberPpuRunFibers, ~20 Threads in sys_lwcond_wait. Kein harter Deadlock: Guest dreht in Flag-Warteschleife, das Gegenueber (Flag loeschen + CheckFlags) kommt nie. Naechster Schritt Hyp. 22: haengendes Flag per Log im Stub bestimmen, Setzer suchen.
+
+## 2026-11-22 - Hyp. 22 (WaitFlag-Quelle)
+GT6_FLAGLOG (stubs.cpp): einziger WaitFlag-Aufrufer ist Fiber-Idle-Loop 0xA2F464 (flag obj+0x40, Wert 0; Waker indirekt 0xA2F8B8, CheckFlags). Stack-Scan zeigt nur A2F484. Fibers erben thread_id des Erzeugers (tid 1): Watchdog-Zeile 'tid 1 in WaitFlag' = Fiber, nicht Hauptthread. Hauptthread selbst wartet in sys_lwcond_wait-Wrapper (lr 0xA4309C, cond 0x7FEAE030) wie ~20 weitere Threads; Zeit real, Sleep-Loops enden. Hyp. 21-Deutung (Flag-Deadlock) damit korrigiert. Naechster Schritt Hyp. 23: lwcond-Signalverkehr loggen.
