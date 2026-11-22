@@ -651,3 +651,6 @@ tid 33 "p-OmN" (Entry 0x014E0898, Functor 0xF3D5F4 -> F3D150) hat 0 indirekte Ca
 
 ## 2026-11-22 - Hyp. 19 (Vergleich ohne Tutorial-Skip)
 boot.adc.nodlg_noadjust (2 Laeufe, probe cmp_tut_*): Tutorial laedt (race_tutorial.mproject/.adc, Template.gpb), genau 1 Track (0449), dann Stillstand; 1/2 Laeufe mit mfc-REJECTED. Keine 27-Track-Schleife -> Schleife nur im gtmode-Pfad (Tutorial-Skip). boot.adc danach auf gepatchten Stand zurueck (Backup work/ARCHIV/boot.adc.patched_full, cmp identisch).
+
+## 2026-11-22 - Hyp. 20 (7E90F0 fehlschlagen lassen)
+Neuer Hook PS3_FAIL_ICALL=<hex> in ppu_loader.cpp (indirect call skip, r3=0); clang-cl neu gebaut (gt6\build-clangcl, 17:21). Lauf fail7e90f0: Hook feuert 1x, keine Track-Schleife, Boot stoppt weiter nach scene/misc/gl0019; Frame 4200 nie erreicht (4/4 gueltige Laeufe) -> keine Umgehung. Schleife ist Symptom. MinGW-Build (gt6\build) nicht neu gebaut: Hook nur Probe-Knob, Laeufe nutzen build-clangcl.

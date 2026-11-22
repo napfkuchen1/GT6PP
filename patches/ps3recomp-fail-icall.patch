@@ -1,0 +1,17 @@
+--- a/runtime/ppu/ppu_loader.cpp	2026-11-22 17:21:38.722063400 +0100
++++ b/runtime/ppu/ppu_loader.cpp	2026-11-22 17:21:42.902133900 +0100
+@@ -2749,6 +2749,14 @@
+ #endif
+     uint32_t addr = (uint32_t)ctx->ctr;
+     if (g_icall_target_set) { addr = g_icall_target; g_icall_target_set = 0; }
++    /* PS3_FAIL_ICALL=<hex>: probe -- skip indirect calls whose target is this
++     * guest address and return r3=0 (failure). Used to test whether a
++     * stream-open (e.g. 0x7E90F0) failing ends a retry loop. */
++    { static int64_t fail_to = -2;
++      if (fail_to == -2) { const char* e = getenv("PS3_FAIL_ICALL"); fail_to = e ? (int64_t)strtoul(e, 0, 16) : -1; }
++      if (fail_to >= 0 && addr == (uint32_t)fail_to) {
++          static int n = 0; if (n < 5) { n++; fprintf(stderr, "[FAILICALL] 0x%08X skipped r3=0 lr=0x%08X\n", addr, (uint32_t)ctx->lr); }
++          ctx->gpr[3] = 0; return; } }
+     /* PS3_CALLTRACE=N: log the first N indirect calls (target + r3/r4) --
+      * generic visibility into vtable/callback dispatch (e.g. which job body a
+      * JobManager worker runs). */
