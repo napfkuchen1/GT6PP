@@ -1,4 +1,4 @@
-# GT6PP EU - STATE (single source of truth)
+﻿# GT6PP EU - STATE (single source of truth)
 
 Stand: 2026-11-22. Branch `eu-first-build` im Haupt-Checkout. Disc: EU `BCES01893`.
 Regeln und Fallen: `CLAUDE.md`. Detail-Logs (nur nachschlagen): `docs/analysis/eu-boot-log.md`, `work/MENU_RUN_NOTES.md`, `docs/analysis/CONTINUE-HERE.md`, `docs/HANDOFF.md`, `docs/analysis/eu-session-handoff.md`.
@@ -32,10 +32,11 @@ Hauptmenue nicht erreicht. Erststart-Sprachdialog (~Frame 3300, `LanguageSelectR
 | 13 | RPCS3-Boot-Diff Threads/Queues | Spur abgeschlossen | LLE (libio/usbd/Spurs) vs HLE, keine fehlende Queue relevant |
 | 14 | Dialog-Update / Script-VM-Tick / Draw-Fokus-Seite | zurueckgestellt | Highlight fehlt auch ohne Eingabe; DSP-Probe 5D9B68 [r25]=0 im Steady-State; durch Umgehung (15) nicht mehr blockierend |
 | 15 | Dialog/Adjust/Tutorial per boot.adc-Gate umgehen | **bestaetigt** | 3 Ein-Byte-Datenpatches (`scripts/patch-boot-adc.py`), gtmode-Projekt laedt |
+| 17 | Aufrufer von 7D8308 per CALLTRACE | **inkonklusiv, 3 Laeufe** | 7D8308 nur per Tail-Branch (0x7D8BB8 in 7D8B10, 0x7D8E88 in 7D8DA8) erreichbar, beide Vtable-Slots 0x14775E4/0x14775E0 (Vtable ~0x14775B0). CALLTRACE_TO=7D8308/7D8B10/7D8DA8 ab 200 s: 0 Treffer -> Methoden evtl. gar nicht der Treiber, oder CALLTRACE sieht den Aufruf nicht |
 | 16 | Track-Sound-Ladeschleife (54 Files x338) blockiert Menue | **offen, 2 Laeufe verbraucht** | Treiber = Sound-Player-Create 7D8308 (Worker tid 33), Aufrufer unbekannt; Details unten |
 
 ## Naechster Schritt (EINER)
-1. **Hyp. 17:** Aufrufer von func_007D8308 (CALLTRACE_TO=7D8308) + Vergleich Original-Boot ohne Tutorial-Skip; ggf. Track-Preload umgehen. Siehe "Hyp. 16 Analyse" unten.
+1. **Hyp. 18:** Treiber ueber Worker-tid-Stack/Entry statt Callee suchen (PS3_CALLTRACE_FROM Thread-Entry des Sound-Workers) ODER Umgehung: sgh-Open per Datenpatch fehlschlagen lassen; Vergleich Original-Boot ohne Tutorial-Skip. Siehe "Hyp. 16 Analyse" unten.
 2. Danach: mfc-REJECTED-Divergenz (ea=0x7FFFFFFF, img=19 pc=0xF0C, ~1 von 3 Laeufen) und blauer Block AdjustScreen (M3).
 3. Hinweis: extrahierter Baum `work/gt6_vol` ist gepatcht; Original `work/ARCHIV/boot.adc.orig`.
 Optional: US-Disc (BCUS98296) als Gegenprobe, falls Build-Basis vorhanden.
@@ -65,3 +66,4 @@ Offen: voller 320-s-Baseline-Lauf mit `probe.ps1` noch nicht gefahren (nur Smoke
 - SPURS-Folgefehler (nur Lauf 2, spaet, nach Schleifenbeginn): `bad sizeBinary=0`, `dispatch MISS fp=0xDDB604318D2ACB6D size=34704` (SPU-Job ohne lifted Image, DROPPED). In Lauf 1/3 nicht vorhanden -> wahrscheinlich nicht Ursache.
 - Hypothese: Sound-Subsystem laedt/spielt zyklisch alle Track-Banks (Preload-Schleife, Worker tid 33), Abschluss-/Ready-Flag der Banks wird nie gesetzt (SPU-Decode/Sound-Job fehlt?) -> Menue wartet. NICHT bewiesen.
 - Naechster Schritt (Hyp. 17): (a) `PS3_CALLTRACE_TO=7D8308` -> lr/Aufrufer-Klasse des Players; (b) Vergleich: sind die gleichen sgb-Zyklen im Original-Boot (nur Dialog-Gates ungepatcht) vorhanden? sonst Artefakt der Tutorial-Skip-Patches; (c) Umgehung: Track-Sound-Preload per Datenpatch/HLE ueberspringen (sgh-Open fehlschlagen lassen).
+

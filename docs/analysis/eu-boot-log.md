@@ -642,3 +642,6 @@ Quelle: `work/boot_adc.txt` (tools/adch_disasm.py auf boot.adc), Modul `Language
 ## 2026-11-22 - Sprachdialog-Umgehung (boot.adc-Gates)
 Siehe STATE.md "Umgehung Sprachdialog". Gates: 0x18924/0x196D6 (Sprache), 0x18A69 (Adjust), 0x18FDA (Tutorial). Ergebnis: gtmode laedt, dann Track-Sound-Schleife (338x 54 Files, tid 60-64 Entry 0x014E0898).
 - Hyp. 16 Analyse: Leser-Thread 0x14E0898 = Stream-Reader (0x7E7C6C), Treiber 0x7D8308 (Sound-Player-Create, tid 33), Aufrufer offen. Details STATE.md.
+
+## 2026-11-22 - Hyp. 17 (Aufrufer 7D8308)
+7D8308 nur per Tail-Branch aus Vtable-Methoden 7D8B10/7D8DA8 (Slots 0x14775E4/E0). CALLTRACE_TO auf 7D8308, 7D8B10, 7D8DA8 (AFTER=200): jeweils 0 Treffer. Inkonklusiv; naechster Ansatz siehe STATE.md Hyp. 18.
