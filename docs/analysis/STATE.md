@@ -34,10 +34,12 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Kein Thread hat 0x568658 auf dem Stack. Vorhandener Pump (gt6_menu_project_tick) laeuft nur pro Worker-Schleife 0xA12170, Worker schlafen aber in A187CC/lwcond_wait -> Hook feuert nie.
 - Signal vor Wait geht nicht verloren (A21D8C setzt +0x29=1) -> synchroner Pump vor 568CC8 im Hauptthread ist zulaessig.
 - Hyp. 39 (probe_sync39): synchroner Pump vor 568CC8 (gt6_menu_project_sync_pump) wirkt: gtmode.mproject wird geladen (5FA338), States 1->3->4. Danach bleibt manager+0x48=4 (4000 Iter, 3500x state_after=4).
+- Hyp. 40 (Snapshot work/snap_h40): State 4/3-Zyklus = 3 Sequenz-Objekte (vt 145FAD8, 7FF0B000/7FF0B800/7FEAC000) in 5C406C, +0x90/+0x91=0, +0x88 zyklisch 0..5 (Handler-Tabelle 145D0D4).
+- Fertig-Flag +0x90 wird per A13644 (Byte 0x164AB90, =0) oder von einem Handler gesetzt. Wer es setzt, unbekannt; Pump laeuft 4000 Ticks ohne Fortschritt.
 
 ## Naechster Schritt (EINER)
-**Hyp. 40: State 4 haengt (Sequenz-Objekte r28+0x1d4, +0x91 nie 1).** Snapshot mit `PS3_SNAP_AT=100` im Sync-Pump-Build, offline: Sequenz-Objekte des gtmode-Projekts lesen, welches Script/Child-Job pending bleibt.
-Pump-Limit (4000x1ms) ggf. erhoehen, nur falls offline zeigt, dass Fortschritt vorhanden ist.
+**Hyp. 41: wer setzt Sequenz-Flag +0x90 (stb ..,0x90)?** capstone-Scan EMAIN.elf nach `stb rX,0x90(rY)` in Handlern 5C1B3C/5BD718/5A8218/5B80DC/5B97A0/5A5BB0 + Setter von 0x164AB90 (A13644).
+Offline in work/snap_h40. Danach klaeren, ob das Flag von Input/Zeit/Event kommt (Loading-Screen-Ende) und ob 4000x1ms-Pump nur zu kurz ist (kein Fortschritt in +0x88 sichtbar).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

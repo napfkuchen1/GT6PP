@@ -716,3 +716,8 @@ Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot
 - Sync-Pump vor 568CC8: "boot" (state 1->3->4->done, `sync pump done state=0` L7829), danach "gtmode": project load gtmode.mproject, states 1,3,4,3,4...
 - gtmode: `sync pump done state=4` (L29752) nach 4000 Iter; state_after=3 3729x, =4 3538x, flag4C=1 load4D=1 -> Sequenz wird getickt, wird nie fertig (+0x91).
 - Patches: gt6/src/stubs.cpp gt6_menu_project_sync_pump; tools/apply_gt6_post_lift.py add_menu_sync_pump (backup work/_bk_h39/ppu_recomp_012.cpp).
+
+## Hyp. 40 (snap_h40, PS3_SNAP_AT=100 im sync-pump-Build)
+- Consumer 0x568658: state 3->4 CAS, tickt manager+0x1d4[0..2] via 5C406C, setzt state zurueck auf 3, solange +0x91==0; alle fertig -> state 5.
+- 5C406C: pro Tick Handler[+0x88] aus Tabelle 145D0D4 (5C1B3C,5BD718,5A8218,5B80DC,5B97A0,5A5BB0), +0x88++; Ende wenn A13644()=1 (Byte 0x164AB90 unter Mutex 164AB50) -> +0x90=1 -> 5C3EC4.
+- Snapshot: Objekte 7FF0B000/7FF0B800/7FEAC000: +0x88=0, +0x8C=5/5/A, +0x90/91=0; 0x164AB90=0.
