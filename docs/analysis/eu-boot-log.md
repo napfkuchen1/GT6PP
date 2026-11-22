@@ -660,3 +660,6 @@ probe wd21 (PS3_WD_AT=120,240; PS3_EVQSTAT=40; 2 gueltige Laeufe): tid 1 in cell
 
 ## 2026-11-22 - Hyp. 22 (WaitFlag-Quelle)
 GT6_FLAGLOG (stubs.cpp): einziger WaitFlag-Aufrufer ist Fiber-Idle-Loop 0xA2F464 (flag obj+0x40, Wert 0; Waker indirekt 0xA2F8B8, CheckFlags). Stack-Scan zeigt nur A2F484. Fibers erben thread_id des Erzeugers (tid 1): Watchdog-Zeile 'tid 1 in WaitFlag' = Fiber, nicht Hauptthread. Hauptthread selbst wartet in sys_lwcond_wait-Wrapper (lr 0xA4309C, cond 0x7FEAE030) wie ~20 weitere Threads; Zeit real, Sleep-Loops enden. Hyp. 21-Deutung (Flag-Deadlock) damit korrigiert. Naechster Schritt Hyp. 23: lwcond-Signalverkehr loggen.
+
+## 2026-11-22 - Hyp. 23 (lwcond-Verkehr)
+PS3_LWCLOG (ppu_sysprx.cpp, gitignored, nur nach 90 s): reger Verkehr, lwcond-IDs ~0x4C0213xx..0x4C021Dxx (~139k create), Stack-lokale Conds; tid 1 signalisiert Sound-Manager-Conds 0x1570AB8/0x15DE688, tid 34/33 warten, Wiederholung. Boot haengt nicht idle, sondern dreht in der Track-Preload-Schleife. Naechster Schritt Hyp. 24: Abbruchbedingung der Schleife im aufrufenden Script/Native finden.
