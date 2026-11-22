@@ -1,0 +1,10 @@
+--- work/_bk_ppu_recomp_022_h25.cpp	2026-11-22 19:00:34.687440100 +0100
++++ gt6/generated/ppu_recomp_022.cpp	2026-11-22 19:04:00.678341100 +0100
+@@ -11000,6 +11000,7 @@
+ 
+ void func_00987180(ppu_context* ctx) {
+     PPU_MM_SNAP
++    { static int n25=0; uint32_t o25=(uint32_t)ctx->gpr[3]; if (o25==0x4083F190u && n25<60) { n25++; fprintf(stderr,"[ST25] obj=%08X st=%u ev=%u lr=%08X tid=%llu\n",o25,vm_read32(o25+0x28),(uint32_t)ctx->gpr[4],(uint32_t)ctx->lr,(unsigned long long)ctx->thread_id); if (n25<=12 && (uint32_t)ctx->gpr[4]==3) { uint32_t sp=(uint32_t)ctx->gpr[1]; fprintf(stderr,"[ST25]   stk:"); int c=0; for(int i=0;i<600&&c<30;++i){uint32_t hi=vm_read32(sp+8*i), w=vm_read32(sp+8*i+4); if(hi==0 && w>=0x10000 && w<0x1000000 && !(w&3)){ fprintf(stderr," %08X",w); ++c; }} fprintf(stderr,"\n"); } } }
+         ctx->gpr[0] = ctx->lr;
+         ctx->lr = 0x00987188; func_00BE1424(ctx); DRAIN_TRAMPOLINE(ctx);
+         vm_write64(ctx->gpr[1] + -0xB0, ctx->gpr[1]); ctx->gpr[1] += -0xB0;

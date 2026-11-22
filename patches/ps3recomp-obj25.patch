@@ -1,0 +1,10 @@
+--- work/_bk_ppu_loader_h25.cpp	2026-11-22 18:49:52.496099000 +0100
++++ third_party/ps3recomp/runtime/ppu/ppu_loader.cpp	2026-11-22 18:52:19.731554700 +0100
+@@ -2825,6 +2825,7 @@
+         fprintf(stderr,"[CALL]    r28=0x%08X r29=0x%08X r30=0x%08X r31=0x%08X\n",
+                 (uint32_t)ctx->gpr[28],(uint32_t)ctx->gpr[29],
+                 (uint32_t)ctx->gpr[30],(uint32_t)ctx->gpr[31]);
++        if (addr == 0x640038 || addr == 0x593E34) { uint32_t o=(uint32_t)ctx->gpr[3]; fprintf(stderr,"[OBJ25] %08X:",o); for(int q=0;q<28;++q) fprintf(stderr," %08X",vm_read32(o+4*q)); fprintf(stderr,"\n"); for(int q=9;q<15;++q){ uint32_t p=vm_read32(o+4*q); if(p>=0x10000&&p<0x50000000){ fprintf(stderr,"[OBJ25]   +%02X->%08X:",4*q,p); for(int r=0;r<40;++r) fprintf(stderr," %08X",vm_read32(p+4*r)); fprintf(stderr,"\n"); } } }
+         if (addr == 0x5D9B68) { uint32_t o=(uint32_t)ctx->gpr[3]; uint32_t t30=vm_read32(o+0x30); uint32_t e0=vm_read32((uint32_t)ctx->gpr[4]); uint32_t vt=t30?vm_read32(t30):0; fprintf(stderr,"[CALL]    o30=0x%08X ev0=0x%08X tvt=0x%08X w:%08X %08X %08X %08X %08X %08X %08X %08X\n",t30,e0,vt,vm_read32(t30),vm_read32(t30+4),vm_read32(t30+8),vm_read32(t30+12),vm_read32(t30+16),vm_read32(t30+20),vm_read32(t30+24),vm_read32(t30+28)); } } }
+       /* FLOW_FORCE_RTCFG=1: flOw calls PCoreGcmRenderInterface::
+        * setScreenRenderTarget(this, config) exactly once, with config = NULL,
