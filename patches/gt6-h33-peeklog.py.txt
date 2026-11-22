@@ -1,0 +1,14 @@
+p='gt6/generated/ppu_recomp_022.cpp'
+s=open(p,encoding='latin-1',newline='').read()
+eol='\r\n' if '\r\n' in s else '\n'
+n=chr(92)+'n'
+a="        ctx->lr = 0x00986018; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);"
+assert s.count(a)==1
+# pre: object saved before r3 clobbered -> need obj: r3 at entry is overwritten at line 'ctx->gpr[9] = vm_read32(ctx->gpr[3] + 0x74)'
+b="        ctx->gpr[9] = vm_read32(ctx->gpr[3] + 0x74);"
+i=s.index('void func_00985FE0'); j=s.index(b,i)
+ent="        uint32_t o33_=(uint32_t)ctx->gpr[3]; uint32_t v33_=vm_read32(vm_read32(vm_read32(o33_+0x74)-4)); uint32_t t33_=vm_read32(vm_read32(vm_read32(o33_+0x74)-4)+0); "+eol
+s=s[:j]+ent+s[j:]
+post=("        { static int k33_[3]={0,0,0}; int q_=(o33_==0x40007A10)?0:(o33_==0x40007C90)?1:(o33_==0x40007990)?2:-1; if(q_>=0&&k33_[q_]<40){k33_[q_]++; fprintf(stderr,\"[P33] peek obj=%08X vec=%08X..%08X top=%08X vt=%08X h=%08X res=%d o24=%d o28=%d"+n+"\",o33_,(unsigned)vm_read32(o33_+0x70),(unsigned)vm_read32(o33_+0x74),v33_,t33_,(unsigned)ctx->ctr,(int)ctx->gpr[3],(int)vm_read32(o33_+0x24),(int)vm_read32(o33_+0x28)); } }"+eol)
+s=s.replace(a,a+eol+post,1)
+open(p,'w',encoding='latin-1',newline='').write(s)
