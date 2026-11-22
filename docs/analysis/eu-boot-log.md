@@ -569,3 +569,76 @@ Quelle: `work/boot_adc.txt` (tools/adch_disasm.py auf boot.adc), Modul `Language
 - Neu: `PS3_CALLTRACE_AFTER=<sek>` (patches/gt6-calltrace-after.patch) schaltet den Calltrace erst nach N s Wandzeit scharf.
 
 - Lauf ct_listbox (PS3_CALLTRACE_TO=600A50, _AFTER=150, 200 s, Dialog erreicht, usercmd #3584): 0 Trace-Zeilen. Calltrace erfasst nur indirekte Aufrufe; 0x600A50 wird per direktem bl erreicht -> Ergebnis NICHT aussagekraeftig. Naechster Schritt: PPU_CALLTRACE auf Lifter-Ebene fuer direkte Aufrufe (Funktions-Entry-Probe) oder PS3_CALLTRACE_FROM/Caller der Widget-Klasse (vtable) statt Zieladresse.
+
+## 2026-11-21 — Entry-Probe 0x600A50 + Vtable-Befund
+- Direkte Entry-Probe func_00600A50: 0 Aufrufe im vollen Lauf (Dialog-Phase erreicht, Baseline black 87.4 %, ops=158). Die ListBox-Fokuspruefung laeuft nie.
+- 0x600A50 ist virtueller Slot +0x1F4 der Vtable 0x1460530 (Descriptor 0x14C4828). Ctors 0x601878/0x6019B8/0x6063B8 setzen den vptr. Probe: 0x6063B8 3x gebaut (r3=70255D40/7FEE4800/7FEE52A0), 0x601878 1x, 6019B8 0x.
+- Naechster Schritt: Aufrufstellen des Slots +0x1F4 (lwz ...,0x1F4 + bctrl) finden, pruefen welche Objekte/Pfade ihn erreichen sollten. Details: work/MENU_RUN_NOTES.md, Log work/entryprobe2_run.err.
+
+- 2026-11-22: Event-Dispatcher 5D9B68 (Slot +0x128, rekursiv ueber obj+0x30). Steady-State: 1 Event/Frame an Wurzelobjekt, Dialogbaum bekommt nur beim Bau Events (663). Heap-Adressen variieren pro Lauf. Details work/MENU_RUN_NOTES.md.
+
+## sys_timer One-Shot Fix (2026-11-22)
+- RPCS3-Abgleich (Warning-Log, log.yml wird von rpcs3 --no-gui NICHT beachtet; Pfad mit Leerzeichen muss in "..." im ArgumentList): Spiel erzeugt Timer (gFKsE/9qstY, Queue 0x8d033900) und startet sie.
+- Bei uns: sys_timer_start(period=0, base=absolute Systemzeit us) -> EINVAL, Timer feuerte nie (~6700 Starts pro Lauf).
+- Fix: period==0 = One-Shot bei absoluter Systemzeit (ps3_system_time_us exportiert aus ppu_sysprx.cpp, Backup work/_bk_ppu_sysprx.cpp, work/_bk_sys_timer.c; Kopie work/sys_timer_oneshot_fix.c).
+- Ergebnis: Timer feuern jetzt, Dialog UNVERAENDERT (black 87.4 %, ops=158, cap_timer2, Pad-Script gedrueckt). Echter Bug, aber nicht die Dialog-Ursache.
+- Offen: sys_event_queue/port- und Thread-Zaehler gegen RPCS3, Pad-Mapper-Ausgang, RPCS3-Trace per GUI-Log-Einstellung.
+
+## Event-Queue-/Pad-Zaehler-Abgleich (2026-11-22)
+- RPCS3 (Warning-Log, ab 12 s) legt 15 Event-Queues an, wir 9. Fehlend bei uns: sys_config-Queue size 32 (+Thread _cfg_evt_hndlr, kommt aus echter libio via sys_config_start), usbd-Queue 127 (sys_usbd_initialize), 2x size 42 und 1x size 32 (libsre/Spurs-Pfad), 1x size 127. Erklaerung: RPCS3 laeuft mit LLE-libio/usbd/Spurs, wir mit HLE -> kein Defekt per se.
+- Pad-Zaehler (cellPad.c, [padcnt], Backup work/_bk_cellPad.c): Spiel ruft nur cellPadGetInfo2 + cellPadGetData (je >15000x, 1:1) und einmal ClearBuf; kein GetCapabilityInfo/SetActDirect/PressMode/SensorMode. Pad wird normal gepollt -> Pad-Datenquelle ok, Konsument ignoriert Eingabe.
+- Naechster Schritt: Pad-Mapper-Ausgang (D00B2EF0 / 0x15708C0) per WWATCH/RWATCH; pruefen ob Mapper-Thread (tid=27) Daten ueberhaupt in Spiel-State schreibt.
+
+## Pad-Mapper-Watch + PAD_SCRIPT-Oktal-Falle (2026-11-22)
+- WWATCH/RWATCH 0x15708C0 (cap_padmap1): Objekt = Thread-Wrapper (Ctor A1C26C tid=1, Leser A1C130/A1C1F8 starten Thread-Body). KEIN Pad-Ausgang. Mapper-Ausgang liegt woanders (Schreibziele in A39CD8, gt6/generated/ppu_recomp_023.cpp).
+- PAD_SCRIPT-Masken MUESSEN 0x-Praefix haben (strtoul base 0): "0040" = oktal 0x20 (press 0x0020). Lauf padreal1 mit 0x0040/0x4000 (log: press 0x0040 / 0x4000 bestaetigt): Dialog UNVERAENDERT (black 87.4 %, ops=158, Zeile 1 ohne Highlight, Mauszeiger sichtbar). Fruehere PAD_SCRIPT-Tests ohne 0x ggf. ungueltig, Ergebnis aber jetzt mit gueltiger Eingabe bestaetigt.
+- cap-gt6 -Env trennt an Kommas: PPU_RWATCH=<hex>,<len> geht nicht (Laenge verloren).
+- Naechster Schritt: A39CD8 lifted lesen, echte Schreibziele (Pad-Mapper-Ausgang) finden, dort WWATCH/RWATCH.
+
+## Pad-Mapper-Gating + LEN-Konstanten (2026-11-22)
+- A39CD8: r21 = Pad-Manager 0x165AD40; Ausgaenge manager+0xB08..0xB14 (0x165B848..). padnz2: Mapper liest 0x40 an 0x165ADE8/ADEA zur Presszeit -> Lieferung ok.
+- Gating im Mapper: button[1] Low-Nibble*2 = r0; Stick/Sensor-Pfad (+0xB0E..B14) nur bei r0==0x18 (len 24). Wir lieferten len 28 -> Pfad tot.
+- Ursache: cellPad.h CELL_PAD_LEN_CHANGE_PRESS_ON=24/SENSOR_ON=28; SDK: 20/24. Gefixt (Backup work/_bk_cellPad.h). Game setzt SetPortSetting(0, 0x6) -> len 24.
+- Verifiziert (padw2): Mapper schreibt jetzt 0x200/0x18F (Sensor-Ruhewerte) nach 0x165B84E..B85E. padlen1/padw2/padr3: Dialog weiter unveraendert (black 87.4 %, ops=158).
+- padr3: Listener-Records 0x165B1A8+ werden nur vom Mapper (Listenwalk), 0x03002F00 (Flag=1) und Decoder A395F0 (read2) gelesen. Naechster Schritt: Aufrufer/Konsument von A395F0 und Ausgabe nach dem Decoder.
+- Diagnose im Code: [padpress] (cellPad.c, stderr nur bei PAD_SCRIPT-Druck), PPU_RWATCH_NZ (ppu_loader.cpp, env-gated). Riesige Watch-Caps machen Lauf zu langsam (>330 s).
+
+## Zeitquellen-Check + Anim-Diff + Upstream + Xbox (2026-11-22)
+- Anim-Diff Frame 3400 vs 4200: Dialog statisch, nur Cursor-Pixel differieren -> keine laufende Animation.
+- Upstream ps3recomp: keine neuen Hinweise zu Pad/Dialog.
+- Xbox-Pad (echtes XInput): keine Reaktion -> Problem nicht Eingabe-Backend.
+- Zeitquellen statisch geprueft: ppu_timebase_now = QPC, 79.8 MHz, monoton, Anker bei Erstnutzung (ok). sys_time_get_system_time = QPC-Mikrosekunden seit Erstaufruf (ok, gleiche Hostuhr). sys_time_get_timebase_frequency = 79800000 (ok).
+- Auffaellig (klein): sys_time_get_current_time liefert QPC-Uptime (sec seit Boot), nicht Epoch-Zeit wie LV2. Kann Datums-/Erststart-Logik beeinflussen. Nicht als Ursache bestaetigt.
+- Fazit: keine Zeitquelle defekt. Offener Kandidat: Dialog-Open-Sequenz wartet auf Event/Callback (sysutil, Queue, Eventflag), nicht auf Zeit.
+- Naechster Schritt: Thread-/Wait-Dump bei Frame ~3400 (wer blockiert worauf), plus Test current_time als Epoch.
+
+- Epoch-Test (2026-11-22): sys_time_get_current_time liefert jetzt Unix-Epoch (GetSystemTimePreciseAsFileTime; Backup work/_bk_sys_timer.c). Capture cap_epoch1: black 87.4 %, ops=158 -> Dialog unveraendert. Zeit-Hypothese damit erledigt (Fix bleibt, da LV2-konform). Naechster Schritt: Wait-Dump aller Threads bei Frame 3400.
+
+## Wait-Dump bei ~270/300 s (2026-11-22)
+- Neu: env `PS3_WD_AT=<s1>,<s2>` (ppu_loader.cpp, Thread in lv2_syscall; gt6 hat keinen boot_main-Watchdog). Dumpt pro Guest-Thread lr/r3/sp, laufenden lv2-Syscall (g_sc_inflight) + HLE-inflight. Backup work/_bk_ppu_loader3.cpp. Logs work/wd2_run.log.err, work/evq1_run.log.err (PS3_EVQSTAT=300).
+- Zustand (beide Samples identisch = statisch): ~20 Worker idle in sys_lwcond_wait (lr A4309C); tid1 (Fiber-Ctx) in cellFiberPpuWaitFlag, tid32 in cellFiberPpuRunFibers (lr A2FB4C); tid3 usleep 16 ms (lr A37464, Frame-Takt); tid27 Pad-Mapper usleep 12.5 ms; tid 5/36/37/42/43 lr A30550 ohne Syscall.
+- Event-Queue-Waiter OHNE Timeout: q3 (tid15, lr A566C4), q4 (tid18, lr 82039C), q8 (tid22, lr 0), q9 (tid31, lr 7F9F6C). Mit Timeout: q1 (tid2), q6 (tid20), q7 (tid21). cond_wait 10 s: tid16/17/30.
+- EVQSTAT: q3, q6, q8, q9 bekommen NIE einen Push. q4 size=1: 221 Pushes, stoppt nach Boot (~Event 1500). q1 ~15k, q5 ~61k (pending=4, kein Waiter), q7 ~61k (Timer). Ports: port2->q3 (name 0xD0A77), port3->q6, port4->q8; nur port1->q1 sendet (A466A4+0x742).
+- Bewertung: Sender fuer q3/q8 (und q6/q9) feuern nie. Kandidat fuer fehlende Dialog-Fokus-/Open-Sequenz: Producer von port2/port4. Nicht bestaetigt.
+- Naechster Schritt: Erzeuger/Sender von port2 (name 0xD0A77) und port4 per Caller-Trace auf sys_event_port_send (syscall 134) finden; Consumer q3 = func um A566C4, q8 = Thread-Entry tid22.
+
+## Queue/Port-Zuordnung (2026-11-22, EVT_PUSHLOG=4, PS3_EVT_CREATE_STACK)
+- Neu: env `PS3_EVT_CREATE_STACK=1` (sys_event.c, port_create); Stack-Dump blieb im Log leer (ppu_dump_guest_stack liefert nichts). Backup work/_bk_sys_event2.c. Logs work/pcs1_run.log.err, work/pl4_run.log.err.
+- port2->q3 (name 0xD0A77) gehoert zum Thread tid15 "Spu Event Handler" (SPURS-Eventhandler, entry 14E14C0). Sender waere SPU-Seite (throw_event), nie aktiv.
+- port3->q6: usbd-Kontext (cellUsbdSetThreadPriority2, tid20 pnZ). Sender = usbd-HLE, nie aktiv (Stub).
+- port4->q8: mempool-Thread tid22 "lgFF" (unser sys_mempool). Sender fehlt.
+- q4 (tid18 sgx-audio-thr, size=1) = SPURS-Queue, src=0xFFFFFFFF53505501 ('SPU\1') + d=0x701AC000/<wid 0..A>: ~200 Pushes im Boot, danach Stillstand -> SPURS-Workloads melden nichts mehr.
+- q5/q7 = Audio-Notify (key 0x23A0 / 0x48DA6C685BCC82D), laufen (61k Pushes). Keine Audio-Ursache.
+- q9 tid31 MEfYS: Sender unbekannt.
+- Naechster Schritt: warum SPURS nach Boot keine Events mehr sendet (Spurs-Workload-Status 0x701AC000, Workload-Wakeups); usbd-Events (q6) gegen RPCS3 pruefen.
+
+## SPURS-Check (2026-11-22, SPURS_KSTAT=20, PS3_EVT_CREATE_STACK=1; Lauf ks3 mit GT6_BUILD_DIR=gt6\build-clangcl)
+- Korrektur: "Stack-Dump leer" (pcs1) war falsch; run-gt6.ps1 nutzt ohne `GT6_BUILD_DIR` das alte gt6\build\gt6.exe. Mit clangcl-Build liefert PS3_EVT_CREATE_STACK Stacks.
+- Neu: `SPURS_KSTAT=<sek>` in cellSpurs.c (Kernel-Thread: Slots, je wid state/ready/sig/act/idle/runs). Backup work/_bk_cellSpurs2.c. Log work/ks3_run.log.err.
+- Ergebnis: SPURS laeuft weiter. Beide Kernel-Threads loopen (loop#20000), wid0-7 state=2, runs steigen (wid5 12k->20k, wid7 9.8k->15k), alle Slots idle/ready 0. Stillstand-Hypothese SPURS widerlegt; q4-Stopp = Jobchain 0x701AC000 liefert keine Completion mehr (sgx-audio-Chain), nicht Kernel.
+- Port-Ersteller (Guest): port1 func_00A47588 (PDI GFXS); port2 (->q3, Spu Event Handler) func_00A434FC/00A4259C; port3 (->q6) func_00274178 <- A37E58 <- B62864 <- 007D7340; port4 (->q8) func_00A5DE60+0x2A0 <- A2B94C <- A1C130.
+- Naechster Schritt: Sender-Wrapper der Klassen von port3/port4 (analog port1 A466A4+0x742) finden und die Aufrufer per Entry-Probe/Calltrace pruefen; Consumer q6=tid20, q8=tid22.
+
+## 2026-11-22 - Sprachdialog-Umgehung (boot.adc-Gates)
+Siehe STATE.md "Umgehung Sprachdialog". Gates: 0x18924/0x196D6 (Sprache), 0x18A69 (Adjust), 0x18FDA (Tutorial). Ergebnis: gtmode laedt, dann Track-Sound-Schleife (338x 54 Files, tid 60-64 Entry 0x014E0898).
+- Hyp. 16 Analyse: Leser-Thread 0x14E0898 = Stream-Reader (0x7E7C6C), Treiber 0x7D8308 (Sound-Player-Create, tid 33), Aufrufer offen. Details STATE.md.

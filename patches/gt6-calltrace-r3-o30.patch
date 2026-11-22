@@ -1,0 +1,31 @@
+diff --git a/third_party/ps3recomp/runtime/ppu/ppu_loader.cpp b/third_party/ps3recomp/runtime/ppu/ppu_loader.cpp
+index 8167e29..2a8aece 100644
+--- a/third_party/ps3recomp/runtime/ppu/ppu_loader.cpp
++++ b/third_party/ps3recomp/runtime/ppu/ppu_loader.cpp
+@@ -2775,6 +2775,16 @@ static void ps3_indirect_call_impl(ppu_context* ctx)
+       static int64_t only_r5 = -2;
+       if (only_r5 == -2) { const char* e = getenv("PS3_CALLTRACE_R5");
+                            only_r5 = e ? strtol(e, 0, 0) : -1; }
++      /* PS3_CALLTRACE_R3=<hex>:<len>[;<hex>:<len>...]: only calls whose r3 (the
++       * object) lies in one of these guest ranges -- shows which virtual methods
++       * run on specific objects. */
++      static uint32_t r3_lo[8], r3_hi[8]; static int r3_n = -1;
++      if (r3_n == -1) { r3_n = 0; const char* e = getenv("PS3_CALLTRACE_R3");
++          while (e && *e && r3_n < 8) { char* nx; uint32_t a = (uint32_t)strtoul(e, &nx, 16); uint32_t l = 0x100;
++              if (*nx == ':') { l = (uint32_t)strtoul(nx + 1, &nx, 0); } r3_lo[r3_n] = a; r3_hi[r3_n] = a + l; r3_n++;
++              if (*nx == ';') nx++; e = nx; if (nx == e && !*nx) break; } }
++      bool r3_ok = (r3_n == 0); for (int q = 0; q < r3_n; q++) if ((uint32_t)ctx->gpr[3] >= r3_lo[q] && (uint32_t)ctx->gpr[3] < r3_hi[q]) r3_ok = true;
++      if (!r3_ok) { /* skip */ } else
+       if (only_r5 >= 0 && (int64_t)(int32_t)ctx->gpr[5] != only_r5) { /* skip */ } else
+       if (only_lr >= 0 && (uint32_t)ctx->lr != (uint32_t)only_lr) { /* skip */ } else
+       if(ctr_n>0){ ctr_n--;
+@@ -2792,7 +2802,8 @@ static void ps3_indirect_call_impl(ppu_context* ctx)
+          * supplied it. */
+         fprintf(stderr,"[CALL]    r28=0x%08X r29=0x%08X r30=0x%08X r31=0x%08X\n",
+                 (uint32_t)ctx->gpr[28],(uint32_t)ctx->gpr[29],
+-                (uint32_t)ctx->gpr[30],(uint32_t)ctx->gpr[31]); } }
++                (uint32_t)ctx->gpr[30],(uint32_t)ctx->gpr[31]);
++        if (addr == 0x5D9B68) { uint32_t o=(uint32_t)ctx->gpr[3]; uint32_t t30=vm_read32(o+0x30); uint32_t e0=vm_read32((uint32_t)ctx->gpr[4]); uint32_t vt=t30?vm_read32(t30):0; fprintf(stderr,"[CALL]    o30=0x%08X ev0=0x%08X tvt=0x%08X w:%08X %08X %08X %08X %08X %08X %08X %08X\n",t30,e0,vt,vm_read32(t30),vm_read32(t30+4),vm_read32(t30+8),vm_read32(t30+12),vm_read32(t30+16),vm_read32(t30+20),vm_read32(t30+24),vm_read32(t30+28)); } } }
+       /* FLOW_FORCE_RTCFG=1: flOw calls PCoreGcmRenderInterface::
+        * setScreenRenderTarget(this, config) exactly once, with config = NULL,
+        * and every later setScreenRenderTargetInternal() then reports "No
