@@ -27,13 +27,15 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - SPU: 0 dispatch-MISS, 0 unresolved NID in den Hyp.-29-35-Laeufen -> kein fehlendes SPU-Image.
 - Hyp. 36 Snapshot-Werkzeug (patches/gt6-snap-at.patch, scripts/snap_walk.py): geht. Workers alle in lwcond_wait, 0 Mutex-Owner, 0 Sem-Waiter, kein cancelled evq. Details eu-boot-log.md.
 - Alte Callee-Adressen 4037EC28 u.a. aus Hyp. 35 sind lauf-spezifisch/stale; im Snapshot 110 Bind-Wrapper (vt 0x1484968) mit vtable+0x54 = 0x9E5FC0 (Bind-Trampolin -> 0x9880BC).
+- Hyp. 37 Snapshot-Auswertung: haengender Script-Opcode 0x06 ruft Wrapper 4037A844 (vt 0x1483EC8+0xdc=9B0918) mit Arg "gtmode" -> 9C625C -> 9C6184 -> OPD 014CD330 = MGOM.start (6C54DC).
+- MGOM.start("gtmode") ist nur Queue: manager 7FF01FC4 +0x48=1 (pending), +0x50="gtmode" noch bei 200 s. Der Engine-Consumer von manager+0x48 (-> Projekt-Loader 5FA338) laeuft nicht.
 - Nebenspuren, nicht verfolgt: `[mfc] REJECTED malformed transfer` (ea=0x7FFFFFFF, img=19, pc=0xF0C) in ~1/3 Laeufen; blauer Block auf AdjustScreen (M3).
 
 ## Naechster Schritt (EINER)
-**Snapshot auswerten, Script-Task finden.** Werkzeug steht (Hyp. 36): Lauf `scripts\probe.ps1 -Name snap -Boot notut -Seconds 320 -Env "PS3_SNAP_AT=200;PS3_SNAP_DIR=<abs>/work/snap_runN"`.
-1. Task-Objekt (Poll 0x9EEA88) im Snapshot finden: Vtable-Klasse per `find32` suchen, obj+0x70/0x74 (Job-Stack), Top-Job `vtable+8` (985FE0) lesen -> Status/Typ des haengenden Jobs.
-2. Daran haengende Bind-Wrapper (vt 0x1484968 -> [+0x14] -> vt 0x1487348 -> 0x9E5FC0 -> 0x9880BC -> vtable+0x28) offline bis zum Ziel auflösen (`snap_walk.py`).
-Snapshot-Vorlage: `work/snap_run2` (200 s, notut). Kein Einzelfeld-Log-Lauf mehr, bevor das offline geklaert ist.
+**Consumer von manager+0x48 finden (offline).** Manager im Snapshot `work/snap_run2`: 7FF01FC4 (+0x48=1, +0x50="gtmode").
+1. Code-Stellen suchen, die manager+0x48 lesen (`lwz rX,0x48(..)`/`cmpwi 1`; Ketten 0x568C94, 5FA338, 5F0424, boot-presents-fix.md 2.2/2.3) per capstone-Scan ueber EMAIN.elf.
+2. Pruefen, welcher Thread/Update-Tick diesen Consumer aufruft und warum er nicht laeuft (Thread in lwcond_wait? Queue-Handoff).
+Kein Einzelfeld-Log-Lauf, bevor das offline geklaert ist.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

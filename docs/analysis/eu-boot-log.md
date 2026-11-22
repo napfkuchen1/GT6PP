@@ -698,3 +698,10 @@ Statischer Scan der Handler-Tabelle 0x1487660 (patches/gt6-h34-scan.py.txt): dir
 Patch patches/gt6-snap-at.patch (ppu_loader.cpp Thread + runtime/diag/ps3_snapshot.c): nach N s alle committeten VM-Regionen (reg_<ea>.bin, regions.txt, ~1 GB), Thread-Regs/Stacks, Sync-Tabellen. Lauf snap2 (work/snap_run2, 200 s, notut) gueltig.
 Befund: Threads 2-40 in lwcond_wait/Syscalls (130/141/107), Hauptthread in cellFiberPpuWaitFlag. Mutex: 10 aktiv, alle owner 0. Sem: 8 mit value=0 (max 1024), keine Waiter. evq5 (key 0x23A0 = cellAudio-Notify) cap4 count4 ohne Receiver (vermutl. Symptom, vgl. Hyp. 19/20).
 Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot 0x54 = 0x9E5FC0: Bind-Trampolin, ruft 0x9880BC(*arg4, this+0x14, [this+0x14]+0x34 ...) -> [x+0xC].vtable+0x28. Zielfunktion noch offen.
+
+## Hyp. 37 - Snapshot snap_run2 (200 s, notut): Script-Task und Ziel des Pending-Calls
+- Poll 0x9EEA88 gehoert zu 12 Task-Knoten (vt 0x14875B0, Poll +0x14); State-Objekt (vt 0x14811E8) +0x24 Status, +0x28 Zustand. Aktiver Task 400DB544 (Parent 400C7F88), State 40007990 Status 5.
+- Bytecode: task+0x1c = ip (Array von Record-Zeigern), Record byte0 = Opcode, Handlertabelle 0x1487660+24*opc+0x10. Letzter Record vor Yield: opc 0x06 (arg 0x9A), danach 0x36 (015DE7D8).
+- Opcode 0x06 (0x9F0748): Stack task+0x20 (base[0], Top +0x1c) pop 2 -> Callee 4037A844 (vt 0x1483EC8, +0xdc=0x9B0918), Arg-Objekt 400E97F0 = String "gtmode".
+- 0x9B0918 -> obj2 4009EFE8 (vt 0x1485B50) +0x54 = 0x9C625C -> +0x58 = 0x9C6184 -> Functor obj2+0x14 = OPD 014CD330 = 0x6C54DC = MGOM.start.
+- Manager 7FF01FC4: +0x48 = 1 (pending), +0x50 = "gtmode" -> Request wird nie konsumiert. Siehe boot-presents-fix.md 2.3.
