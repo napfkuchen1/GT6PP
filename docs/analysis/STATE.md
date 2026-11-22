@@ -36,7 +36,7 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Hyp. 44: Pump-Limit weg (GT6_PUMP_ITERS): 15600+ Iter stabil, ~2193 Flips, Bild bleibt Legal/Logo. Track-Opens laufen im Consumer 5FA730->568784 + Kette 009F79D8<-008C1540.
 
 ## Naechster Schritt (EINER)
-**Hyp. 45: Was haelt die Track-Preload-Schleife (Caller 008C1540 / 009F79D8-Kette) am Laufen?** Snapshot snap_223439640: +0x88 der 3 Objekte + Opens pro Tick.
+**Hyp. 45: Was treibt die Track-Schleife?** Pro Track 1 SPURS-Chain "soc-job" (3754 RunJobChain/320 s, nur 8 JobGuardNotify geloggt). Main-Thread steckt im Pump (lr 568CB4). Pruefen: soc-job-Ergebnis/Completion.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
