@@ -12,6 +12,8 @@
 # -Expect   : regexes that MUST appear in stdout/stderr, else the run is INVALID (not "hypothesis refuted")
 # -Frame    : >0 enables RSX capture at that frame (windowed run, PS3_HEADLESS removed) + pixel stats
 # -KeepDb   : do not archive userdb before the batch
+# -Boot     : orig|noadj|notut - which boot.adc variant is installed (from work\ARCHIV\boot.adc.*); omitted = keep current.
+#             The active variant is always detected by hash, printed and written to <rundir>\boot.txt.
 param(
     [Parameter(Mandatory)][string]$Name,
     [int]$Seconds = 320,
@@ -20,7 +22,8 @@ param(
     [string[]]$Expect = @(),
     [string]$PadScript = "",
     [int]$Frame = 0,
-    [switch]$KeepDb
+    [switch]$KeepDb,
+    [ValidateSet("", "orig", "noadj", "notut")][string]$Boot = ""
 )
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
@@ -65,6 +68,26 @@ if ($pairs.Contains("PS3_CALLTRACE") -and -not $pairs.Contains("PS3_CALLTRACE_AF
     Write-Warning "PS3_CALLTRACE without PS3_CALLTRACE_AFTER fills the budget during boot. Use PS3_CALLTRACE_AFTER=200."
 }
 
+# --- boot.adc variant (baseline) --------------------------------------------
+$bootFile = Join-Path $Root "work\gt6_vol\projects\gt6\boot\boot.adc"
+$variants = [ordered]@{ orig = "boot.adc.orig"; noadj = "boot.adc.nodlg_noadjust"; notut = "boot.adc.nodlg_noadjust_notut" }
+if (-not (Test-Path $bootFile)) { throw "Missing $bootFile (run scripts\extract-gtvol.ps1)." }
+if ($Boot) {
+    $src = Join-Path $Root ("work\ARCHIV\" + $variants[$Boot])
+    if (-not (Test-Path $src)) { throw "Variant file missing: $src" }
+    if ((Get-FileHash $src).Hash -ne (Get-FileHash $bootFile).Hash) {
+        $known = $variants.Values | ForEach-Object { Join-Path $Root "work\ARCHIV\$_" } | Where-Object { Test-Path $_ } | ForEach-Object { (Get-FileHash $_).Hash }
+        if ((Get-FileHash $bootFile).Hash -notin $known) {
+            Copy-Item $bootFile (Join-Path $Root ("work\ARCHIV\boot.adc.unknown_{0}" -f $Ts)); Write-Warning "Unknown boot.adc saved to ARCHIV before switching."
+        }
+        Copy-Item $src $bootFile -Force
+    }
+}
+$curHash = (Get-FileHash $bootFile).Hash
+$BootName = "unknown"
+foreach ($k in $variants.Keys) { $f = Join-Path $Root ("work\ARCHIV\" + $variants[$k]); if ((Test-Path $f) -and (Get-FileHash $f).Hash -eq $curHash) { $BootName = $k } }
+Write-Host "BOOT variant: $BootName"
+
 # --- toolchain DLLs --------------------------------------------------------
 $mingw = Get-ChildItem -Path (Join-Path $Root "tools\llvm-mingw") -Directory -ErrorAction SilentlyContinue |
     ForEach-Object { Join-Path $_.FullName "bin\clang.exe" } | Where-Object { Test-Path $_ } | Select-Object -First 1
@@ -90,6 +113,7 @@ try {
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
         if ($Frame -gt 0) { $env:RSX_CAP = "${Frame}:1"; $env:RSX_CAP_DIR = $dir }
         $log = Join-Path $dir "run.log"
+        Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.Name, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
         $proc = Start-Process -FilePath $Exe.FullName -ArgumentList @($Elf) -WorkingDirectory $Root `
             -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
         $runs += [pscustomobject]@{ I = $i; Dir = $dir; Log = $log; Proc = $proc }
@@ -128,7 +152,7 @@ foreach ($r in $runs) {
         } else { $status = "INVALID"; $why += "frame $Frame not captured (not reached in ${Seconds}s)" }
     }
     if ($status -ne "OK") { $bad++ }
-    Write-Host ("run {0}: {1} unresolved={2} {3}{4} {5}  -> {6}" -f $r.I, $status, $unres, $dlg, $stat, ($why -join "; "), $r.Dir)
+    Write-Host ("run {0}: {1} boot={7} unresolved={2} {3}{4} {5}  -> {6}" -f $r.I, $status, $unres, $dlg, $stat, ($why -join "; "), $r.Dir, $BootName)
 }
 if ($bad) { Write-Host "WARNING: $bad run(s) INVALID - do not draw conclusions from them."; exit 1 }
 Write-Host "All runs valid. Logs: work\probe_${Name}_${Ts}_*"

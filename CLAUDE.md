@@ -6,15 +6,17 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 
 ## Arbeitsweise
 - **Im Haupt-Checkout arbeiten** (`C:\Users\Daniel\Downloads\Games\GT6\ClaudeCode\GT6PP`, Branch `eu-first-build`), NICHT im Worktree: Worktrees haben kein `work/` (45 GB), keinen Build, keine Disc, und Edit/Write-Hooks blockieren dort Haupt-Pfade. Laeuft die Session doch im Worktree: Dateien per PowerShell schreiben.
-- **Autonom weitermachen.** Keine Rueckfragen und keine `wrap_up`-Fragen zwischen Schritten. Nur fragen bei echtem Blocker, Credentials, Push/PR/Commit auf Remote. Konservativste sinnvolle Option waehlen, dokumentieren, weiter.
-- **Zeitbox pro Hypothese: max. 2 Probe-Laeufe oder 30 min.** Danach in STATE.md als widerlegt/offen eintragen und den naechsten Ansatz nehmen. Nach 3 widerlegten Hypothesen in Folge: Strategie wechseln (Umgehung/Vergleich) statt weiter bohren.
+- **Turn-Ende-Regel (wichtigste Regel).** Eine abgeschlossene Hypothese ist NIE das Ende des Turns. Ablauf: Ergebnis -> STATE.md aktualisieren -> lokal committen -> SOFORT die naechste Hypothese starten, im selben Turn. `wrap_up` und Abschlussnachricht NUR bei: (a) Hauptmenue erreicht, (b) echter Blocker (Credentials, Push/PR, fehlende Rechte), (c) 8 abgeschlossene Hypothesen seit Turn-Start, (d) Kontext fast voll. Der User soll nie "weiter" tippen muessen (2026-11-22: 21x noetig gewesen = Hauptverlust). Keine Rueckfragen; konservativste Option waehlen, dokumentieren, weiter.
+- **Zeitbox pro Hypothese: max. 2 Probe-Laeufe oder 30 min.** Danach in STATE.md eintragen und naechster Ansatz. Nach 3 widerlegten Hypothesen ODER 3 Schritten derselben Kette (z.B. immer ein Feld tiefer im selben Objektbaum): Strategie wechseln (Snapshot/Offline-Analyse, Umgehung, Vergleich), nicht weiter Einzel-Logs.
+- **Keine Einzelfeld-Log-Hypothesen mehr** (generierte .cpp patchen + Rebuild + 5,5-min-Lauf + Restore pro Frage). Fragen der Form "welchen Wert hat Objekt X zum Zeitpunkt T" werden ueber Snapshot + `scripts/snap_walk.py` offline beantwortet (siehe STATE.md Naechster Schritt).
+- **Kontext sparen:** Rohlogs nie komplett lesen. Immer `python scripts/loganalyze.py <run-dir|log> [--grep RX]` (max. 40 Zeilen) oder `grep -c`/`head -20`. Grosse Auswertungen an einen Subagenten geben (nur Fazit zurueck). STATE.md <=5 KB, Zeilen <=200 Zeichen; Messwerte in `eu-boot-log.md`.
 - Hypothese zuerst statisch pruefen (Code lesen), erst dann Probe-Lauf. Vor jedem Lauf pruefen, ob die Frage nicht schon in STATE.md beantwortet ist.
 - Nichts loeschen: Alt-Dateien nach `work/ARCHIV/` bzw. `ARCHIV/`.
-- Nach jeder Erkenntnis: STATE.md (Hypothesen-Tabelle + 1 Zeile "Naechster Schritt") im selben Zug aktualisieren, Details in `eu-boot-log.md`. Memory nur als Verweis auf STATE.md.
+- Nach jeder Erkenntnis: STATE.md (Aktive Kette / Erledigt je 1 Zeile + "Naechster Schritt") im selben Zug aktualisieren, Messwerte in `eu-boot-log.md`, lokal committen. Memory nur als Verweis auf STATE.md.
 
 ## Laeufe (Pflicht: `scripts/probe.ps1`)
 - Alle Probe-/Capture-Laeufe ueber `scripts/probe.ps1`. Es waehlt den neuesten Build, validiert Env/PAD_SCRIPT, archiviert userdb, schreibt in `work/probe_<name>_<ts>_<i>/`, prueft Erwartungszeilen. Parallel starten (`-Parallel 4`) statt sequentiell.
-- Lauf = ~320 s (`-Seconds 320`), Frame 4200 fuer Baseline. Lange Laeufe im Hintergrund + `Monitor`, nie `sleep`.
+- Lauf = ~320 s (`-Seconds 320`), Frame 4200 fuer Baseline. Baseline-Variante immer explizit mit `-Boot orig|noadj|notut` setzen (aendert `work/gt6_vol/.../boot.adc`, steht im Lauf-Log `boot.txt`). Steady-State-Fragen: `-Seconds 220` reicht (ab ~150 s). Lange Laeufe im Hintergrund + `Monitor`, nie `sleep`.
 - Auswertung erst, wenn die erwartete Probe-Zeile im Log steht. Fehlt sie: Lauf ungueltig (falsches Binary / Env nicht gesetzt), nicht "Hypothese widerlegt".
 - Seltene Treffer (Logs/Captures) nie ueberschreiben; Ausgabeordner immer mit Zeitstempel.
 - Detektoren gegen Log-Reihenfolge pruefen, Treffer per Frame-Capture verifizieren (Falsch-Positiv: `arcade.mpackage` laedt in jedem Boot vor LanguageSelectRoot).
