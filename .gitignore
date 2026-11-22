@@ -104,3 +104,4 @@ compile_commands.json
 # Local game trees
 game/
 gamedata/
+gt6/build-clangcl/

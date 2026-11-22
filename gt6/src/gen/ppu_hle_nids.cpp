@@ -117,6 +117,7 @@ extern "C" {
     void cellFiberPpuCreateFiber(void);
     void cellFiberPpuRunFibers(void);
     void cellFiberPpuWaitSignal(void);
+    void cellFiberPpuWaitFlagEx(void);
     void cellFiberPpuSendSignal(void);
     void cellFiberPpuYield(void);
     void cellFiberPpuExit(void);
@@ -191,6 +192,7 @@ extern "C" {
     void cellGame_init_from_paramsfo(void);
     void cellGame_get_title_id(void);
     void cellGame_get_hdd_title_id(void);
+    void cellGamePatchCheck(void);
     void cellGameBootCheck(void);
     void cellGameContentPermit(void);
     void cellGameDataCheck(void);
@@ -241,6 +243,7 @@ extern "C" {
     void cellGcm_replay_display_buffers_to_engine(void);
     void cellGcmSetDisplayBuffer(void);
     void cellGcmOffsetIsDisplay(void);
+    void cellGcm_current_scanout(void);
     void cellGcm_display_buffer_count(void);
     void cellGcmSetFlipCommand(void);
     void cellGcmSetFlip(void);
@@ -663,12 +666,14 @@ extern "C" {
     void cellSheapQueryFree(void);
     void cellSpursInitialize(void);
     void cellSpursInitializeWithAttribute(void);
+    void cellSpursInitializeWithAttribute2(void);
     void cellSpursFinalize(void);
     void cellSpursAttributeInitialize(void);
     void _cellSpursAttributeInitialize(void);
     void cellSpursAttributeSetNamePrefix(void);
     void cellSpursAttributeSetSpuThreadGroupType(void);
     void cellSpursAttributeEnableSpuPrintfIfAvailable(void);
+    void cellSpursAttributeEnableSystemWorkload(void);
     void cellSpursGetNumSpuThread(void);
     void cellSpursSetMaxContention(void);
     void cellSpursSetPriorities(void);
@@ -676,6 +681,8 @@ extern "C" {
     void cellSpursDetachLv2EventQueue(void);
     void cellSpursCreateTaskset(void);
     void cellSpursCreateTasksetWithAttribute(void);
+    void _cellSpursTasksetAttribute2Initialize(void);
+    void cellSpursCreateTaskset2(void);
     void cellSpursDestroyTaskset(void);
     void cellSpursShutdownTaskset(void);
     void cellSpursJoinTaskset(void);
@@ -684,6 +691,8 @@ extern "C" {
     void cellSpursCreateTask(void);
     void _cellSpursTaskAttributeInitialize(void);
     void cellSpursCreateTaskWithAttribute(void);
+    void _cellSpursTaskAttribute2Initialize(void);
+    void cellSpursCreateTask2(void);
     void _cellSpursTasksetAttributeInitialize(void);
     void cellSpursJoinTask(void);
     void cellSpursSendSignal(void);
@@ -691,6 +700,8 @@ extern "C" {
     void cellSpursTaskExitCodeInitialize(void);
     void cellSpursAddWorkload(void);
     void cellSpursAddWorkloadWithAttribute(void);
+    void cellSpursGetWorkloadFlag(void);
+    void _cellSpursWorkloadFlagReceiver(void);
     void _cellSpursWorkloadAttributeInitialize(void);
     void cellSpursWorkloadAttributeSetName(void);
     void cellSpursRemoveWorkload(void);
@@ -856,6 +867,14 @@ extern "C" {
     void cellSysutilIsMeetingApp(void);
     void cellSysutilAvc2InitParam(void);
     void cellSysutilAvc2LoadAsync(void);
+    void cellSysutilAvc2Load(void);
+    void cellSysutilAvc2Unload(void);
+    void cellSysutilAvc2SetAttribute(void);
+    void cellSysutilAvc2SetSpeakerVolumeLevel(void);
+    void cellSysutilAvc2SetSpeakerMuting(void);
+    void cellSysutilAvc2SetVoiceMuting(void);
+    void cellSysutilAvc2StartVoiceDetection(void);
+    void cellSysutilAvc2StopVoiceDetection(void);
     void cellSysutilAvc2UnloadAsync(void);
     void cellSysutilAvc2JoinChatRequest(void);
     void cellSysutilAvc2LeaveChatRequest(void);
@@ -866,6 +885,7 @@ extern "C" {
     void sceNpEulaCheckEulaStatus(void);
     void sceNpEulaAbort(void);
     void sceNpEulaShowCurrentEula(void);
+    void cellSysutilNpEulaCheck(void);
     void cellUsbdInit(void);
     void cellUsbdEnd(void);
     void cellUsbdRegisterLdd(void);
@@ -947,6 +967,7 @@ extern "C" {
     void sceNpGetAccountRegion(void);
     void sceNpGetAccountAge(void);
     void sceNpGetMyLanguages(void);
+    void sceNpManagerGetEntitlementIdList(void);
     void sceNpManagerGetStatus(void);
     void sceNpManagerRegisterCallback(void);
     void sceNpManagerUnregisterCallback(void);
@@ -974,6 +995,7 @@ extern "C" {
     void sceNpBasicGetFriendListEntry(void);
     void sceNpBasicGetFriendPresence(void);
     void sceNpBasicSetPresence(void);
+    void sceNpBasicSetPresenceDetails(void);
     void sceNpBasicSendMessage(void);
     void sceNpBasicSendMessageAttachment(void);
     void sceNpBasicSendInGameInvitation(void);
@@ -1084,10 +1106,12 @@ extern "C" {
     void sceNpSignalingTerm(void);
     void sceNpSignalingCreateCtx(void);
     void sceNpSignalingDestroyCtx(void);
+    void sceNpSignalingAddExtendedHandler(void);
     void sceNpSignalingActivateConnection(void);
     void sceNpSignalingDeactivateConnection(void);
     void sceNpSignalingGetConnectionStatus(void);
     void sceNpSignalingGetConnectionInfo(void);
+    void sceNpSignalingGetConnectionFromNpId(void);
     void sceNpSignalingGetLocalNetInfo(void);
     void sceNpSignalingGetPeerNetInfo(void);
     void sceNpSnsInit(void);
@@ -1338,6 +1362,7 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x7C2F4034u, "cellFiberPpuCreateFiber", (void*)cellFiberPpuCreateFiber);
     ps3_hle_register(0x12B1ACF0u, "cellFiberPpuRunFibers", (void*)cellFiberPpuRunFibers);
     ps3_hle_register(0x6C164B3Bu, "cellFiberPpuWaitSignal", (void*)cellFiberPpuWaitSignal);
+    ps3_hle_register(0x129CC064u, "cellFiberPpuWaitFlagEx", (void*)cellFiberPpuWaitFlagEx);
     ps3_hle_register(0x8AFB8356u, "cellFiberPpuSendSignal", (void*)cellFiberPpuSendSignal);
     ps3_hle_register(0x0C44F441u, "cellFiberPpuYield", (void*)cellFiberPpuYield);
     ps3_hle_register(0xFA8D5F95u, "cellFiberPpuExit", (void*)cellFiberPpuExit);
@@ -1412,6 +1437,7 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x61887BCFu, "cellGame_init_from_paramsfo", (void*)cellGame_init_from_paramsfo);
     ps3_hle_register(0x081978C0u, "cellGame_get_title_id", (void*)cellGame_get_title_id);
     ps3_hle_register(0x0376AC12u, "cellGame_get_hdd_title_id", (void*)cellGame_get_hdd_title_id);
+    ps3_hle_register(0xCE4374F6u, "cellGamePatchCheck", (void*)cellGamePatchCheck);
     ps3_hle_register(0xF52639EAu, "cellGameBootCheck", (void*)cellGameBootCheck);
     ps3_hle_register(0x70ACEC67u, "cellGameContentPermit", (void*)cellGameContentPermit);
     ps3_hle_register(0xDB9819F3u, "cellGameDataCheck", (void*)cellGameDataCheck);
@@ -1462,6 +1488,7 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0xD90D9497u, "cellGcm_replay_display_buffers_to_engine", (void*)cellGcm_replay_display_buffers_to_engine);
     ps3_hle_register(0xA53D12AEu, "cellGcmSetDisplayBuffer", (void*)cellGcmSetDisplayBuffer);
     ps3_hle_register(0x00E536BFu, "cellGcmOffsetIsDisplay", (void*)cellGcmOffsetIsDisplay);
+    ps3_hle_register(0x3222046Du, "cellGcm_current_scanout", (void*)cellGcm_current_scanout);
     ps3_hle_register(0xB4198636u, "cellGcm_display_buffer_count", (void*)cellGcm_display_buffer_count);
     ps3_hle_register(0x5C770579u, "cellGcmSetFlipCommand", (void*)cellGcmSetFlipCommand);
     ps3_hle_register(0xDC09357Eu, "cellGcmSetFlip", (void*)cellGcmSetFlip);
@@ -1884,12 +1911,14 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x7FA23275u, "cellSheapQueryFree", (void*)cellSheapQueryFree);
     ps3_hle_register(0xACFC8DBCu, "cellSpursInitialize", (void*)cellSpursInitialize);
     ps3_hle_register(0xAA6269A8u, "cellSpursInitializeWithAttribute", (void*)cellSpursInitializeWithAttribute);
+    ps3_hle_register(0x30AA96C4u, "cellSpursInitializeWithAttribute2", (void*)cellSpursInitializeWithAttribute2);
     ps3_hle_register(0xCA4C4600u, "cellSpursFinalize", (void*)cellSpursFinalize);
     ps3_hle_register(0x9A079B6Bu, "cellSpursAttributeInitialize", (void*)cellSpursAttributeInitialize);
     ps3_hle_register(0x95180230u, "_cellSpursAttributeInitialize", (void*)_cellSpursAttributeInitialize);
     ps3_hle_register(0x07529113u, "cellSpursAttributeSetNamePrefix", (void*)cellSpursAttributeSetNamePrefix);
     ps3_hle_register(0xA839A4D9u, "cellSpursAttributeSetSpuThreadGroupType", (void*)cellSpursAttributeSetSpuThreadGroupType);
     ps3_hle_register(0x1051D134u, "cellSpursAttributeEnableSpuPrintfIfAvailable", (void*)cellSpursAttributeEnableSpuPrintfIfAvailable);
+    ps3_hle_register(0x9DCBCB5Du, "cellSpursAttributeEnableSystemWorkload", (void*)cellSpursAttributeEnableSystemWorkload);
     ps3_hle_register(0xC56DEFB5u, "cellSpursGetNumSpuThread", (void*)cellSpursGetNumSpuThread);
     ps3_hle_register(0x84D2F6D5u, "cellSpursSetMaxContention", (void*)cellSpursSetMaxContention);
     ps3_hle_register(0x80A29E27u, "cellSpursSetPriorities", (void*)cellSpursSetPriorities);
@@ -1897,6 +1926,8 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x4E66D483u, "cellSpursDetachLv2EventQueue", (void*)cellSpursDetachLv2EventQueue);
     ps3_hle_register(0x52CC6C82u, "cellSpursCreateTaskset", (void*)cellSpursCreateTaskset);
     ps3_hle_register(0xC10931CBu, "cellSpursCreateTasksetWithAttribute", (void*)cellSpursCreateTasksetWithAttribute);
+    ps3_hle_register(0xC2ACDF43u, "_cellSpursTasksetAttribute2Initialize", (void*)_cellSpursTasksetAttribute2Initialize);
+    ps3_hle_register(0x4A6465E3u, "cellSpursCreateTaskset2", (void*)cellSpursCreateTaskset2);
     ps3_hle_register(0x1EA5E4CFu, "cellSpursDestroyTaskset", (void*)cellSpursDestroyTaskset);
     ps3_hle_register(0xA789E631u, "cellSpursShutdownTaskset", (void*)cellSpursShutdownTaskset);
     ps3_hle_register(0x9F72ADD3u, "cellSpursJoinTaskset", (void*)cellSpursJoinTaskset);
@@ -1905,6 +1936,8 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0xBEB600ACu, "cellSpursCreateTask", (void*)cellSpursCreateTask);
     ps3_hle_register(0xB8474EFFu, "_cellSpursTaskAttributeInitialize", (void*)_cellSpursTaskAttributeInitialize);
     ps3_hle_register(0x1D46FEDFu, "cellSpursCreateTaskWithAttribute", (void*)cellSpursCreateTaskWithAttribute);
+    ps3_hle_register(0x8ADADF65u, "_cellSpursTaskAttribute2Initialize", (void*)_cellSpursTaskAttribute2Initialize);
+    ps3_hle_register(0xE14CA62Du, "cellSpursCreateTask2", (void*)cellSpursCreateTask2);
     ps3_hle_register(0x16394A4Eu, "_cellSpursTasksetAttributeInitialize", (void*)_cellSpursTasksetAttributeInitialize);
     ps3_hle_register(0xCBAB1042u, "cellSpursJoinTask", (void*)cellSpursJoinTask);
     ps3_hle_register(0x8CB5DE93u, "cellSpursSendSignal", (void*)cellSpursSendSignal);
@@ -1912,6 +1945,8 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x34552FA6u, "cellSpursTaskExitCodeInitialize", (void*)cellSpursTaskExitCodeInitialize);
     ps3_hle_register(0x69726AA2u, "cellSpursAddWorkload", (void*)cellSpursAddWorkload);
     ps3_hle_register(0xC0158D8Bu, "cellSpursAddWorkloadWithAttribute", (void*)cellSpursAddWorkloadWithAttribute);
+    ps3_hle_register(0xC765B995u, "cellSpursGetWorkloadFlag", (void*)cellSpursGetWorkloadFlag);
+    ps3_hle_register(0xA73BF47Eu, "_cellSpursWorkloadFlagReceiver", (void*)_cellSpursWorkloadFlagReceiver);
     ps3_hle_register(0xEFEB2679u, "_cellSpursWorkloadAttributeInitialize", (void*)_cellSpursWorkloadAttributeInitialize);
     ps3_hle_register(0x4A5EAB63u, "cellSpursWorkloadAttributeSetName", (void*)cellSpursWorkloadAttributeSetName);
     ps3_hle_register(0x57E4DEC3u, "cellSpursRemoveWorkload", (void*)cellSpursRemoveWorkload);
@@ -2077,6 +2112,14 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x7F6AE074u, "cellSysutilIsMeetingApp", (void*)cellSysutilIsMeetingApp);
     ps3_hle_register(0x89456724u, "cellSysutilAvc2InitParam", (void*)cellSysutilAvc2InitParam);
     ps3_hle_register(0x1D73AB8Cu, "cellSysutilAvc2LoadAsync", (void*)cellSysutilAvc2LoadAsync);
+    ps3_hle_register(0xC6C93D62u, "cellSysutilAvc2Load", (void*)cellSysutilAvc2Load);
+    ps3_hle_register(0x38F33624u, "cellSysutilAvc2Unload", (void*)cellSysutilAvc2Unload);
+    ps3_hle_register(0xCCF0AEFFu, "cellSysutilAvc2SetAttribute", (void*)cellSysutilAvc2SetAttribute);
+    ps3_hle_register(0x207621A8u, "cellSysutilAvc2SetSpeakerVolumeLevel", (void*)cellSysutilAvc2SetSpeakerVolumeLevel);
+    ps3_hle_register(0xC35ED665u, "cellSysutilAvc2SetSpeakerMuting", (void*)cellSysutilAvc2SetSpeakerMuting);
+    ps3_hle_register(0x14937714u, "cellSysutilAvc2SetVoiceMuting", (void*)cellSysutilAvc2SetVoiceMuting);
+    ps3_hle_register(0x16FF9BA0u, "cellSysutilAvc2StartVoiceDetection", (void*)cellSysutilAvc2StartVoiceDetection);
+    ps3_hle_register(0x178982D9u, "cellSysutilAvc2StopVoiceDetection", (void*)cellSysutilAvc2StopVoiceDetection);
     ps3_hle_register(0x17481336u, "cellSysutilAvc2UnloadAsync", (void*)cellSysutilAvc2UnloadAsync);
     ps3_hle_register(0x712D51D6u, "cellSysutilAvc2JoinChatRequest", (void*)cellSysutilAvc2JoinChatRequest);
     ps3_hle_register(0x97B2DA6Au, "cellSysutilAvc2LeaveChatRequest", (void*)cellSysutilAvc2LeaveChatRequest);
@@ -2087,6 +2130,7 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x59D1629Au, "sceNpEulaCheckEulaStatus", (void*)sceNpEulaCheckEulaStatus);
     ps3_hle_register(0x5EC05AD8u, "sceNpEulaAbort", (void*)sceNpEulaAbort);
     ps3_hle_register(0x6599500Du, "sceNpEulaShowCurrentEula", (void*)sceNpEulaShowCurrentEula);
+    ps3_hle_register(0x024940F1u, "cellSysutilNpEulaCheck", (void*)cellSysutilNpEulaCheck);
     ps3_hle_register(0xD0E766FEu, "cellUsbdInit", (void*)cellUsbdInit);
     ps3_hle_register(0x35F22AC3u, "cellUsbdEnd", (void*)cellUsbdEnd);
     ps3_hle_register(0x359BEFBAu, "cellUsbdRegisterLdd", (void*)cellUsbdRegisterLdd);
@@ -2168,6 +2212,7 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x652DDE99u, "sceNpGetAccountRegion", (void*)sceNpGetAccountRegion);
     ps3_hle_register(0x72CA41DCu, "sceNpGetAccountAge", (void*)sceNpGetAccountAge);
     ps3_hle_register(0xFACC5962u, "sceNpGetMyLanguages", (void*)sceNpGetMyLanguages);
+    ps3_hle_register(0xB66D1C46u, "sceNpManagerGetEntitlementIdList", (void*)sceNpManagerGetEntitlementIdList);
     ps3_hle_register(0xA7BFF757u, "sceNpManagerGetStatus", (void*)sceNpManagerGetStatus);
     ps3_hle_register(0xE7DCD3B4u, "sceNpManagerRegisterCallback", (void*)sceNpManagerRegisterCallback);
     ps3_hle_register(0x52A6B523u, "sceNpManagerUnregisterCallback", (void*)sceNpManagerUnregisterCallback);
@@ -2195,6 +2240,7 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0x04372385u, "sceNpBasicGetFriendListEntry", (void*)sceNpBasicGetFriendListEntry);
     ps3_hle_register(0x6B6A1EABu, "sceNpBasicGetFriendPresence", (void*)sceNpBasicGetFriendPresence);
     ps3_hle_register(0x3F0808AAu, "sceNpBasicSetPresence", (void*)sceNpBasicSetPresence);
+    ps3_hle_register(0xBE81C71Cu, "sceNpBasicSetPresenceDetails", (void*)sceNpBasicSetPresenceDetails);
     ps3_hle_register(0xEC0A1FBFu, "sceNpBasicSendMessage", (void*)sceNpBasicSendMessage);
     ps3_hle_register(0x43B989F5u, "sceNpBasicSendMessageAttachment", (void*)sceNpBasicSendMessageAttachment);
     ps3_hle_register(0x6955D0A6u, "sceNpBasicSendInGameInvitation", (void*)sceNpBasicSendInGameInvitation);
@@ -2305,10 +2351,12 @@ extern "C" void ppu_hle_register_all(void) {
     ps3_hle_register(0xE0D0E6B8u, "sceNpSignalingTerm", (void*)sceNpSignalingTerm);
     ps3_hle_register(0x6356082Eu, "sceNpSignalingCreateCtx", (void*)sceNpSignalingCreateCtx);
     ps3_hle_register(0xA8CF8451u, "sceNpSignalingDestroyCtx", (void*)sceNpSignalingDestroyCtx);
+    ps3_hle_register(0x50B86D94u, "sceNpSignalingAddExtendedHandler", (void*)sceNpSignalingAddExtendedHandler);
     ps3_hle_register(0x60897C38u, "sceNpSignalingActivateConnection", (void*)sceNpSignalingActivateConnection);
     ps3_hle_register(0xFD0EB5AEu, "sceNpSignalingDeactivateConnection", (void*)sceNpSignalingDeactivateConnection);
     ps3_hle_register(0xCA0A2D04u, "sceNpSignalingGetConnectionStatus", (void*)sceNpSignalingGetConnectionStatus);
     ps3_hle_register(0x155DE760u, "sceNpSignalingGetConnectionInfo", (void*)sceNpSignalingGetConnectionInfo);
+    ps3_hle_register(0xE853D388u, "sceNpSignalingGetConnectionFromNpId", (void*)sceNpSignalingGetConnectionFromNpId);
     ps3_hle_register(0x9AD7FBD1u, "sceNpSignalingGetLocalNetInfo", (void*)sceNpSignalingGetLocalNetInfo);
     ps3_hle_register(0x75EB50CBu, "sceNpSignalingGetPeerNetInfo", (void*)sceNpSignalingGetPeerNetInfo);
     ps3_hle_register(0xF0FAB23Fu, "sceNpSnsInit", (void*)sceNpSnsInit);
