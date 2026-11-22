@@ -735,3 +735,6 @@ Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot
 - Danach exit-chain code=-1 lr 7F9588 = func_007F9520 (ppu_recomp_018): wenn Byte +0x95E==0 und A13644()!=0 -> +0x95E=1, Zeit (A2F308) nach +0x960; spaeter (now-stamp > 0x97FDF) -> func_00F9A080(-1) = exit.
 - Schluss: 0x164AB90 = Quit/Abbruch-Anforderung mit Grace-Timer, nicht "Projekt fertig". Die Sequenzobjekte beenden sich bei Quit; GT6_FORCE_LOADFLAG bleibt reines Diagnose-Werkzeug (erzeugt Shutdown).
 - Echter Fertig-Setter fuer +0x91 weiter unbekannt -> Hyp. 43.
+
+## Hyp. 43
+5C3EC4 (Finalizer) setzt +0x91=1; Aufrufer: 5C406C (nur wenn +0x90 durch A13644/Quit) und Shutdown 5FBAF0. Schleife 568800 = Haupt-Game-Loop, endet nur bei Quit. Hang = kein Menue-Rendering im Tick, nicht fehlendes Done.

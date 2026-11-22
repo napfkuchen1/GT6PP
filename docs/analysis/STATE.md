@@ -32,9 +32,10 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Hyp. 41: Fertig kommt aus A13644 = Byte 0x164AB90 (Objekt 164AB80+0x10, Setter C3FE14 nur per vtable+0xC). Flag forcieren (GT6_FORCE_LOADFLAG=1, probe_flag41): Projekte enden, Boot geht weiter.
 - Hyp. 42: NULL-Crash in A21D50 war r29=0 durch pending g_trampoline_fn nach dem Sync-Pump (Tick drainte nicht). Fix in gt6_menu_project_tick (stubs.cpp). Rueckweg MGOM.start laeuft.
 - Hyp. 42: danach exit(-1) aus 7F9520 (lr 7F9588): A13644-Flag gesetzt -> Zeitstempel +0x960, nach ~0x97FDF Ticks exit. 0x164AB90 ist ein QUIT/Abbruch-Flag, KEIN Load-Done. Force-Flag = Sackgasse.
+- Hyp. 43: +0x91 setzt nur Finalizer 5C3EC4 (aus 5C406C bei +0x90, oder Shutdown 5FBAF0 Schleife). Das ist Quit-Pfad: 568800-Schleife ist die Haupt-Game-Loop, kein 'Warten auf Fertig'.
 
 ## Naechster Schritt (EINER)
-**Hyp. 43: Echte Fertig-Bedingung der gtmode-Sequenzobjekte (vt 145FAD8) ohne A13644.** 5C406C/5C3EC4 lesen: was ausser dem Quit-Flag setzt +0x91 (Child-Job, Datei, Timer)? Dann Waiter dort suchen.
+**Hyp. 44: Was tut die Game-Loop pro Tick (5C406C State-Handler +0x88)?** Warum kein Menue-Frame: State-Handler der 3 Objekte + Render/Flip-Aufrufe (cellGcmSetFlip) im Tick zaehlen (loganalyze), Snapshot +0x88 pro Objekt lesen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
