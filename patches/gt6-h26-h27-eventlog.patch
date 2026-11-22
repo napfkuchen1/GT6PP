@@ -1,0 +1,59 @@
+--- work/_bk_ppu_recomp_022_h25.cpp	2026-11-22 19:00:34.687440100 +0100
++++ gt6/generated/ppu_recomp_022.cpp	2026-11-22 19:17:36.661435600 +0100
+@@ -10024,6 +10024,7 @@
+ 
+ void func_00986440(ppu_context* ctx) {
+     PPU_MM_SNAP
++    { static int n=0; if (n<25) { n++; uint32_t o=(uint32_t)ctx->gpr[3]; fprintf(stderr,"[H26] 986440 r3=%08X r4=%08X lr=%08X tid=%llu o28=%u o24=%u o30=%08X\n",o,(uint32_t)ctx->gpr[4],(uint32_t)ctx->lr,(unsigned long long)ctx->thread_id, o>0x10000?vm_read32(o+0x28):0, o>0x10000?vm_read32(o+0x24):0, o>0x10000?vm_read32(o+0x30):0); } }
+         ctx->gpr[12] = ctx->gpr[1] + (int64_t)(-8);
+         ctx->gpr[0] = ctx->lr;
+         ctx->lr = 0x0098644C; func_00BE14DC(ctx); DRAIN_TRAMPOLINE(ctx);
+@@ -10115,6 +10116,7 @@
+ 
+ void func_00986568(ppu_context* ctx) {
+     PPU_MM_SNAP
++    { static int n=0; if (n<25) { n++; uint32_t o=(uint32_t)ctx->gpr[3]; fprintf(stderr,"[H26] 986568 r3=%08X r4=%08X lr=%08X tid=%llu o28=%u o24=%u o30=%08X\n",o,(uint32_t)ctx->gpr[4],(uint32_t)ctx->lr,(unsigned long long)ctx->thread_id, o>0x10000?vm_read32(o+0x28):0, o>0x10000?vm_read32(o+0x24):0, o>0x10000?vm_read32(o+0x30):0); } }
+         { int64_t a = (int32_t)ctx->gpr[4]; int64_t b = (int64_t)1; uint32_t cr_val = ((a < b) ? 8 : (a > b) ? 4 : 2) | ((ctx->xer >> 31) & 1u); ctx->cr = (ctx->cr & ~(0xFu << 0)) | (cr_val << 0); }
+         ctx->gpr[0] = ctx->lr;
+         ctx->lr = 0x00986574; func_00BE142C(ctx); DRAIN_TRAMPOLINE(ctx);
+@@ -10242,6 +10244,7 @@
+ 
+ void func_00986704(ppu_context* ctx) {
+     PPU_MM_SNAP
++    { static int n=0; if (n<25) { n++; uint32_t o=(uint32_t)ctx->gpr[3]; fprintf(stderr,"[H26] 986704 r3=%08X r4=%08X lr=%08X tid=%llu o28=%u o24=%u o30=%08X\n",o,(uint32_t)ctx->gpr[4],(uint32_t)ctx->lr,(unsigned long long)ctx->thread_id, o>0x10000?vm_read32(o+0x28):0, o>0x10000?vm_read32(o+0x24):0, o>0x10000?vm_read32(o+0x30):0); } }
+         ctx->gpr[9] = (int64_t)(int32_t)((uint32_t)0x109 << 16);
+         ctx->gpr[0] = ctx->lr;
+         { int64_t a = (int32_t)ctx->gpr[4]; int64_t b = (int64_t)0; uint32_t cr_val = ((a < b) ? 8 : (a > b) ? 4 : 2) | ((ctx->xer >> 31) & 1u); ctx->cr = (ctx->cr & ~(0xFu << 0)) | (cr_val << 0); }
+@@ -10348,6 +10351,7 @@
+ 
+ void func_00986860(ppu_context* ctx) {
+     PPU_MM_SNAP
++    { static int n=0; if (n<25) { n++; uint32_t o=(uint32_t)ctx->gpr[3]; fprintf(stderr,"[H26] 986860 r3=%08X r4=%08X lr=%08X tid=%llu o28=%u o24=%u o30=%08X\n",o,(uint32_t)ctx->gpr[4],(uint32_t)ctx->lr,(unsigned long long)ctx->thread_id, o>0x10000?vm_read32(o+0x28):0, o>0x10000?vm_read32(o+0x24):0, o>0x10000?vm_read32(o+0x30):0); } }
+         ctx->gpr[9] = (int64_t)(int32_t)((uint32_t)0x148 << 16);
+         ctx->gpr[0] = ctx->lr;
+         ctx->lr = 0x0098686C; func_00BE141C(ctx); DRAIN_TRAMPOLINE(ctx);
+@@ -11000,7 +11004,7 @@
+ 
+ void func_00987180(ppu_context* ctx) {
+     PPU_MM_SNAP
+-        ctx->gpr[0] = ctx->lr;
++    { static int ne[4]={0,0,0,0}; uint32_t o=(uint32_t)ctx->gpr[3]; uint32_t ev=(uint32_t)ctx->gpr[4]; if (ev<4 && ne[ev]<40) { ne[ev]++; fprintf(stderr,"[E27] obj=%08X st=%u ev=%u lr=%08X\n",o,vm_read32(o+0x28),ev,(uint32_t)ctx->lr); } }
+         ctx->lr = 0x00987188; func_00BE1424(ctx); DRAIN_TRAMPOLINE(ctx);
+         vm_write64(ctx->gpr[1] + -0xB0, ctx->gpr[1]); ctx->gpr[1] += -0xB0;
+         ctx->gpr[0] = vm_read32(ctx->gpr[3] + 0x28);
+@@ -11869,6 +11873,7 @@
+ 
+ void func_00987A28(ppu_context* ctx) {
+     PPU_MM_SNAP
++    { static int n=0; if (n<25) { n++; uint32_t o=(uint32_t)ctx->gpr[3]; fprintf(stderr,"[H26] 987A28 r3=%08X r4=%08X lr=%08X tid=%llu o28=%u o24=%u o30=%08X\n",o,(uint32_t)ctx->gpr[4],(uint32_t)ctx->lr,(unsigned long long)ctx->thread_id, o>0x10000?vm_read32(o+0x28):0, o>0x10000?vm_read32(o+0x24):0, o>0x10000?vm_read32(o+0x30):0); } }
+         ctx->gpr[12] = ctx->cr;
+         { g_trampoline_fn = (void(*)(void*))func_00987A2C; return; }
+ }
+@@ -48988,6 +48993,7 @@
+ 
+ void func_009A5A38(ppu_context* ctx) {
+     PPU_MM_SNAP
++    { static int n=0; if (n<25) { n++; uint32_t o=(uint32_t)ctx->gpr[3]; fprintf(stderr,"[H26] 9A5A38 r3=%08X r4=%08X lr=%08X tid=%llu o28=%u o24=%u o30=%08X\n",o,(uint32_t)ctx->gpr[4],(uint32_t)ctx->lr,(unsigned long long)ctx->thread_id, o>0x10000?vm_read32(o+0x28):0, o>0x10000?vm_read32(o+0x24):0, o>0x10000?vm_read32(o+0x30):0); } }
+         { int64_t a = (int32_t)ctx->gpr[4]; int64_t b = (int64_t)0; uint32_t cr_val = ((a < b) ? 8 : (a > b) ? 4 : 2) | ((ctx->xer >> 31) & 1u); ctx->cr = (ctx->cr & ~(0xFu << 0)) | (cr_val << 0); }
+         ctx->gpr[0] = ctx->lr;
+         ctx->gpr[12] = ctx->gpr[1] + (int64_t)(-8);
