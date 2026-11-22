@@ -675,3 +675,6 @@ Ein Build mit [H26]-Entry-Logs (986440/986568/986704/986860/9A5A38/987A28) und [
 
 ## 2026-11-22 - Hyp. 28 (Job-Liste am Cancel-Zweig)
 [C28] in func_00987A28 @loc_00987E54 (Patch patches/gt6-h28-cancelzweig.patch). Alle Cancels: obj=r23=r25=r28 (40007A10/40007C90), obj+0x28=1, obj+0x30=0, g(0x15DE27C)=0, r22=obj+0x6c, begin(obj+0x70)==end(obj+0x74) -> Vektor leer, Kapazitaet begin+0x28 (Heap mit Alt-Strings). Wait-Schleife (0x987E34..0x987E50) wartet nur bei nicht-leerem Vektor. Naechster Schritt: Befueller des Vektors finden.
+
+## 2026-11-22 - Baseline-Wechsel + Hyp. 29/30
+boot.adc auf nodlg_noadjust (Kopie work/ARCHIV/boot.adc.nodlg_noadjust; vorheriger Vollpatch in work/ARCHIV/boot.adc.patched_full_*). 3 Laeufe 320 s: Tutorial-Rennen laedt (race.adc, race_tutorial, Template.gpb, nur sgb 0449), Frame 5000 GT-Logo-Ladebildschirm, keine Sound-Schleife; STACKSCAN-Hauptthread identisch zu Hyp. 24 -> gleiche Task-Wait-Ursache. Hyp. 29: 987A28 ruft vtable+0xdc des Executors (obj+0x34), der 1 Job in obj+0x70/74 pusht (v74=v70+4); Dispatch 98787C -> Poll 9EEA88 (Executor obj+0x68); Job-Ergebnis 0/1 nie 2, Vektor danach leer -> Cancel. Hyp. 30: Poll setzt o24=0 (Task-State 3) / 2 (State 2) / sonst fuehrt Job aus (ab 0x9EEB04). Patch: patches/gt6-h29-h30-joblog.patch.

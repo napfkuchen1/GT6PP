@@ -1,0 +1,42 @@
+--- work/_bk_ppu_recomp_022_h29orig.cpp	2026-11-22 19:59:13.933580100 +0100
++++ gt6/generated/ppu_recomp_022.cpp	2026-11-22 20:03:34.321787800 +0100
+@@ -11766,7 +11766,9 @@
+         ctx->gpr[0] = vm_read32(ctx->gpr[11] + 0x0);
+         ctx->gpr[2] = vm_read32(ctx->gpr[11] + 0x4);
+         ctx->ctr = ctx->gpr[0];
++        static int nd=0; uint32_t tgt30=(uint32_t)ctx->ctr;
+         ctx->lr = 0x009878E8; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);
++        if (nd<40) { nd++; fprintf(stderr,"[D30] obj=%08X poll_tgt=%08X ret=%u o24=%u\n",(uint32_t)ctx->gpr[30],tgt30,(uint32_t)ctx->gpr[3]&0xFF,vm_read32((uint32_t)ctx->gpr[30]+0x24)); }
+         ctx->gpr[3] = ppc_rlw64(ctx->gpr[3], 0, 24, 31, 0, 0);
+         { int64_t a = (int32_t)ctx->gpr[3]; int64_t b = (int64_t)0; uint32_t cr_val = ((a < b) ? 8 : (a > b) ? 4 : 2) | ((ctx->xer >> 31) & 1u); ctx->cr = (ctx->cr & ~(0xFu << 0)) | (cr_val << 0); }
+         if ((!((ctx->cr >> 1) & 1))) goto loc_00987A08;
+@@ -11776,6 +11778,7 @@
+         ctx->gpr[9] = ctx->gpr[9] + (int64_t)(-27312);
+         ctx->gpr[0] = (int64_t)(int32_t)ctx->gpr[0];
+         ctx->gpr[9] = vm_read32((ctx->gpr[9] + ctx->gpr[0]));
++        { static int ns=0; if (ns<40) { ns++; fprintf(stderr,"[D30] switch obj=%08X o24=%u tgt=%08X\n",(uint32_t)ctx->gpr[30],vm_read32((uint32_t)ctx->gpr[30]+0x24),(uint32_t)ctx->gpr[9]); } }
+         switch ((uint32_t)ctx->gpr[9]) {
+         case 0x00987914u: goto loc_00987914;
+         case 0x0098792Cu: goto loc_0098792C;
+@@ -11965,7 +11968,9 @@
+         ctx->gpr[0] = vm_read32(ctx->gpr[9] + 0x0);
+         ctx->gpr[2] = vm_read32(ctx->gpr[9] + 0x4);
+         ctx->ctr = ctx->gpr[0];
++        static int n29=0; int l29 = n29<30; uint32_t ob=(uint32_t)ctx->gpr[28]; if (l29) { n29++; fprintf(stderr,"[S29] pre obj=%08X ctr=%08X r3=%08X r4=%08X r5=%u r6=%08X v70=%08X v74=%08X st=%u\n",ob,(uint32_t)ctx->ctr,(uint32_t)ctx->gpr[3],(uint32_t)ctx->gpr[4],(uint32_t)ctx->gpr[5],(uint32_t)ctx->gpr[6],vm_read32(ob+0x70),vm_read32(ob+0x74),vm_read32(ob+0x28)); }
+         ctx->lr = 0x00987B74; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);
++        if (l29) fprintf(stderr,"[S29] post obj=%08X v70=%08X v74=%08X st=%u\n",ob,vm_read32(ob+0x70),vm_read32(ob+0x74),vm_read32(ob+0x28));
+         ctx->gpr[3] = ctx->gpr[30] | ctx->gpr[30];
+         ctx->lr = 0x00987B7C; func_0097922C(ctx); DRAIN_TRAMPOLINE(ctx);
+         ctx->gpr[0] = vm_read32(ctx->gpr[28] + 0x28);
+@@ -12124,9 +12129,11 @@
+               ctx->lr = 0x00987D80; func_00B98168(ctx); DRAIN_TRAMPOLINE(ctx);
+           } }
+         { int64_t a = (int32_t)ctx->gpr[3]; int64_t b = (int64_t)0; uint32_t cr_val = ((a < b) ? 8 : (a > b) ? 4 : 2) | ((ctx->xer >> 31) & 1u); ctx->cr = (ctx->cr & ~(0xFu << 0)) | (cr_val << 0); }
++        { static int nj=0; if (nj<40) { nj++; fprintf(stderr,"[J29] sjret=%d obj=%08X\n",(int)ctx->gpr[3],(uint32_t)ctx->gpr[23]); } }
+         if ((!((ctx->cr >> 1) & 1))) goto loc_00987DA0;
+         ctx->gpr[3] = ctx->gpr[23] | ctx->gpr[23];
+         ctx->lr = 0x00987D90; func_0098787C(ctx); DRAIN_TRAMPOLINE(ctx);
++        { static int nk=0; if (nk<40) { nk++; fprintf(stderr,"[J29] jobres=%d obj=%08X\n",(int)ctx->gpr[3],(uint32_t)ctx->gpr[23]); } }
+         vm_write32(ctx->gpr[28] + 0x24, ctx->gpr[3]);
+         ctx->gpr[3] = ctx->gpr[31] | ctx->gpr[31];
+         ctx->lr = 0x00987D9C; func_009D3CF4(ctx); DRAIN_TRAMPOLINE(ctx);
