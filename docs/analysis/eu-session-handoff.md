@@ -1,7 +1,7 @@
 # EU GT6 (BCES01893) — Session-Handoff, Stand 2026-11-21
 
 ## Zustand
-- Repo: `C:\Users\Daniel\Downloads\Games\GT6\ClaudeCode\GT6PP`, Branch `eu-first-build` (lokal, nicht gepusht; origin=upstream xynnpg/GT6PP, fork=napfkuchen1/GT6PP; PR #3 `eu-region-check` offen, kein PR2).
+- Repo: `%USERPROFILE%\Downloads\Games\GT6\ClaudeCode\GT6PP`, Branch `eu-first-build` (lokal, nicht gepusht; origin=upstream xynnpg/GT6PP, fork=napfkuchen1/GT6PP; PR #3 `eu-region-check` offen, kein PR2).
 - Letzte Commits: `0aaca4c` (Patch rsx), `eec0fc2` (rsx-Fix-Doku, cap-gt6.ps1, Screenshot), `4cd25f8`, `8053531` (cellMusicInitialize2).
 - Spiel bootet: Boot-2-Validator ok (Cache-Fill), cellMusicInitialize2 gestubbt, ~36 FPS, Sprachauswahl-Dialog sichtbar (`docs/analysis/eu-language-select-dialog.png`): Panel, Titel, 4 Menüzeilen; Text lesbar (Commit 34b1e2d), Hintergrund-Verlauf falsch.
 
@@ -28,7 +28,7 @@
 3. Memory `project_gt6pp-eu.md` aktualisieren (Cache-Fix, cellMusic, Render-Fixes).
 4. Uncommitted Diagnosen entscheiden (committen/verwerfen).
 5. Offen: cellMusic-Callback, Syscall 327 (2x gestubbt).
-- Nur mit Daniels Go: Push, PR2, README, verify-real-frame (Gate 0,8 % < 1 %).
+- Nur mit Go des Users: Push, PR2, README, verify-real-frame (Gate 0,8 % < 1 %).
 
 ## Regeln
 Deutsch, knapp. Commits als `-c user.name=napfkuchen1 -c user.email=122364471+napfkuchen1@users.noreply.github.com`, KEINE Trailer/Co-Authored-By. Nie löschen (archivieren), additive Änderungen, live verifizieren, Abschluss mit "Offene Punkte". Nie Credentials anfordern.

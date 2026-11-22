@@ -2,7 +2,7 @@
 """Offline walker for PS3_SNAP_AT snapshots (work/snap_<ts>/).
 
 Usage (PowerShell):
-  C:\\Users\\Daniel\\AppData\\Local\\Programs\\Python\\Python313\\python.exe -I scripts\\snap_walk.py <snapdir> <cmd> [args]
+  %USERPROFILE%\\AppData\\Local\\Programs\\Python\\Python313\\python.exe -I scripts\\snap_walk.py <snapdir> <cmd> [args]
 
 Commands (all addresses hex; output is capped, never dumps whole RAM):
   threads                 threads.txt (one line per thread, regs trimmed)
