@@ -648,3 +648,6 @@ Siehe STATE.md "Umgehung Sprachdialog". Gates: 0x18924/0x196D6 (Sprache), 0x18A6
 
 ## 2026-11-22 - Hyp. 18 (Worker-Thread-Entry)
 tid 33 "p-OmN" (Entry 0x014E0898, Functor 0xF3D5F4 -> F3D150) hat 0 indirekte Calls (FROM=F3D150, AFTER=0/200). Sound-Manager-Singleton @0x1570A40 (Static-Init 0x11508: ctor 0x7D8CEC Player +0x18, Stream +0xB0). Nur Ctor/Dtor referenzieren die Adresse. Inkonklusiv -> Strategiewechsel Hyp. 19 (Umgehung/Vergleich). Hinweis: CALLTRACE-Ausgabe liegt in run.log.err, nicht run.log.
+
+## 2026-11-22 - Hyp. 19 (Vergleich ohne Tutorial-Skip)
+boot.adc.nodlg_noadjust (2 Laeufe, probe cmp_tut_*): Tutorial laedt (race_tutorial.mproject/.adc, Template.gpb), genau 1 Track (0449), dann Stillstand; 1/2 Laeufe mit mfc-REJECTED. Keine 27-Track-Schleife -> Schleife nur im gtmode-Pfad (Tutorial-Skip). boot.adc danach auf gepatchten Stand zurueck (Backup work/ARCHIV/boot.adc.patched_full, cmp identisch).
