@@ -1,0 +1,16 @@
+p='gt6/generated/ppu_recomp_022.cpp'
+s=open(p,encoding='latin-1',newline='').read()
+eol='\r\n' if '\r\n' in s else '\n'
+n=chr(92)+'n'
+i=s.index('void func_009F0748')
+a="        ctx->lr = 0x009F0824; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);"
+j=s.index(a,i)
+pre=("        { static int c_=0; if(vm_read32(ctx->gpr[28]+4)==0x40007C90 && c_<120){c_++; fprintf(stderr,\"[P35] submit ip=%08X w1=%08X task=%08X callee=%08X vt=%08X tgt=%08X r4=%08X r5=%08X r6=%08X"+n+"\",(unsigned)ctx->gpr[27],(unsigned)vm_read32(ctx->gpr[27]+4),(unsigned)vm_read32(ctx->gpr[28]+4),(unsigned)ctx->gpr[3],(unsigned)vm_read32(ctx->gpr[3]),(unsigned)ctx->ctr,(unsigned)ctx->gpr[4],(unsigned)ctx->gpr[5],(unsigned)ctx->gpr[6]); } }"+eol)
+s=s[:j]+pre+s[j:]
+b="        ctx->gpr[0] = vm_read32(ctx->gpr[9] + 0x24);"
+k=s.index(b,j)
+post=("        { static int d_=0; if(vm_read32(ctx->gpr[28]+4)==0x40007C90 && d_<200){d_++; fprintf(stderr,\"[P35] child ip=%08X child=%08X st=%d task=%08X"+n+"\",(unsigned)ctx->gpr[27],(unsigned)ctx->gpr[9],(int)ctx->gpr[0],(unsigned)vm_read32(ctx->gpr[28]+4)); } }"+eol)
+# st printed before gpr[0] assigned -> place after
+e=s.index(eol,k)+len(eol)
+s=s[:e]+post+s[e:]
+open(p,'w',encoding='latin-1',newline='').write(s)
