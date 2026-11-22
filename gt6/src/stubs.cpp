@@ -1728,6 +1728,7 @@ extern "C" void gt6_menu_project_request(ppu_context* ctx)
  * through 0x5FA6C8 and opens it with 0x5FA338; states 3/5 complete the
  * transition and clear manager+0x48.  No guest state is written here.
  */
+extern "C" PPU_THREAD_LOCAL void (*g_trampoline_fn)(void*);
 extern "C" void gt6_menu_project_tick(ppu_context* ctx, uint32_t worker_arg)
 {
     const uint32_t mgr = g_menu_manager;
@@ -1766,6 +1767,9 @@ extern "C" void gt6_menu_project_tick(ppu_context* ctx, uint32_t worker_arg)
     ppu_context saved = *ctx;
     ctx->gpr[3] = mgr;
     func_00568658(ctx);
+    /* Hyp. 42: a cross-fragment fallthrough leaves g_trampoline_fn pending; the next
+     * DRAIN_TRAMPOLINE of the caller would run it with the wrong register file. */
+    while (g_trampoline_fn) { void (*tf)(void*) = g_trampoline_fn; g_trampoline_fn = 0; tf(ctx); }
     *ctx = saved;
 
     if (gt6_boot_trace() && gt6_guest_ptr_ok(mgr))
@@ -1797,7 +1801,9 @@ extern "C" void gt6_menu_project_sync_pump(ppu_context* ctx)
         if (vm_read32((uint64_t)mgr + 0x48u) == st) std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     g_menu_manager = 0u;
-    fprintf(stderr, "[GT6] sync pump done state=%u\n", (unsigned)vm_read32((uint64_t)mgr + 0x48u));
+    fprintf(stderr, "[GT6] sync pump done state=%u r3=%llX r27=%llX r29=%llX w28=%u w29=%u\n", (unsigned)vm_read32((uint64_t)mgr + 0x48u),
+            (unsigned long long)ctx->gpr[3], (unsigned long long)ctx->gpr[27], (unsigned long long)ctx->gpr[29],
+            (unsigned)vm_read8((uint64_t)mgr + 0x18u + 0x28u), (unsigned)vm_read8((uint64_t)mgr + 0x18u + 0x29u));
 }
 
 extern "C" void gt6_hle_overrides(void)

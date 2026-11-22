@@ -727,3 +727,11 @@ Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot
 - A13644 liest Byte 0x164AB90 = Objekt 164AB80 (vt 146FA48) +0x10 unter Mutex 0x164AB50. Getter vt+0x8 = 3C0E84 (lbz 0x10(r3)), Setter vt+0xC = C3FE14 (stb r4,0x10(r3)); keine direkten bl-Aufrufer -> nur indirekt.
 - Probe probe_flag41_20261122_222528_1 (GT6_FORCE_LOADFLAG=1, Sync-Pump i==20 schreibt 0x164AB90=1): Pump-State -> 0, Boot laeuft weiter (cellMusicInitialize2, open game024.db). Danach NULL-Deref in A21D50/A21CBC (Rueckweg 568CC8, Waiter manager+0x18) -> exit-chain code=0xFFFFFFFF.
 - Interferenz Worker-Hook vs Haupt-Pump: nicht separat gemessen (Hook feuert laut Hyp. 38 nie).
+
+## Hyp. 42 (2026-11-22): Rueckweg nach Sync-Pump, Natur des Flags 0x164AB90
+- A21D50 (bl bei 568CC8) nach Pump: r3=mgr+0x18 korrekt, aber nach A42DE8 (Lock) r29=0 -> A21CBC liest NULL+0x29. Lock/HLE (ppu_sysprx lwmutex, gcm_pump) klobbern r29 NICHT (Diagnose-Klammern probe_flag42d..i).
+- Ursache: DRAIN_TRAMPOLINE nach dem Lock-Call fuehrt ein vom Sync-Pump hinterlassenes g_trampoline_fn aus (Cross-Fragment-Fallthrough aus func_00568658), das r3/r29 nullt.
+- Fix: gt6_menu_project_tick drained g_trampoline_fn direkt nach func_00568658 (stubs.cpp). probe_flag42j: A21D50 after lock r29=7FEAC018, Boot laeuft weiter.
+- Danach exit-chain code=-1 lr 7F9588 = func_007F9520 (ppu_recomp_018): wenn Byte +0x95E==0 und A13644()!=0 -> +0x95E=1, Zeit (A2F308) nach +0x960; spaeter (now-stamp > 0x97FDF) -> func_00F9A080(-1) = exit.
+- Schluss: 0x164AB90 = Quit/Abbruch-Anforderung mit Grace-Timer, nicht "Projekt fertig". Die Sequenzobjekte beenden sich bei Quit; GT6_FORCE_LOADFLAG bleibt reines Diagnose-Werkzeug (erzeugt Shutdown).
+- Echter Fertig-Setter fuer +0x91 weiter unbekannt -> Hyp. 43.

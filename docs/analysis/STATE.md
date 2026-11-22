@@ -30,11 +30,11 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - MGOM.start("gtmode") ist nur Queue: manager 7FF01FC4 +0x48=1 (pending), +0x50="gtmode" noch bei 200 s. Der Engine-Consumer von manager+0x48 (-> Projekt-Loader 5FA338) laeuft nicht.
 - Hyp. 38-40: Consumer processEventLoop 0x568658; Worker-Hook feuert nie. Sync-Pump (stubs.cpp, vor 568CC8) laedt gtmode (State 1->3->4), 3 Sequenz-Objekte (vt 145FAD8) ticken ohne +0x91.
 - Hyp. 41: Fertig kommt aus A13644 = Byte 0x164AB90 (Objekt 164AB80+0x10, Setter C3FE14 nur per vtable+0xC). Flag forcieren (GT6_FORCE_LOADFLAG=1, probe_flag41): Projekte enden, Boot geht weiter.
-- Danach: cellMusicInitialize2, game024.db offen, dann NULL-Deref in A21D50 (Rueckweg MGOM.start, Waiter manager+0x18 weg) -> exit-chain code=-1. Wer das Flag real setzt: unbekannt (indirekter Call).
+- Hyp. 42: NULL-Crash in A21D50 war r29=0 durch pending g_trampoline_fn nach dem Sync-Pump (Tick drainte nicht). Fix in gt6_menu_project_tick (stubs.cpp). Rueckweg MGOM.start laeuft.
+- Hyp. 42: danach exit(-1) aus 7F9520 (lr 7F9588): A13644-Flag gesetzt -> Zeitstempel +0x960, nach ~0x97FDF Ticks exit. 0x164AB90 ist ein QUIT/Abbruch-Flag, KEIN Load-Done. Force-Flag = Sackgasse.
 
 ## Naechster Schritt (EINER)
-**Hyp. 42: Rueckweg nach Sync-Pump.** Nach Pump-Ende (State 0) darf 568CC8 (bl A21D50) nicht blind warten: Waiter manager+0x18 pruefen/Pump-Ende ueberspringen, NULL-Crash in A21D50 beheben.
-Dann Flag-Setzer finden: Aufrufer von vtable-Slot +0xC (Obj 164AB80, lwz ..,0xC(vt);mtctr) per Scan, oder Flag nach realer Ladezeit setzen (kein Event noetig?).
+**Hyp. 43: Echte Fertig-Bedingung der gtmode-Sequenzobjekte (vt 145FAD8) ohne A13644.** 5C406C/5C3EC4 lesen: was ausser dem Quit-Flag setzt +0x91 (Child-Job, Datei, Timer)? Dann Waiter dort suchen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
