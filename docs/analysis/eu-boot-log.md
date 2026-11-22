@@ -672,3 +672,6 @@ Handler-4-Objekte (Getter 0x640038 / 0x593E34) sind Task/Future-Wrapper. 0x64003
 
 ## 2026-11-22 - Hyp. 26/27 (Event-2-Sender, Eventverteilung)
 Ein Build mit [H26]-Entry-Logs (986440/986568/986704/986860/9A5A38/987A28) und [E27]-Eventlog (alle Objekte, je 40 pro Event) in func_00987180, 3 Laeufe parallel (probe h26/h27). 986440/986568/986860 und 9A5A38 werden gerufen (986568/986440 lr 9C6390, 986860 lr 9791A4); Event 2 erreicht 40007C10/4083F390/4083F410. 40007A10/40007C90/40007990 (Task-Objekte der Handler-4-Schleife) sehen nur 0->1, 1->3 (Cancel lr 9875C8) -> Restart (lr 987AC4). Wait-Fkt (in func_00987A28, 0x987D00..0x987E58) cancelt bei leerer/kleiner Job-Liste (r22+4==0 oder end-begin+3<=6) oder obj+0x28==3. Naechster Schritt: Log der Listenwerte am Cancel-Zweig. Patch: patches/gt6-h26-h27-eventlog.patch; generated/ zurueckgespielt.
+
+## 2026-11-22 - Hyp. 28 (Job-Liste am Cancel-Zweig)
+[C28] in func_00987A28 @loc_00987E54 (Patch patches/gt6-h28-cancelzweig.patch). Alle Cancels: obj=r23=r25=r28 (40007A10/40007C90), obj+0x28=1, obj+0x30=0, g(0x15DE27C)=0, r22=obj+0x6c, begin(obj+0x70)==end(obj+0x74) -> Vektor leer, Kapazitaet begin+0x28 (Heap mit Alt-Strings). Wait-Schleife (0x987E34..0x987E50) wartet nur bei nicht-leerem Vektor. Naechster Schritt: Befueller des Vektors finden.
