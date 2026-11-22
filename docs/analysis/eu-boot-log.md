@@ -645,3 +645,6 @@ Siehe STATE.md "Umgehung Sprachdialog". Gates: 0x18924/0x196D6 (Sprache), 0x18A6
 
 ## 2026-11-22 - Hyp. 17 (Aufrufer 7D8308)
 7D8308 nur per Tail-Branch aus Vtable-Methoden 7D8B10/7D8DA8 (Slots 0x14775E4/E0). CALLTRACE_TO auf 7D8308, 7D8B10, 7D8DA8 (AFTER=200): jeweils 0 Treffer. Inkonklusiv; naechster Ansatz siehe STATE.md Hyp. 18.
+
+## 2026-11-22 - Hyp. 18 (Worker-Thread-Entry)
+tid 33 "p-OmN" (Entry 0x014E0898, Functor 0xF3D5F4 -> F3D150) hat 0 indirekte Calls (FROM=F3D150, AFTER=0/200). Sound-Manager-Singleton @0x1570A40 (Static-Init 0x11508: ctor 0x7D8CEC Player +0x18, Stream +0xB0). Nur Ctor/Dtor referenzieren die Adresse. Inkonklusiv -> Strategiewechsel Hyp. 19 (Umgehung/Vergleich). Hinweis: CALLTRACE-Ausgabe liegt in run.log.err, nicht run.log.
