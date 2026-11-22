@@ -663,3 +663,6 @@ GT6_FLAGLOG (stubs.cpp): einziger WaitFlag-Aufrufer ist Fiber-Idle-Loop 0xA2F464
 
 ## 2026-11-22 - Hyp. 23 (lwcond-Verkehr)
 PS3_LWCLOG (ppu_sysprx.cpp, gitignored, nur nach 90 s): reger Verkehr, lwcond-IDs ~0x4C0213xx..0x4C021Dxx (~139k create), Stack-lokale Conds; tid 1 signalisiert Sound-Manager-Conds 0x1570AB8/0x15DE688, tid 34/33 warten, Wiederholung. Boot haengt nicht idle, sondern dreht in der Track-Preload-Schleife. Naechster Schritt Hyp. 24: Abbruchbedingung der Schleife im aufrufenden Script/Native finden.
+
+## 2026-11-22 - Hyp. 24 (Schleifen-Abbruchbedingung)
+PS3_STACKSCAN/PS3_THRLOG (ppu_sysprx.cpp, Patch patches/ps3recomp-stackscan.patch). Hauptthread-Stack-Scan (tid 1, in lwc_signal nach 100 s) zeigt identischen Stack in 2 Samples: Schleife 0x568800..0x568858 (setjmp 0xB98168; Tick 0x5C406C ueber 3 Objekte bei r28+0x1d4 bis alle obj+0x91 != 0). Tick = Zustandsmaschine obj+0x88 0..5 via Methodentabelle 0x145D0D4. Handler 4 = 0x5B97A0 (Jobliste, vtable+0x120 == 3 -> Fortschritt), Handler 5 = 0x5A5BB0. obj+0x91 nur durch Exit-Request (0xA13644 liest Byte 0x164AB90; gesetzt in 0xA13804 via EXITGAME 0x101 aus 0x7F8F70) oder Finish 0x5C4824/0x5C3EC4. Global 0x15DE27C==1 ueberspringt Handler. Schluss: Loader-Jobs werden nie fertig; Ursache ist Zustand des Loader-Objekts, nicht der Schleifenrahmen.

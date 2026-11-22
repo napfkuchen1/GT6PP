@@ -1,0 +1,59 @@
+--- work/_bk_ppu_sysprx_h24.cpp	2026-11-22 18:31:41.917742600 +0100
++++ third_party/ps3recomp/runtime/ppu/ppu_sysprx.cpp	2026-11-22 18:37:24.037277300 +0100
+@@ -503,6 +503,20 @@
+ static void lwc_signal(ppu_context* ctx, int all)
+ {
+     uint32_t addr = (uint32_t)ctx->gpr[3];
++    {   /* Hyp. 24: main-thread stack scan (PS3_STACKSCAN=<tid>), 6 samples after 100 s */
++        static int tid_sel = -2; if (tid_sel == -2) { const char* e = getenv("PS3_STACKSCAN"); tid_sel = e ? atoi(e) : -1; }
++        static const ULONGLONG t0 = GetTickCount64(); static int cnt = 0;
++        if (tid_sel >= 0 && (int)ctx->thread_id == tid_sel && cnt < 6 && GetTickCount64() - t0 > 100000 + 3000ull * cnt) {
++            cnt++;
++            fprintf(stderr, "[STACKSCAN] tid=%u cond=0x%08X:", (unsigned)ctx->thread_id, addr);
++            uint32_t sp = (uint32_t)ctx->gpr[1];
++            for (int i = 0; i < 1500; ++i) {
++                uint32_t hi = vm_read32(sp + 8 * i), w = vm_read32(sp + 8 * i + 4);
++                if (hi == 0 && w >= 0x10000 && w < 0x1000000 && !(w & 3)) fprintf(stderr, " %08X", w);
++            }
++            fprintf(stderr, "\n");
++        }
++    }
+     ctx->gpr[3] = 0;
+     InitOnceExecuteOnce(&g_lwc_once, lwc_init_cb, NULL, NULL);
+     EnterCriticalSection(&g_lwc_cs);
+@@ -550,6 +564,20 @@
+         lwc_log("wait", lwcond, vm_read32(lwcond + 0x04), c ? c->waiters : -1, ctx);
+         LeaveCriticalSection(&g_lwc_cs);
+     }
++    {   /* Hyp. 24: main-thread stack scan (PS3_STACKSCAN=<tid>), 6 samples after 100 s */
++        static int tid_sel = -2; if (tid_sel == -2) { const char* e = getenv("PS3_STACKSCAN"); tid_sel = e ? atoi(e) : -1; }
++        static const ULONGLONG t0 = GetTickCount64(); static int cnt = 0;
++        if (tid_sel >= 0 && (int)ctx->thread_id == tid_sel && cnt < 6 && GetTickCount64() - t0 > 100000 + 3000ull * cnt) {
++            cnt++;
++            fprintf(stderr, "[STACKSCAN] tid=%u cond=0x%08X:", (unsigned)ctx->thread_id, lwcond);
++            uint32_t sp = (uint32_t)ctx->gpr[1];
++            for (int i = 0; i < 1500; ++i) {
++                uint32_t hi = vm_read32(sp + 8 * i), w = vm_read32(sp + 8 * i + 4);
++                if (hi == 0 && w >= 0x10000 && w < 0x1000000 && !(w & 3)) fprintf(stderr, " %08X", w);
++            }
++            fprintf(stderr, "\n");
++        }
++    }
+     uint32_t own = 0, rc = 0;
+     if (sl) {
+         own = vm_read32(lwmutex + LWM_OWNER);
+@@ -667,7 +695,13 @@
+  * (&tid, nonzero) and the guest wrapper reads it as "create failed" -- e.g. LBP's
+  * sub_52613C does `v6 = (ret==0); return v6 ? tid : 0`, so a nonzero ret makes it
+  * hand back 0 and the caller's init (sub_C1484 / KdConvert) bails. */
+-static void hle_ppu_thread_create(ppu_context* ctx) { ctx->gpr[3] = sys_ppu_thread_create(ctx); }
++static void hle_ppu_thread_create(ppu_context* ctx)
++{
++    static int on = -1; if (on < 0) on = getenv("PS3_THRLOG") ? 1 : 0;
++    static int n = 0;
++    if (on && n < 400) { n++; fprintf(stderr, "[THRLOG] create by tid=%u lr=0x%08X entry_opd=0x%08X arg=0x%08X sp=0x%08X\n", (unsigned)ctx->thread_id, (unsigned)ctx->lr, (unsigned)vm_read32((uint32_t)ctx->gpr[4]), (unsigned)ctx->gpr[5], (unsigned)ctx->gpr[1]); }
++    ctx->gpr[3] = sys_ppu_thread_create(ctx);
++}
+ static void hle_ppu_thread_exit(ppu_context* ctx)   { ctx->gpr[3] = sys_ppu_thread_exit(ctx); }
+ 
+ /* _cellGcmInitBody (NID 0x15BAE46B) -- the GCM init every PS3 game calls via the
