@@ -1792,6 +1792,7 @@ extern "C" void gt6_menu_project_sync_pump(ppu_context* ctx)
         if (st != last && gt6_boot_trace())
             fprintf(stderr, "[GT6] sync pump i=%d state=%u\n", i, st);
         last = st;
+        if (i == 20 && getenv("GT6_FORCE_LOADFLAG")) { vm_write8(0x164AB90ull, 1u); fprintf(stderr, "[GT6] forced loadflag 0x164AB90=1\n"); }
         gt6_menu_project_tick(ctx, 0u);
         if (vm_read32((uint64_t)mgr + 0x48u) == st) std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }

@@ -26,20 +26,15 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - WaitFlag/Fiber-Idle, lwcond-Livelock (Hyp. 21-23): normales Worker-Verhalten, Hauptthread dreht in Track-Preload-Tick.
 - SPU: 0 dispatch-MISS, 0 unresolved NID in den Hyp.-29-35-Laeufen -> kein fehlendes SPU-Image.
 - Hyp. 36 Snapshot-Werkzeug (patches/gt6-snap-at.patch, scripts/snap_walk.py): geht. Workers alle in lwcond_wait, 0 Mutex-Owner, 0 Sem-Waiter, kein cancelled evq. Details eu-boot-log.md.
-- Alte Callee-Adressen 4037EC28 u.a. aus Hyp. 35 sind lauf-spezifisch/stale; im Snapshot 110 Bind-Wrapper (vt 0x1484968) mit vtable+0x54 = 0x9E5FC0 (Bind-Trampolin -> 0x9880BC).
 - Hyp. 37 Snapshot-Auswertung: haengender Script-Opcode 0x06 ruft Wrapper 4037A844 (vt 0x1483EC8+0xdc=9B0918) mit Arg "gtmode" -> 9C625C -> 9C6184 -> OPD 014CD330 = MGOM.start (6C54DC).
 - MGOM.start("gtmode") ist nur Queue: manager 7FF01FC4 +0x48=1 (pending), +0x50="gtmode" noch bei 200 s. Der Engine-Consumer von manager+0x48 (-> Projekt-Loader 5FA338) laeuft nicht.
-- Nebenspuren, nicht verfolgt: `[mfc] REJECTED malformed transfer` (ea=0x7FFFFFFF, img=19, pc=0xF0C) in ~1/3 Laeufen; blauer Block auf AdjustScreen (M3).
-- Hyp. 38 (offline): Consumer = processEventLoop 0x568658 (OPD 014BF800), signalisiert Waiter manager+0x18 (0xA21E04@5689D8). Hauptthread blockt in MGOM.start (568CC8 bl A21D50).
-- Kein Thread hat 0x568658 auf dem Stack. Vorhandener Pump (gt6_menu_project_tick) laeuft nur pro Worker-Schleife 0xA12170, Worker schlafen aber in A187CC/lwcond_wait -> Hook feuert nie.
-- Signal vor Wait geht nicht verloren (A21D8C setzt +0x29=1) -> synchroner Pump vor 568CC8 im Hauptthread ist zulaessig.
-- Hyp. 39 (probe_sync39): synchroner Pump vor 568CC8 (gt6_menu_project_sync_pump) wirkt: gtmode.mproject wird geladen (5FA338), States 1->3->4. Danach bleibt manager+0x48=4 (4000 Iter, 3500x state_after=4).
-- Hyp. 40 (Snapshot work/snap_h40): State 4/3-Zyklus = 3 Sequenz-Objekte (vt 145FAD8, 7FF0B000/7FF0B800/7FEAC000) in 5C406C, +0x90/+0x91=0, +0x88 zyklisch 0..5 (Handler-Tabelle 145D0D4).
-- Fertig-Flag +0x90 wird per A13644 (Byte 0x164AB90, =0) oder von einem Handler gesetzt. Wer es setzt, unbekannt; Pump laeuft 4000 Ticks ohne Fortschritt.
+- Hyp. 38-40: Consumer processEventLoop 0x568658; Worker-Hook feuert nie. Sync-Pump (stubs.cpp, vor 568CC8) laedt gtmode (State 1->3->4), 3 Sequenz-Objekte (vt 145FAD8) ticken ohne +0x91.
+- Hyp. 41: Fertig kommt aus A13644 = Byte 0x164AB90 (Objekt 164AB80+0x10, Setter C3FE14 nur per vtable+0xC). Flag forcieren (GT6_FORCE_LOADFLAG=1, probe_flag41): Projekte enden, Boot geht weiter.
+- Danach: cellMusicInitialize2, game024.db offen, dann NULL-Deref in A21D50 (Rueckweg MGOM.start, Waiter manager+0x18 weg) -> exit-chain code=-1. Wer das Flag real setzt: unbekannt (indirekter Call).
 
 ## Naechster Schritt (EINER)
-**Hyp. 41: wer setzt Sequenz-Flag +0x90 (stb ..,0x90)?** capstone-Scan EMAIN.elf nach `stb rX,0x90(rY)` in Handlern 5C1B3C/5BD718/5A8218/5B80DC/5B97A0/5A5BB0 + Setter von 0x164AB90 (A13644).
-Offline in work/snap_h40. Danach klaeren, ob das Flag von Input/Zeit/Event kommt (Loading-Screen-Ende) und ob 4000x1ms-Pump nur zu kurz ist (kein Fortschritt in +0x88 sichtbar).
+**Hyp. 42: Rueckweg nach Sync-Pump.** Nach Pump-Ende (State 0) darf 568CC8 (bl A21D50) nicht blind warten: Waiter manager+0x18 pruefen/Pump-Ende ueberspringen, NULL-Crash in A21D50 beheben.
+Dann Flag-Setzer finden: Aufrufer von vtable-Slot +0xC (Obj 164AB80, lwz ..,0xC(vt);mtctr) per Scan, oder Flag nach realer Ladezeit setzen (kein Event noetig?).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

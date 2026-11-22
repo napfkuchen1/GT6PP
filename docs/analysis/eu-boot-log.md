@@ -721,3 +721,9 @@ Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot
 - Consumer 0x568658: state 3->4 CAS, tickt manager+0x1d4[0..2] via 5C406C, setzt state zurueck auf 3, solange +0x91==0; alle fertig -> state 5.
 - 5C406C: pro Tick Handler[+0x88] aus Tabelle 145D0D4 (5C1B3C,5BD718,5A8218,5B80DC,5B97A0,5A5BB0), +0x88++; Ende wenn A13644()=1 (Byte 0x164AB90 unter Mutex 164AB50) -> +0x90=1 -> 5C3EC4.
 - Snapshot: Objekte 7FF0B000/7FF0B800/7FEAC000: +0x88=0, +0x8C=5/5/A, +0x90/91=0; 0x164AB90=0.
+
+## Hyp. 41 (2026-11-22): Fertig-Flag der Sequenz-Objekte
+- Offline (snap_h40): einziger Setter von +0x90 im Sequenzcode = 5A3AC0 (Func 5A3AAC), Aufrufer: 5680FC (Consumer-Exit 0x56886C/0x5E6D78) und 5A7A10 (generischer weak-ref-Wrapper, von 5AB428 mit >20 Aufrufern). Kein Handler setzt es selbst.
+- A13644 liest Byte 0x164AB90 = Objekt 164AB80 (vt 146FA48) +0x10 unter Mutex 0x164AB50. Getter vt+0x8 = 3C0E84 (lbz 0x10(r3)), Setter vt+0xC = C3FE14 (stb r4,0x10(r3)); keine direkten bl-Aufrufer -> nur indirekt.
+- Probe probe_flag41_20261122_222528_1 (GT6_FORCE_LOADFLAG=1, Sync-Pump i==20 schreibt 0x164AB90=1): Pump-State -> 0, Boot laeuft weiter (cellMusicInitialize2, open game024.db). Danach NULL-Deref in A21D50/A21CBC (Rueckweg 568CC8, Waiter manager+0x18) -> exit-chain code=0xFFFFFFFF.
+- Interferenz Worker-Hook vs Haupt-Pump: nicht separat gemessen (Hook feuert laut Hyp. 38 nie).
