@@ -1,0 +1,11 @@
+p='gt6/generated/ppu_recomp_022.cpp'
+s=open(p,encoding='latin-1',newline='').read()
+nl=chr(92)+'n'
+a1="        ctx->lr = 0x009EEC40; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);"
+assert s.count(a1)==1
+eol='\r\n' if '\r\n' in s else '\n'
+pre=("        if(vm_read8(ctx->gpr[10])==0x37){ static int c_=0; if(c_<40){ c_++; fprintf(stderr,\"[P32] op37 task=%08X r3=%08X r10=%08X w0=%08X w1=%08X w2=%08X w3=%08X [r3+4]=%08X exec_r4=%08X r30=%08X\"+NL,(unsigned)vm_read32(ctx->gpr[31]+4),(unsigned)ctx->gpr[3],(unsigned)ctx->gpr[10],(unsigned)vm_read32(ctx->gpr[10]),(unsigned)vm_read32(ctx->gpr[10]+4),(unsigned)vm_read32(ctx->gpr[10]+8),(unsigned)vm_read32(ctx->gpr[10]+12),(unsigned)vm_read32(ctx->gpr[3]+4),(unsigned)ctx->gpr[4],(unsigned)ctx->gpr[30]); } }"+eol).replace('+NL','+"'+nl+'"')
+# fix: NL inside string
+pre=pre.replace('r30=%08X"+"'+nl+'"','r30=%08X'+nl)
+s=s.replace(a1,pre+a1,1)
+open(p,'w',encoding='latin-1',newline='').write(s)

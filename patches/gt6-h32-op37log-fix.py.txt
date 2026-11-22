@@ -1,0 +1,6 @@
+p='gt6/generated/ppu_recomp_022.cpp'
+s=open(p,encoding='latin-1',newline='').read()
+a='r30=%08X'+chr(92)+'n,(unsigned)'
+assert s.count(a)==1
+s=s.replace(a,'r30=%08X'+chr(92)+'n",(unsigned)')
+open(p,'w',encoding='latin-1',newline='').write(s)
