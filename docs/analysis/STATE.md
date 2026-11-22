@@ -25,15 +25,15 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Race/Determinismus: 17/18 Boots identisch. Sound-Schleife = Symptom, nicht Ursache (Hyp. 19/20: 7E90F0 failen, Boot endet gleich).
 - WaitFlag/Fiber-Idle, lwcond-Livelock (Hyp. 21-23): normales Worker-Verhalten, Hauptthread dreht in Track-Preload-Tick.
 - SPU: 0 dispatch-MISS, 0 unresolved NID in den Hyp.-29-35-Laeufen -> kein fehlendes SPU-Image.
+- Hyp. 36 Snapshot-Werkzeug (patches/gt6-snap-at.patch, scripts/snap_walk.py): geht. Workers alle in lwcond_wait, 0 Mutex-Owner, 0 Sem-Waiter, kein cancelled evq. Details eu-boot-log.md.
+- Alte Callee-Adressen 4037EC28 u.a. aus Hyp. 35 sind lauf-spezifisch/stale; im Snapshot 110 Bind-Wrapper (vt 0x1484968) mit vtable+0x54 = 0x9E5FC0 (Bind-Trampolin -> 0x9880BC).
 - Nebenspuren, nicht verfolgt: `[mfc] REJECTED malformed transfer` (ea=0x7FFFFFFF, img=19, pc=0xF0C) in ~1/3 Laeufen; blauer Block auf AdjustScreen (M3).
 
 ## Naechster Schritt (EINER)
-**Snapshot statt Einzel-Logs.** Nach 15 Hypothesen auf einer Kette gilt: keine weitere Log-Hypothese ohne Snapshot-Werkzeug.
-1. `PS3_SNAP_AT=<s>` bauen (ps3recomp-Runtime): Gast-RAM + Thread-Register/Stacks + Sync-Objekt-Tabellen (Mutex, Event-Queue, lwcond, Fiber) in `work/snap_<ts>/`. Patch nach `patches/` (third_party ist gitignored).
-2. `scripts/snap_walk.py`: Objekt am Zeiger lesen, vtable/OPD ueber ELF aufloesen, Felder dumpen, `[callee+0x14]` -> vtable+0x54 -> Methode disassemblieren.
-3. Ein Lauf `-Boot notut` bei 200 s, dann alles offline: Callee-Objekte, Ziel-Objekt, auf was die Methode wartet.
-Zeitbox 2 h. Scheitert der Bau: Hyp. 36 klassisch (Log in 9B89D8 vor bctrl 0x9B8A44, Cap pro Methodenadresse).
-Optional (User): RPCS3 manuell mit Log nach dem Dialog starten, Datei-/Thread-Reihenfolge vergleichen.
+**Snapshot auswerten, Script-Task finden.** Werkzeug steht (Hyp. 36): Lauf `scripts\probe.ps1 -Name snap -Boot notut -Seconds 320 -Env "PS3_SNAP_AT=200;PS3_SNAP_DIR=<abs>/work/snap_runN"`.
+1. Task-Objekt (Poll 0x9EEA88) im Snapshot finden: Vtable-Klasse per `find32` suchen, obj+0x70/0x74 (Job-Stack), Top-Job `vtable+8` (985FE0) lesen -> Status/Typ des haengenden Jobs.
+2. Daran haengende Bind-Wrapper (vt 0x1484968 -> [+0x14] -> vt 0x1487348 -> 0x9E5FC0 -> 0x9880BC -> vtable+0x28) offline bis zum Ziel auflösen (`snap_walk.py`).
+Snapshot-Vorlage: `work/snap_run2` (200 s, notut). Kein Einzelfeld-Log-Lauf mehr, bevor das offline geklaert ist.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

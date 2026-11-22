@@ -1,0 +1,219 @@
+diff --git a/runtime/ppu/ppu_loader.cpp b/runtime/ppu/ppu_loader.cpp
+index 90e1089..e036d40 100644
+--- a/runtime/ppu/ppu_loader.cpp
++++ b/runtime/ppu/ppu_loader.cpp
+@@ -3379,6 +3379,44 @@ static DWORD WINAPI ps3_wd_thread(LPVOID p)
+     return 0;
+ }
+ #endif
++/* PS3_SNAP_AT=<s>: offline snapshot (see runtime/diag/ps3_snapshot.c). Dir = PS3_SNAP_DIR or snap_<ts>. */
++extern "C" void ps3_snap_dump_sync(const char*);
++extern "C" void ps3_snap_dump_mem(const char*);
++extern "C" void ps3_snap_dump_stack(const char*, unsigned, uint32_t);
++#ifdef _WIN32
++static DWORD WINAPI ps3_snap_thread(LPVOID p)
++{
++    Sleep((DWORD)(atof((const char*)p) * 1000.0));
++    char dir[400]; const char* e = getenv("PS3_SNAP_DIR");
++    if (e && *e) snprintf(dir, sizeof dir, "%s", e);
++    else snprintf(dir, sizeof dir, "snap_%lu", (unsigned long)GetTickCount());
++    CreateDirectoryA(dir, NULL);
++    fprintf(stderr, "[SNAP] start dir=%s\n", dir); fflush(stderr);
++    char path[460]; snprintf(path, sizeof path, "%s/threads.txt", dir);
++    FILE* f = fopen(path, "w");
++    long n = g_resv_ctx_n; if (n > PPU_RESV_MAX) n = PPU_RESV_MAX;
++    for (long i = 0; i < n; i++) {
++        ppu_context* c = g_resv_ctxs[i]; if (!c) continue;
++        unsigned t = (unsigned)c->thread_id;
++        if (f) {
++            fprintf(f, "thread %u lr=%08X ctr=%08X cia=%08X cr=%08X sp=%08X inflight_sc=%u hle=%s\n", t,
++                    (uint32_t)c->lr, (uint32_t)c->ctr, (uint32_t)c->cia, c->cr, (uint32_t)c->gpr[1],
++                    t < 64u ? g_sc_inflight[t] : 0u, (t < 64u && g_hle_inflight[t]) ? g_hle_inflight[t] : "-");
++            for (int r = 0; r < 32; r++) fprintf(f, " r%d=%08X%08X", r, (uint32_t)(c->gpr[r] >> 32), (uint32_t)c->gpr[r]);
++            fprintf(f, "\n");
++        }
++        uint32_t sp = (uint32_t)c->gpr[1];
++        if (sp >= 0x10000u && sp < 0xFFFF0000u) ps3_snap_dump_stack(dir, t, sp);
++    }
++    if (f) fclose(f);
++    ps3_snap_dump_sync(dir);
++    ps3_snap_dump_mem(dir);
++    snprintf(path, sizeof path, "%s/meta.txt", dir);
++    if ((f = fopen(path, "w"))) { fprintf(f, "ram_main.bin=0x%08X ram_hle.bin=0x%08X big-endian guest bytes\n", (unsigned)VM_MAIN_MEM_BASE, (unsigned)VM_HLE_HEAP_BASE); fclose(f); }
++    fprintf(stderr, "[SNAP] done dir=%s\n", dir); fflush(stderr);
++    return 0;
++}
++#endif
+ extern "C" void lv2_syscall(ppu_context* ctx)
+ {
+ #ifdef _WIN32
+@@ -3386,6 +3424,10 @@ extern "C" void lv2_syscall(ppu_context* ctx)
+       if (!_wd) { _wd = 1; const char* e = getenv("PS3_WD_AT");
+           if (e && *e) { static char buf[64]; snprintf(buf, sizeof buf, "%s", e);
+                          CreateThread(NULL, 0, ps3_wd_thread, buf, 0, NULL); } } }
++    { static int _sn = 0;
++      if (!_sn) { _sn = 1; const char* e = getenv("PS3_SNAP_AT");
++          if (e && *e) { static char sbuf[64]; snprintf(sbuf, sizeof sbuf, "%s", e);
++                         CreateThread(NULL, 0, ps3_snap_thread, sbuf, 0, NULL); } } }
+ #endif
+     ppu_rpage_arm();
+     /* One-shot: PPU_GUARD_EA=<hex> arms the page guard on that address without
+diff --git a/third_party/ps3recomp/runtime/diag/ps3_snapshot.c b/runtime/diag/ps3_snapshot.c
+new file mode 100644
+index 0000000..300964b
+--- /dev/null
++++ b/runtime/diag/ps3_snapshot.c
+@@ -0,0 +1,153 @@
++/*
++ * PS3_SNAP_AT=<seconds>: one-shot offline snapshot of the guest (best effort,
++ * threads keep running while it is written).
++ *
++ *   work/snap_<ts>/ram_main.bin   guest 0x00010000..0x10010000 (256 MB, big-endian raw)
++ *   work/snap_<ts>/ram_hle.bin    guest 0x50000000..0x58000000 (HLE heap, 128 MB)
++ *   work/snap_<ts>/stack_<tid>.bin  [sp-0x2000, sp+0xE000) of every guest thread
++ *   work/snap_<ts>/threads.txt    per-thread gpr/lr/ctr/cia/sp + in-flight syscall
++ *   work/snap_<ts>/sync.txt       mutex/cond/sem/event-queue/event-flag tables (active only)
++ *   work/snap_<ts>/meta.txt       dump dir layout, base addresses
++ *
++ * Called from the PS3_SNAP_AT watchdog thread in ppu_loader.cpp.
++ */
++#include "../syscalls/sys_mutex.h"
++#include "../syscalls/sys_cond.h"
++#include "../syscalls/sys_event.h"
++#include "../syscalls/sys_semaphore.h"
++#include "../memory/vm.h"
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#ifdef _WIN32
++#include <windows.h>
++#endif
++
++extern uint8_t* vm_base;
++extern uint32_t g_sc_inflight[64];
++
++static void snap_dump_range(const char* dir, const char* name, uint32_t ea, uint32_t len)
++{
++    char path[600];
++    snprintf(path, sizeof path, "%s/%s", dir, name);
++    FILE* f = fopen(path, "wb");
++    if (!f) { fprintf(stderr, "[SNAP] cannot open %s\n", path); return; }
++    /* chunked so a not-committed page range fails visibly instead of crashing silently */
++    const uint32_t chunk = 0x100000;
++    for (uint32_t off = 0; off < len; off += chunk) {
++        uint32_t n = len - off < chunk ? len - off : chunk;
++#ifdef _WIN32
++        /* skip (zero-fill) any sub-range that is not committed */
++        for (uint32_t o = 0; o < n; ) {
++            MEMORY_BASIC_INFORMATION mbi;
++            const uint8_t* p = vm_base + ea + off + o;
++            uint32_t run = n - o;
++            if (!VirtualQuery(p, &mbi, sizeof mbi)) { run = 0x1000; }
++            else {
++                uint32_t left = (uint32_t)((const uint8_t*)mbi.BaseAddress + mbi.RegionSize - p);
++                if (left < run) run = left;
++            }
++            if (mbi.State == MEM_COMMIT && !(mbi.Protect & (PAGE_NOACCESS | PAGE_GUARD)))
++                fwrite(p, 1, run, f);
++            else { static char z[0x1000]; for (uint32_t k = 0; k < run; k += sizeof z) fwrite(z, 1, run - k < sizeof z ? run - k : sizeof z, f); }
++            o += run;
++        }
++#else
++        fwrite(vm_base + ea + off, 1, n, f);
++#endif
++    }
++    fclose(f);
++}
++
++/* ctxs: array of ppu_context* provided by the loader (opaque here, we only need
++ * the text/registers, which the loader writes itself). */
++void ps3_snap_dump_sync(const char* dir)
++{
++    char path[600];
++    snprintf(path, sizeof path, "%s/sync.txt", dir);
++    FILE* f = fopen(path, "w");
++    if (!f) return;
++    for (int i = 0; i < SYS_MUTEX_MAX; i++) {
++        const sys_mutex_info* m = &g_sys_mutexes[i];
++        if (!m->active) continue;
++        fprintf(f, "mutex id=%d name=%.8s owner_tid=%llu lock_count=%d waiters=%d recursive=%d\n",
++                i + 1, m->name, (unsigned long long)m->owner_tid, m->lock_count, (int)m->waiters, m->recursive);
++    }
++    for (int i = 0; i < SYS_COND_MAX; i++) {
++        const sys_cond_info* c = &g_sys_conds[i];
++        if (!c->active) continue;
++        fprintf(f, "cond id=%d name=%.8s mutex_id=%u\n", i + 1, c->name, c->mutex_id);
++    }
++    for (int i = 0; i < SYS_SEMAPHORE_MAX; i++) {
++        const sys_semaphore_info* s = &g_sys_semaphores[i];
++        if (!s->active) continue;
++        fprintf(f, "sem id=%d name=%.8s value=%d max=%d waiters=%d\n",
++                i + 1, s->name, (int)s->value, (int)s->max_value, (int)s->waiters);
++    }
++    for (int i = 0; i < SYS_EVENT_QUEUE_MAX; i++) {
++        const sys_event_queue_info* q = &g_sys_event_queues[i];
++        if (!q->active) continue;
++        fprintf(f, "evq id=%d name=%.8s key=0x%llX cap=%d count=%d cancelled=%d waiters=%d\n",
++                i + 1, q->name, (unsigned long long)q->key, q->capacity, q->count, q->cancelled, q->waiters);
++        for (int k = 0, idx = q->head; k < q->count && k < 8; k++, idx = (idx + 1) % (q->capacity ? q->capacity : 1))
++            fprintf(f, "  evq id=%d pending[%d] src=0x%llX d1=0x%llX d2=0x%llX d3=0x%llX\n", i + 1, k,
++                    (unsigned long long)q->buffer[idx].source, (unsigned long long)q->buffer[idx].data1,
++                    (unsigned long long)q->buffer[idx].data2, (unsigned long long)q->buffer[idx].data3);
++    }
++    for (int i = 0; i < SYS_EVENT_PORT_MAX; i++) {
++        const sys_event_port_info* p = &g_sys_event_ports[i];
++        if (!p->connected_queue) continue;
++        fprintf(f, "evport id=%d -> evq id=%d\n", i + 1, p->connected_queue);
++    }
++    for (int i = 0; i < SYS_EVENT_FLAG_MAX; i++) {
++        const sys_event_flag_info* e = &g_sys_event_flags[i];
++        if (!e->active) continue;
++        fprintf(f, "evflag id=%d name=%.8s pattern=0x%016llX\n", i + 1, e->name, (unsigned long long)e->pattern);
++    }
++    fclose(f);
++}
++
++void ps3_snap_dump_mem(const char* dir)
++{
++#ifdef _WIN32
++    /* every committed readable region of the 4 GB guest window, merged runs, <=0x20000000 each.
++     * Files reg_<ea>.bin, index in regions.txt */
++    char path[600];
++    snprintf(path, sizeof path, "%s/regions.txt", dir);
++    FILE* idx = fopen(path, "w");
++    uint64_t ea = 0;
++    uint64_t run_start = 0, run_len = 0;
++    int have = 0;
++    while (ea < 0x100000000ull) {
++        MEMORY_BASIC_INFORMATION mbi;
++        if (!VirtualQuery(vm_base + ea, &mbi, sizeof mbi)) break;
++        uint64_t sz = mbi.RegionSize;
++        int ok = mbi.State == MEM_COMMIT && !(mbi.Protect & (PAGE_NOACCESS | PAGE_GUARD));
++        if (ok && have && run_start + run_len == ea && run_len + sz <= 0x20000000ull) run_len += sz;
++        else {
++            if (have) { char nm[64]; snprintf(nm, sizeof nm, "reg_%08llX.bin", (unsigned long long)run_start);
++                        snap_dump_range(dir, nm, (uint32_t)run_start, (uint32_t)run_len);
++                        if (idx) fprintf(idx, "%08llX %llX\n", (unsigned long long)run_start, (unsigned long long)run_len); }
++            have = 0;
++            if (ok) { run_start = ea; run_len = sz; have = 1; }
++        }
++        ea += sz;
++    }
++    if (have) { char nm[64]; snprintf(nm, sizeof nm, "reg_%08llX.bin", (unsigned long long)run_start);
++                snap_dump_range(dir, nm, (uint32_t)run_start, (uint32_t)run_len);
++                if (idx) fprintf(idx, "%08llX %llX\n", (unsigned long long)run_start, (unsigned long long)run_len); }
++    if (idx) fclose(idx);
++#else
++    snap_dump_range(dir, "reg_00010000.bin", VM_MAIN_MEM_BASE, VM_MAIN_MEM_SIZE);
++#endif
++}
++
++void ps3_snap_dump_stack(const char* dir, unsigned tid, uint32_t sp)
++{
++    char name[64];
++    uint32_t lo = sp - 0x2000u;
++    snprintf(name, sizeof name, "stack_%u_%08X.bin", tid, lo);
++    snap_dump_range(dir, name, lo, 0x10000u);
++}

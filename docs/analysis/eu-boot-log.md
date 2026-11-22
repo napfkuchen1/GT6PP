@@ -693,3 +693,8 @@ Statischer Scan der Handler-Tabelle 0x1487660 (patches/gt6-h34-scan.py.txt): dir
 
 ## 2026-11-22 - Hyp. 35 (Child-Job bei Opcode 0x06)
 [P35] in func_009F0748 (patches/gt6-h35*-submitlog.py.txt; Variante b filtert task 40007C90). Opcode 0x06 = **native Funktion aufrufen** ueber callee-Objekt (r3) mit callee.vtable+0xdc: Ziele 9B0918 (vt 01483EC8, Ergebnis sofort st=1 -> o24=5) und 9B89D8 (vt 01484968; Wrapper, delegiert an Objekt [callee+0x14] vtable+0x54, args r4=Result-Slot sp+0x78, r5=w1, r6=Argumente) sowie 9A0178 (vt 014851B0, st=1). Das Ergebnis-Objekt [sp+0x78] ist der Task selbst (child=40007C90); st=[task+0x24] nach dem Aufruf. **st=4 (pending, Poll wiederholen) tritt nur bei 9B89D8-Aufrufen auf** (callee 4037EC28, 4049AE20/AE80/AF28/AF10, 403AD8E0, ...), 9B0918-Aufrufe liefern st=1. Der in Hyp. 34 dominante Hang-ip 403A6628 lag ausserhalb des 120er-Logs (Cap zu fruh erschoepft). Ziel-Objekt [callee+0x14] und dessen vtable+0x54-Methode noch unbekannt.
+
+## 2026-11-22 - Hyp. 36 (Snapshot-Werkzeug PS3_SNAP_AT)
+Patch patches/gt6-snap-at.patch (ppu_loader.cpp Thread + runtime/diag/ps3_snapshot.c): nach N s alle committeten VM-Regionen (reg_<ea>.bin, regions.txt, ~1 GB), Thread-Regs/Stacks, Sync-Tabellen. Lauf snap2 (work/snap_run2, 200 s, notut) gueltig.
+Befund: Threads 2-40 in lwcond_wait/Syscalls (130/141/107), Hauptthread in cellFiberPpuWaitFlag. Mutex: 10 aktiv, alle owner 0. Sem: 8 mit value=0 (max 1024), keine Waiter. evq5 (key 0x23A0 = cellAudio-Notify) cap4 count4 ohne Receiver (vermutl. Symptom, vgl. Hyp. 19/20).
+Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot 0x54 = 0x9E5FC0: Bind-Trampolin, ruft 0x9880BC(*arg4, this+0x14, [this+0x14]+0x34 ...) -> [x+0xC].vtable+0x28. Zielfunktion noch offen.
