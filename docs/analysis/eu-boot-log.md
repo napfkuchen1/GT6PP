@@ -654,3 +654,6 @@ boot.adc.nodlg_noadjust (2 Laeufe, probe cmp_tut_*): Tutorial laedt (race_tutori
 
 ## 2026-11-22 - Hyp. 20 (7E90F0 fehlschlagen lassen)
 Neuer Hook PS3_FAIL_ICALL=<hex> in ppu_loader.cpp (indirect call skip, r3=0); clang-cl neu gebaut (gt6\build-clangcl, 17:21). Lauf fail7e90f0: Hook feuert 1x, keine Track-Schleife, Boot stoppt weiter nach scene/misc/gl0019; Frame 4200 nie erreicht (4/4 gueltige Laeufe) -> keine Umgehung. Schleife ist Symptom. MinGW-Build (gt6\build) nicht neu gebaut: Hook nur Probe-Knob, Laeufe nutzen build-clangcl.
+
+## 2026-11-22 - Hyp. 21 (Watchdog, Hauptthread-Wartepunkt)
+probe wd21 (PS3_WD_AT=120,240; PS3_EVQSTAT=40; 2 gueltige Laeufe): tid 1 in cellFiberPpuWaitFlag (GT6-Stub stubs.cpp:1382; Yield-Schleife max 2 ms in Fiber, sonst 5 s), tid 32 in cellFiberPpuRunFibers, ~20 Threads in sys_lwcond_wait. Kein harter Deadlock: Guest dreht in Flag-Warteschleife, das Gegenueber (Flag loeschen + CheckFlags) kommt nie. Naechster Schritt Hyp. 22: haengendes Flag per Log im Stub bestimmen, Setzer suchen.
