@@ -38,8 +38,10 @@ Offene Frage: worauf wartet die Methode vtable+0x54 (Thread? SPU? Datei? Timer?)
 - Hyp. 45/46: soc-job = pro Track Create->Run->Shutdown->Join. Shutdown setzte nur running=0, Walker blieb bis 20 s in jg_wait, Join kehrte sofort zurueck -> 2 Walker, Credits gestohlen.
 - Hyp. 46 FIX (patches/gt6-h46-spurs-jc-gen.patch, cellSpurs.c): gen+alive je Chain, Shutdown stoppt Walker, Join wartet auf alive=0. Vorher q4 226 Pushes, nachher 187k; Track-Opens 3950/320s -> 9248/220s. Menue weiter nicht da.
 
+- Hyp. 47: 27-Track-Schleife = BGM-Playlist (sound_gt/track/0428-0456.sgh/.sgb, feste Reihenfolge, ~340 Runden), soc-job = Audio-Decode. Symptom, kein Menue-Treiber. Frame 1500 (probe_h47cap) = weiter Legal+Logo+Spinner.
+
 ## Naechster Schritt (EINER)
-**Hyp. 47: Track-Schleife laeuft jetzt 3x schneller, endet aber nie (27 Tracks 0435/0445...).** Pruefen: wer ruft pro Track Chain neu (Consumer 5FA730->568784) und welche Abbruchbedingung (Job-Ergebnis/Listenende) fehlt. Snapshot mit Fix nehmen.
+**Hyp. 48: Was blockiert die Anzeige trotz laufendem gtmode+BGM?** Script-VM (Poll 0x9EEA88) nach MGOM.start: naechster wartender Opcode per Snapshot (work/snap_h47) + Loading-Screen-Abbruchbedingung (Legal-Overlay) suchen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
