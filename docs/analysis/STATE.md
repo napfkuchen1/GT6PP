@@ -28,10 +28,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 43: +0x91 setzt nur Finalizer 5C3EC4 (Quit-Pfad). Hyp. 44: Pump-Limit weg, ~2193 Flips/320 s, Bild Legal/Logo.
 - Hyp. 45/46 FIX (patches/gt6-h46-spurs-jc-gen.patch, cellSpurs.c): SPURS-Chain gen+alive, Shutdown stoppt Walker, Join wartet. q4 Pushes 226 -> 187k.
 - Hyp. 47: 27-Track-Schleife = BGM-Playlist (soc-job = Audio-Decode), Symptom. Frame 1500 notut = Legal+Logo+Spinner.
-- Hyp. 48a: Captures 4200 orig/noadj siehe Aktive Kette. Beide Varianten kein fertiges Menue bei 4200.
+- Hyp. 48a: Captures 4200 orig/noadj + 9000 noadj: kein Menue; noadj 9000 weiter nur dunkles Logo+Spinner (Frame 9000 ~7 min Laufzeit).
 
 ## Naechster Schritt (EINER)
-**Hyp. 48b:** noadj Frame 9000 (Lauf h48noadj9k) auswerten; dann orig Frame 6000/9000. Definieren: "Menue sichtbar" / "fehlerfrei". Legal-Overlay-Exit (alte Hyp. 48) erst danach.
+**Hyp. 48b:** orig Frame 9000 (Lauf h48orig9k) auswerten; ggf. PAD_SCRIPT durch Dialoge. Danach "Menue sichtbar/fehlerfrei" definieren, dann Legal-Overlay-Exit.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
