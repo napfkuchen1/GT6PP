@@ -1,0 +1,10 @@
+p='gt6/generated/ppu_recomp_022.cpp'
+s=open(p,encoding='latin-1',newline='').read()
+eol='\r\n' if '\r\n' in s else '\n'
+n=chr(92)+'n'
+a="        ctx->lr = 0x009EEC40; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);"
+assert s.count(a)==1
+pre="        static unsigned lop_,lip_,lw1_,lh_; lop_=vm_read8(ctx->gpr[10]); lip_=(unsigned)ctx->gpr[10]; lw1_=vm_read32(ctx->gpr[10]+4); lh_=(unsigned)ctx->ctr;"+eol
+post=("        { static int hh_=0; if(hh_<300){ unsigned t_=vm_read32(ctx->gpr[31]+4); unsigned o_=vm_read32(t_+0x24); if(o_==2||o_==3||o_==4){hh_++; fprintf(stderr,\"[P34] set task=%08X o24=%u op=%02X h=%08X ip=%08X w1=%08X"+n+"\",t_,o_,lop_,lh_,lip_,lw1_);} } }"+eol)
+s=s.replace(a,pre+a+eol+post,1)
+open(p,'w',encoding='latin-1',newline='').write(s)

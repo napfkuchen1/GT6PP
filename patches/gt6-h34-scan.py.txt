@@ -1,0 +1,24 @@
+import sys,struct
+sys.path.insert(0,'tools')
+import gt6_disasm_range as g
+from capstone import Cs, CS_ARCH_PPC, CS_MODE_64, CS_MODE_BIG_ENDIAN
+d,segs=g.load_elf('work/bin/EMAIN.elf')
+md=Cs(CS_ARCH_PPC,CS_MODE_64|CS_MODE_BIG_ENDIAN)
+res={}
+for op in range(0x40):
+    base=0x1487660+op*24
+    ptr=struct.unpack('>I',g.read_guest(d,segs,base+0x10,4))[0]
+    if not ptr: continue
+    desc=struct.unpack('>I',g.read_guest(d,segs,ptr,4))[0]
+    code=g.read_guest(d,segs,desc,0x400)
+    ins=list(md.disasm(code,desc))
+    hits=[]
+    lastli={}
+    for i in ins:
+        m=i.mnemonic; o=i.op_str
+        if m=='li':
+            r,v=o.split(', '); lastli[r]=v
+        if m=='stw' and o.endswith('0x24(r9)') or (m=='stw' and ', 0x24(' in o):
+            r=o.split(',')[0]; hits.append((hex(i.address),o,lastli.get(r)))
+        if m=='blr' and i.address>desc+4: pass
+    print(hex(op),hex(desc),hits)

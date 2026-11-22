@@ -1,0 +1,10 @@
+p='gt6/generated/ppu_recomp_022.cpp'
+s=open(p,encoding='latin-1',newline='').read()
+eol='\r\n' if '\r\n' in s else '\n'
+n=chr(92)+'n'
+a="        ctx->lr = 0x009EEC40; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);"
+assert s.count(a)==1
+pre=("        { unsigned op_=vm_read8(ctx->gpr[10]); if(op_==0x37||op_==0x1B||op_==0x1F||op_==0x28||op_==0x14||op_==0x18||op_==0x36){ static int c_[64]; if(c_[op_]<12){c_[op_]++; fprintf(stderr,\"[P34] op=%02X task=%08X ip=%08X w1=%08X"+n+"\",op_,(unsigned)vm_read32(ctx->gpr[31]+4),(unsigned)ctx->gpr[10],(unsigned)vm_read32(ctx->gpr[10]+4)); } } }"+eol)
+post=("        { static int hh_=0; if(hh_<400){ unsigned t_=vm_read32(ctx->gpr[31]+4); unsigned o_=vm_read32(t_+0x24); if(o_!=5){hh_++; fprintf(stderr,\"[P34] ret task=%08X o24=%u o28=%u"+n+"\",t_,o_,(unsigned)vm_read32(t_+0x28));} } }"+eol)
+s=s.replace(a,pre+a+eol+post,1)
+open(p,'w',encoding='latin-1',newline='').write(s)
