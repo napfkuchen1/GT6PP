@@ -44,6 +44,9 @@ def main():
         return 0
     if os.path.exists(OFF):
         return 0
+    cwd = str(d.get('cwd', '')).replace('\', '/')
+    if '/.claude/worktrees/' in cwd:  # Monitor-/Worktree-Sessions nicht bremsen
+        return 0
     txt = last_text(d)
     n = 0
     try:
