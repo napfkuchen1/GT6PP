@@ -11,8 +11,9 @@ Quelle 1.00: `git show 6697a6d:<pfad>` (ARCHIV/v100 geloescht). 1.22-Anker: tool
 | ctor-Walker / setjmp+guards | ja | 1183C-11880 / C61F88,C620AC | Beleg PORT.md |
 | boot.adc-Gates | ja | scripts/patch-boot-adc.py (1.22-Offsets) | Dialoge uebersprungen (notut laeuft bis ProgressDialog) |
 | ZWAP-Gate (cellMusicInitialize2 arg2=Zeiger auf CELL_OK) | Host-Seite ja (stubs.cpp:1325) | - | In 1.22-Lauf KEIN cellMusicInitialize2-Aufruf (0 Logzeilen): Gast erreicht den Punkt nie |
-| PFS-Cache-Fill b5b260 (userdb-Cache fuellen) | NEIN | Kandidat func_00C1FE74: A26510->AE6C34 @C20368, Alloc AE6FE8, obj+0x28/+0x2C/+0x30, B5A944->C1F604 | initUserDB in 1.22 nie erreicht (kein Open userdb0101.dat) -> erst relevant nach Quit-Ursache |
-| H113 Guard (A25C64), PackageNullGuard (5F81B0), FileDeviceHost-Flush (A08A74/A08B8C) | NEIN | offen | nicht geprueft |
+| PFS-Cache-Fill b5b260 (userdb-Cache fuellen) | p4 portiert (GT6_NO_CACHEFILL), Probe cf 90 s: kein Effekt (5774 Flips, kein Open) | Kandidat func_00C1FE74: A26510->AE6C34 @C20368, Alloc AE6FE8, obj+0x28/+0x2C/+0x30, B5A944->C1F604 | initUserDB in 1.22 nie erreicht (kein Open userdb0101.dat) -> erst relevant nach Quit-Ursache |
+| FileDeviceHost-Flush (A08A74/A08B8C) | JA p3 | AC7418 init / AC75B0 flush | KAUSAL: Quit ~30 s weg (fdf 5769 Flips; GT6_NO_FDFLUSH=1 -> Quit) |
+| H113 Guard (A25C64), PackageNullGuard (5F81B0) | NEIN | 1.22-Anker offen | nicht geprueft |
 | SPURS-Job-Walker, a3-Titelfarbe, AdjustScreen REALFLAG | unklar | host-seitig (gt6/src, patches/gt6-h46*, gt6-rsx-ignore-stale-a3) | AdjustScreen in 1.22 nie erreicht |
 
 ## Befund

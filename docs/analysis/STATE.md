@@ -44,3 +44,4 @@ Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
 Hook-Inventur: docs/analysis/PORT_HOOKS.md. Boot-tragende Hooks aktiv in 1.22; offene (b5b260/ZWAP/SPURS/a3) liegen NACH Quit-Punkt, cellMusicInit2 nie gerufen -> Portieren allein loest Quit nicht.
 Hyp. fdflush: FileDeviceHost-Flush-Guard portiert (port_hooks p3, AC7418/AC75B0): Quit ~30 s WEG (90 s: 5769 Flips, kein Teardown); GT6_NO_FDFLUSH=1 -> Quit wie vorher. Naechst: C1-Capture, dann b5b260 (p4).
+Hyp. C1/p4: Capture Frame 3500 schwarz (1 Draw, 0 nonblack); b5b260 p4 portiert, 90 s: kein Effekt, kein 59/FI-Open. Naechst: Anker H113 A25C64/PackageNull 5F81B0 in 1.22 suchen.
