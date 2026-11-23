@@ -39,7 +39,7 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - 1.22 SPU-Lift: 16 Job-Images (fp-Scan tools/find_spu_jobs_122.py), PM id5 (byteidentisch, 0x14DAA80), 1 Embedded-ELF -> gt6/src/gen122 + gt6-122/generated/spu_lifted. 0 dispatch MISS, ~11400 Flips/180 s.
 - Spinner-Frage 1.22 (VERBOSE-fs, orig+noadj 200-220 s): 30 PDIPFS-Opens, KEIN PDIPFS/59/FI, kein Pamf. Wie 1.00 -> Update-EMAIN allein loest Spinner nicht (Gast-Hooks noch nicht portiert).
 ## Naechster Schritt
-1.22: nur boot-kritische Hooks portieren (9F8E40->AB080C Host-Open, FileDevice-Guards) via Byte-/String-Anker, dann Frame-Capture AdjustScreen. Sonst: Stall-Ursache im PDI-Thread (lwcond-Signaler) auf 1.22 per GT6_GPROF.
+1.22 Sampler (GT6_GPROF): gleicher lwcond-Park wie 1.00 -> Update-EMAIN allein ist NICHT die Loesung. Stall-Ursache (Signaler 9qstY/PDI) weiter auf 1.00/1.22 gleich suchen. Optional: nur boot-kritische Hooks portieren (9F8E40->AB080C Host-Open, FileDevice-Guards) via Byte-/String-Anker, dann Frame-Capture AdjustScreen. Sonst: Stall-Ursache im PDI-Thread (lwcond-Signaler) auf 1.22 per GT6_GPROF.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

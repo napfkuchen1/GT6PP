@@ -48,3 +48,4 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 - 1.22 memset-Duff + 6er-Switch (A2F158) brauchen manuelle Entries (add_computed_entries.py ... 122); ctor/setjmp relokiert (PORT_122). Beleg: v122b->v122d unresolved 6733->0.
 - 1.22 SPU: Job-Images sind Rohbereiche in EMAIN 1.22 (128-aligned, Header 4x-Worte 0x42/0x43..0x02/0x82); FNV-fp aus Laufzeitlog -> tools/find_spu_jobs_122.py. 16 von 20 bekannten 1.00/1.22-fps gefunden; WWS-PM fp 5510DCB8.. byteidentisch (Beleg: probe_v122g, 0 dispatch MISS).
 - 1.22 Spinner-Test (probe_v122fsv orig, probe_v122noadj noadj; PS3_VERBOSE=1): 30 PDIPFS-Opens, 0x PDIPFS/59, 0x Pamf -> kein Unterschied zu 1.00; Gast-Hooks fehlen aber (Frame 4200 schwarz), also nur Vorbefund.
+- 1.22 Gast-PC-Sampler (probe_v122gprof noadj, GT6_GPROF=1): 37 Threads geparkt (pc 0xB03BAC lwcond-wait-Wrapper, 9qstY tid30 ebenso), kein Spin -> Spinner-Stall auf 1.22 identisch zu 1.00 (Hooks nicht portiert).
