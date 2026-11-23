@@ -43,7 +43,7 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 - Detektoren gegen Log-Reihenfolge pruefen, Treffer per Frame-Capture verifizieren (Falsch-Positiv: `arcade.mpackage` laedt in jedem Boot vor LanguageSelectRoot).
 
 ## Fallen (alle schon einmal passiert)
-- `run-gt6.ps1`/`cap-gt6.ps1` ohne `GT6_BUILD_DIR` = altes `gt6\build\gt6.exe`. Aktuell gilt `gt6\build-clangcl\gt6.exe`. `probe.ps1` setzt das selbst.
+- `run-gt6.ps1`/`cap-gt6.ps1` ohne `GT6_BUILD_DIR` = altes `gt6\build\gt6.exe`. Gueltig ist NUR `gt6\build-v020\gt6.exe` (ps3recomp v0.20.0; build-clangcl/build = v0.19, veraltet). `probe.ps1` nutzt es als Default, alte Builds nur mit `-AllowOldBuild`. **Vor jeder Hypothese `docs/analysis/LEDGER.md` lesen** (gesicherte Fakten, Fixes, Widerlegtes); neue gesicherte Erkenntnis dort 1 Zeile mit Beleg.
 - `PAD_SCRIPT` strikt `<sek>:0x<hexmaske>` (CROSS=0x4000, DOWN=0x0040). Namen/ohne 0x ergeben 0/oktal. Im Log `press 0x....` pruefen.
 - `PS3_HEADLESS` ist Praesenz-Flag (auch `"0"`), verhindert RSX-Captures -> Variable entfernen.
 - `-Env`-Werte nie mit Komma (cap-gt6 trennt dort). In probe.ps1 ist Trenner `;`.

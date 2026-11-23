@@ -26,6 +26,7 @@ param(
     [string]$PadScript = "",
     [int]$Frame = 0,
     [switch]$KeepDb,
+    [switch]$AllowOldBuild,
     [string]$Hdd0Src = "",
     [ValidateSet("", "orig", "noadj", "notut")][string]$Boot = ""
 )
@@ -34,10 +35,12 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Ts = Get-Date -Format "yyyyMMdd_HHmmss"
 
 # --- build selection -------------------------------------------------------
-$cands = @("gt6\build-clangcl", "gt6\build") | ForEach-Object {
-    $e = Join-Path $Root "$_\gt6.exe"; if (Test-Path $e) { Get-Item $e }
-}
+# CANON (docs/analysis/LEDGER.md): gt6\build-v020 = ps3recomp v0.20.0. Older builds (v0.19) only with -AllowOldBuild.
+$cands = @(Get-Item (Join-Path $Root "gt6\build-v020\gt6.exe"))
 if ($env:GT6_BUILD_DIR) { $cands = @(Get-Item (Join-Path $Root "$($env:GT6_BUILD_DIR)\gt6.exe")) }
+if (($cands[0].FullName -notmatch 'build-v020') -and -not $AllowOldBuild) {
+    throw "Non-canonical build $($cands[0].FullName) (not ps3recomp v0.20). Use gt6\build-v020 or pass -AllowOldBuild."
+}
 $Exe = ($cands | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
 if (-not $Exe) { throw "No gt6.exe found. Build first (scripts\build-gt6-clangcl.ps1)." }
 $Elf = Join-Path $Root "work\bin\EMAIN.elf"
@@ -136,7 +139,7 @@ try {
         Copy-Item $src0 $hd -Recurse -Force
         if (-not $KeepDb) { Get-ChildItem (Join-Path $hd "game\BCES01893\USRDIR\db") -Filter "userdb*.dat" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue }
         $env:GT6_HDD0 = $hd
-        Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.Name, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
+        Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.FullName, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
         $proc = Start-Process -FilePath $Exe.FullName -ArgumentList @($Elf) -WorkingDirectory $Root `
             -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
         $runs += [pscustomobject]@{ I = $i; Dir = $dir; Log = $log; Proc = $proc }

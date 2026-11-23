@@ -1,0 +1,34 @@
+# GT6PP LEDGER - dauerhafte Fakten (Ueberwacher, 2026-11-23). Nur ergaenzen/korrigieren, nie neu anfangen.
+Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was gesichert ist. Jede Zeile mit Beleg. Zeilen <=200 Zeichen.
+
+## 1. Kanon (Build/Runtime) - HIER nachschauen, nicht raten
+- Gueltiger Build: `gt6\build-v020\gt6.exe` = Runtime ps3recomp v0.20.0 (Klon `third_party/ps3recomp-v020`). PFLICHT: `$env:GT6_BUILD_DIR='gt6\build-v020'`.
+- VERALTET (v0.19, nur Vergleich): `gt6\build`, `gt6\build-clangcl`, `third_party/ps3recomp`. `build-v020-vk` = Vulkan-Variante (Vergleich).
+- Fix 2026-11-23: probe.ps1 nimmt jetzt build-v020 als Default; alte Builds nur mit `-AllowOldBuild`. Lauf-Log `boot.txt` nennt EXE-Pfad.
+- Gast-Basis: EMAIN.elf aus EU-Disc BCES01893 v1.00 (`work/bin`, 8843160 B SELF, 22371400 B ELF), Lift `gt6/generated` (75538 Fn), per-fp Post-Lift-Patches `tools/apply_gt6_post_lift.py`.
+- RPCS3-Orakel (user): Log `...\v1.2_beta4_GT6-Launcher-win64\data\rpcs3\log\RPCS3.log`, Daten `...\data\rpcs3\dev_hdd0\game\BCES01893\USRDIR` (nur LESEN). Game v1.22, gleiche EU-Disc.
+- Version-Divergenz: RPCS3 = v1.22 (EMAIN 9209104 B, EBOOT 165712 B, Daten GT6_1.N). Wir = v1.00 (GT6.N). Recomp v1.22 freigegeben (User 2026-11-23), additiv in neuen Pfaden.
+
+## 2. Historie (belegt per git)
+- 2026-10-31/11-01 Upstream (xynnpg, USA-Disc): Boot bis schwarzes Fenster, MGOM.start("boot"), Manager Zustand 2. KEIN Menue. (docs/STATUS.md, progress.json)
+- 2026-11-20..22 Fork: EU-Disc kompatibel (eu-bces01893-compat.md). Erster echter Frame, Sprachauswahl sichtbar (eu-boot-log "First real frame").
+- 2026-11-22/23 Fixes bis AdjustScreen (Screen-Size-Menue) mit Pad-Eingabe. Danach GT-Logo+Spinner ewig. Hauptmenue wurde NIE erreicht (eu-boot-log "Menue-Run": NICHT erreicht; Live-Lauf user 11-23: Hang).
+- "Menue sichtbar" in alten Notizen = Sprachauswahl/AdjustScreen, nicht Hauptmenue.
+
+## 3. Verifizierte Fixes (muessen bei v1.22-Port WIEDER angewendet werden; Adressen dort neu suchen!)
+- Runtime: generation-keyed lwcond (3467267), host-font sync (patches/gt6-host-font-sync.patch), FileDevice-flush-guard, sys_timer One-Shot, sys_mempool, cellMusic*2 + Callback, cellFiber WaitFlag/CheckFlags parkend (REALFLAG default, behebt AdjustScreen-Render), SPURS-Job-Walker (Hyp. 46).
+- Spiel-Seite: PFS-Cache-Fill (b5b260), ZWAP-Gate, MGOM.start Pump (Hyp. 39/42), per-fp a3 Titelfarbe, boot.adc-Gates (scripts/patch-boot-adc.py).
+- Patch-Dateien: `patches/`, Post-Lift-Skript `tools/apply_gt6_post_lift.py`; Backups `work/_bk_*`. Harte US-1.00-Adressen -> bei 1.22 verschieben.
+
+## 4. Widerlegt/Symptom (NICHT wiederholen)
+- Pad/Dialog-Kette Hyp. 1-14; Exit-Race Hyp. 83-117 (Symptom); fresh vs persistente db; PRIO_START/LOCKSTEP/RESV_OFF; Fiber-Liste/Busyloop; Snap-Diff 140 vs 175 s.
+- PDIPFS-Daten fehlen: NEGATIV (Lauf mit 14-GB-RPCS3-Kopie, gleicher Spinner). RPCS3 `--no-gui` als Orakel: tot (Shader-Precompile).
+- Spinner = reiner Deadlock: 37 Threads geparkt, 29 in sys_lwcond_wait (pc A4305C), Loader 9qstY (tid 32) wartet; kein Busyloop (GT6_GPROF).
+
+## 5. Offene Kernfrage
+- RPCS3 laeuft an derselben Stelle weiter (PDI-Thread -> PDIPFS/59/FI -> Pamf/Vdec/Dmux/Sail). Basis-EMAIN kennt Movie- und Patch-Code (PDIPFSNetworkPatch*, PatchInstall, MSystemPatch).
+- Hypothese (offen): v1.00 wartet auf Patch/Update-/NP-Ereignis, das v1.22 nicht braucht. Test = v1.22-Recomp.
+
+## 6. Arbeitsregeln (Ueberwacher)
+- Vor jeder Hyp.: LEDGER lesen. Neue gesicherte Erkenntnis -> hier 1 Zeile mit Beleg. Widerlegtes -> Abschnitt 4.
+- Immer GT6_BUILD_DIR/Kanon pruefen (Abschnitt 1) und im Lauf-Log EXE verifizieren, bevor Ergebnis gilt.
