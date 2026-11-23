@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: lokaler Commit nach 91dab4f (STATE/eu-boot-log Hyp. submit+npterm). sceNp Term = harmloser Wrapper-Cleanup (AF9780), KEIN Exit-Trigger. Job 0x7FFCEE70 = Script-VM-Task (Factory 7A05D8), endet normal -> Main (A52140) faehrt runter. Guards in ppu_recomp_023 (GT6_NO_NOTIFYGUARD/GT6_NO_FREEGUARD); gt6.exe enthaelt noch [RET]-Diagnose -> vor Baseline build-all.ps1.
-Naechster Schritt: (1) Probe -Boot orig -Seconds 60 -Env "GT6_NO_NOTIFYGUARD=1;GT6_NO_FREEGUARD=1": Quit auch ohne Guards (~30 s)? Wenn JA: Job-Ende ist nicht der Trigger, Exit kommt aus anderem Pfad (xref Aufrufer 13FFC/14884, 'Mouse End' Aufrufer) ; wenn NEIN: Job muss laenger laufen (tid30 spinnt) -> Spin-Ursache (Kopie-Liste next=0) doch tiefer pruefen. (2) Script-Task 'initialize'/'finalize' (7A0900): welche startet?
-Nicht wiederholen: Quit-Flag-Schreiber, savedata fileBuf, AD4294-Spin, obj+0x9d8, sceNpTerm (LEDGER 1.22).
-Laeuft noch: nichts.
+Stand: Commit f0c33c6. Quit (~30 s, ~10 Flips nach LOAD complete -> MapEa 0x72400000 -> sceNp Term) unabhaengig von Guards, Savedata-Inhalt und Savedata-Rueckgabe (GT6_SAVE_NODATA=1 + fresh gamedata: GAME6/BKUP6 -4, kein AutoSave2, gleicher Quit). Job 0x7FFCEE70 = Script-VM-Task endet normal. Reihenfolge: BootProject -> PresentsRootSCEE -> dialog.mproject -> ConfirmDialog -> ProgressDialog -> Shutdown.
+Naechster Schritt: Strategiewechsel (Kette >12 Hyp.): Snapshot-Walk/Vergleich statt Einzel-Logs. Statisch: Script-Pfad dialog.mproject/ProgressDialog -> was liefert den Rueckgabewert, der den Top-Level-Job beendet (Native-Call-Resultate im Dialog-Script, z.B. cellMsgDialog/Sysutil-Callback). Entscheidung: Native-Call liefert Fehler -> HLE fixen; sonst RPCS3-Vergleich (laedt es dialog.mproject?).
+Nicht wiederholen: Quit-Flag 0x1796DC8, savedata fileBuf/Rueckgabe, sceNp Term, Task-State-Maschine 0x28 (LEDGER 1.22, STATE).
+Laeuft noch: nichts. Achtung: gt6/generated/ppu_recomp_022/023.cpp tragen [SETST]/[WAITST]/[QCHK]-Diagnose (Backups work/_bk_022, work/_bk_023); vor Baseline zurueckspielen + build-all.ps1. cellSaveData.c hat Env-Knob GT6_SAVE_NODATA.
 Lesen: STATE.md, dieser Prompt.
