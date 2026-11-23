@@ -17,8 +17,10 @@ Baseline-Probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; `-Boot orig
 - C1 FAIL: Capture Frame 3500 schwarz (1 Draw, 0 nonblack). b5b260 Cache-Fill (p4) portiert, kein Effekt, kein 59/FI-Open.
 - Binary traegt noch Diagnose (022/023 generated sind clean, Diagnose in work/_bk_*): vor Baseline `scripts\build-all.ps1`.
 
+- MAIN-LOOP (Arbeit6): main-Stufe 146E8 loopt while(!AD2778()); AD2778 = alle Tasks in Liste 0x17F8F3C (Knoten per AD2750) vtbl[2]!=0. Task-Klasse vtbl 0x15DD3E0 (ctor AFE0A4, new in 124F4), [2]=AFDFC0: Loop {AFE38C-Snapshot von Struct 0x179ED20: byte0&&byte1 -> return 1 (=fertig, main verlaesst Loop)}. byte0=1 via AFE200 (von AFE2A0 wenn AF32FC==1), byte1 via AFE1C8 = (C6390C(x)==0) wenn [obj+0x34]==1, Reset AFE328/AF47A4. Hypothese: byte0/byte1 hier zu frueh 1 (falscher HLE-Rueckgabewert C6390C/AF32FC?) -> main-Loop endet. TODO: Wert AF32FC + C6390C-Ergebnis + wer AFE2A0 ruft (Hook, kein xref direkt) pruefen.
+
 ## Naechster Schritt
-Welche main()-Stufe (0x14010: 14230,148B4,1416C,147BC,13DE4,143E8,146E8,141E8,91E464) blockiert auf echter HW (Game-Loop) und returnt bei uns sofort? Statisch Stufen lesen (gdis), Ergebnis-Rueckgaben: 143E8=40010010, 141E8=71f320a2, 146E8=1. Danach EIN Lauf. generated clean (Backups work/_bk_fdwait).
+Warum ist Task AFDFC0 sofort 'fertig'? Pruefen: AF32FC-Rueckgabe, C6390C(obj+0x48...)-Rueckgabe (HLE? Stat/Fs), Aufrufer von AFE2A0 (vtbl/indirekt). EIN Lauf mit fprintf in generated (func_00AFE190/AFE2A0, Backups work/_bk_fdwait). Entscheidung: wenn AF32FC/C6390C HLE-Wert falsch -> fixen; sonst Task-Flag-Setter per xref pruefen.
 Offene Hook-Anker: PackageNullGuard 5F81B0 (1.22-Anker per Signatur aus work/bin/_t100.elf), H113 A25C64 (kein 1.00-Code im git -> verwerfen). Danach SPURS-Walker, a3, AdjustScreen REALFLAG, ZWAP.
 
 ## Widerlegt / Symptom (nicht wiederholen)
