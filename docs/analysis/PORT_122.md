@@ -15,3 +15,5 @@ Neu lokalisieren per Signatur/xref (scripts/xref.py, gdis.py); Beleg = Befehl/La
 | code-end (Lift) | 0xF908C4 | 0x10B8154 | letzter OPD-Funktionsstart |
 | memset Duff-Einsprung (computed entries) | A4FDE0.. A4FE68.. A4FEEC.. | B118E0..B1191C, B11968..B119A0, B119E8..B11A20, B11A64..B11A9C | Probe v122b: `unresolved indirect call -> 0xB11A04` (bctr B118DC/B11964/B119E4); `add_computed_entries.py <json> 122` |
 | Mapper 1.00->1.22 | tools/map_funcs_122.py | 20 eindeutig (u.a. 9F8E40->AB080C, A12170->AD1670, A26510->AE6C34, B5A944->C1F604) | Rest "none": Code geaendert, anderes Matching noetig |
+| setjmp-Guards (add_setjmp_guards) | 16 Funktionen (scan, adressfrei) | 16 Funktionen | `scripts/post-lift-122.ps1`; Probe v122e: `depth overflow` 113 -> 0 |
+| Probe-Stand build-v122 (orig, 150 s) | Game-Loop ~9480 Flips | gleich, 0 unresolved, Frame 4200 schwarz | v122d/v122cap/v122e; Hooks (Script/BootPresents/Pump) noch nicht portiert; SPU-fp 1.22 ohne lifted image (5x) |

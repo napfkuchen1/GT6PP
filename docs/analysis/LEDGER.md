@@ -42,3 +42,7 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 - Naechster Test: Klic (16 B) in EBOOT_122.elf an den sceNpDrm*-Aufrufen suchen; mit Klic per RPCS3-Decrypt (GUI Utilities) oder eigenem Skript entschluesseln. Kein Credential noetig.
 - GELOEST 2026-11-23: EMAIN 1.22 = NPDRM (self_type 8, license 3), Klic <klicensee redacted> (RPCS3-Log Z.3478). `tools/self_decrypt_np.py in.SELF out.elf [klic]` (keys gt6/data/keys, nicht im Repo) -> work/bin122/EMAIN.elf 23787792 B. Selbsttest: 1.00 byte-identisch mit work/bin/EMAIN.elf.
 - 1.22 EMAIN.elf sha1 0e1fc30db223a65375f0032985a73e2bde630751. Klic nicht als 16-B-Literal in EBOOT_122.elf (Suche leer); Wert aus RPCS3-Log funktioniert. Port-Tabelle: docs/analysis/PORT_122.md.
+
+## 8. v1.22-Port (2026-11-23)
+- build-v122 = zweiter Kanon (`gt6\build-v122\gt6.exe`, `gt6-122/generated`, EMAIN work/bin122, 74935 Funcs). Probe: `-BuildDir build-v122`.
+- 1.22 memset-Duff + 6er-Switch (A2F158) brauchen manuelle Entries (add_computed_entries.py ... 122); ctor/setjmp relokiert (PORT_122). Beleg: v122b->v122d unresolved 6733->0.
