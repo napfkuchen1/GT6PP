@@ -5,12 +5,13 @@ Blocks the stop (decision=block) unless the last assistant text has a line start
 'STOP-GRUND: MENUE|BLOCKER|UEBERGABE' or 8 continuations in a row were already forced.
 Disable: create work/.stop-guard-off. Counter: work/.stop-guard-count.
 """
-import json, os, re, sys
+import json, os, re, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CNT = os.path.join(ROOT, "work", ".stop-guard-count")
 OFF = os.path.join(ROOT, "work", ".stop-guard-off")
-MAX = 8
+MAX = 25  # aufeinanderfolgende Blocks OHNE neuen Commit
+HEADF = os.path.join(ROOT, "work", ".stop-guard-head")
 SENT = re.compile(r"^\s*STOP-GRUND:\s*(MENUE|BLOCKER|UEBERGABE)", re.I | re.M)
 
 
@@ -53,6 +54,21 @@ def main():
         n = int(open(CNT).read().strip() or 0)
     except Exception:
         pass
+    # Fortschritt (neuer Commit seit letztem Block) setzt den Zaehler zurueck
+    try:
+        head = subprocess.run(["git", "-C", ROOT, "rev-parse", "HEAD"], capture_output=True, text=True, timeout=10).stdout.strip()
+    except Exception:
+        head = ""
+    try:
+        old = open(HEADF).read().strip()
+    except Exception:
+        old = ""
+    if head and head != old:
+        n = 0
+        try:
+            open(HEADF, "w").write(head)
+        except Exception:
+            pass
     reason_ok = bool(SENT.search(txt))
     if reason_ok or n >= MAX:
         try:

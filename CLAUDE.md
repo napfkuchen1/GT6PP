@@ -6,7 +6,7 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 
 ## Arbeitsweise
 - **Im Haupt-Checkout arbeiten** (`%USERPROFILE%\Downloads\Games\GT6\ClaudeCode\GT6PP`, Branch `eu-first-build`), NICHT im Worktree: Worktrees haben kein `work/` (45 GB), keinen Build, keine Disc, und Edit/Write-Hooks blockieren dort Haupt-Pfade. Laeuft die Session doch im Worktree: Dateien per PowerShell schreiben.
-- **Turn-Ende-Regel (wichtigste Regel).** Eine abgeschlossene Hypothese ist NIE das Ende des Turns. Ablauf: Ergebnis -> STATE.md aktualisieren -> lokal committen -> SOFORT die naechste Hypothese starten, im selben Turn. `wrap_up` und Abschlussnachricht NUR bei: (a) Hauptmenue erreicht, (b) echter Blocker (Credentials, Push/PR, fehlende Rechte), (c) 8 abgeschlossene Hypothesen seit Turn-Start, (d) Kontext fast voll. Der User soll nie "weiter" tippen muessen (2026-11-22: 21x noetig gewesen = Hauptverlust). Keine Rueckfragen; konservativste Option waehlen, dokumentieren, weiter.
+- **Turn-Ende-Regel (wichtigste Regel).** Eine abgeschlossene Hypothese ist NIE das Ende des Turns. Ablauf: Ergebnis -> STATE.md aktualisieren -> lokal committen -> SOFORT die naechste Hypothese starten, im selben Turn. `wrap_up` und Abschlussnachricht NUR bei: (a) Hauptmenue erreicht, (b) echter Blocker (Credentials, Push/PR, fehlende Rechte), (c) 20 abgeschlossene Hypothesen seit Turn-Start, (d) Kontext fast voll. Der User soll nie "weiter" tippen muessen (2026-11-22: 21x noetig gewesen = Hauptverlust). Keine Rueckfragen; konservativste Option waehlen, dokumentieren, weiter.
 - **Zeitbox pro Hypothese: max. 2 Probe-Laeufe oder 30 min.** Danach in STATE.md eintragen und naechster Ansatz. Nach 3 widerlegten Hypothesen ODER 3 Schritten derselben Kette (z.B. immer ein Feld tiefer im selben Objektbaum): Strategie wechseln (Snapshot/Offline-Analyse, Umgehung, Vergleich), nicht weiter Einzel-Logs.
 - **Keine Einzelfeld-Log-Hypothesen mehr** (generierte .cpp patchen + Rebuild + 5,5-min-Lauf + Restore pro Frage). Fragen der Form "welchen Wert hat Objekt X zum Zeitpunkt T" werden ueber Snapshot + `scripts/snap_walk.py` offline beantwortet (siehe STATE.md Naechster Schritt).
 - **Kontext sparen:** Rohlogs nie komplett lesen. Immer `python scripts/loganalyze.py <run-dir|log> [--grep RX]` (max. 40 Zeilen) oder `grep -c`/`head -20`. Grosse Auswertungen an einen Subagenten geben (nur Fazit zurueck). STATE.md <=5 KB, Zeilen <=200 Zeichen; Messwerte in `eu-boot-log.md`.
@@ -19,6 +19,15 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 - Hypothese zuerst statisch pruefen (Code lesen), erst dann Probe-Lauf. Vor jedem Lauf pruefen, ob die Frage nicht schon in STATE.md beantwortet ist.
 - Nichts loeschen: Alt-Dateien nach `work/ARCHIV/` bzw. `ARCHIV/`.
 - Nach jeder Erkenntnis: STATE.md (Aktive Kette / Erledigt je 1 Zeile + "Naechster Schritt") im selben Zug aktualisieren, Messwerte in `eu-boot-log.md`, lokal committen. Memory nur als Verweis auf STATE.md.
+
+## Effizienz-Regeln (Screening 2026-11-23, Hyp. 55-116)
+- **Turn endet nur mit Zeile `STOP-GRUND: MENUE|BLOCKER|UEBERGABE`** am Zeilenanfang (Stop-Hook `scripts/stop-guard.py`, Zaehler setzt sich bei neuem Commit zurueck). Ohne diese Zeile nie den Turn beenden; Ergebnis -> naechste Hypothese im selben Turn.
+- **Commit-Buendelung:** nicht je Hypothese ein `docs:`-Commit (waren 90 in 13 h). Ein Commit pro 3-4 Hypothesen oder bei Code/Script-Aenderung. Details in `eu-boot-log.md`, STATE.md nur 1 Zeile je Hypothese.
+- **STATE.md-Pflege:** erledigte Hyp.-Zeilen aelter als 10 Hypothesen nach `eu-boot-log.md` verschieben (STATE.md bleibt <=5 KB, nicht erst bei Ueberlauf trimmen).
+- **Kette erzwingt Strategiewechsel:** Kette "ein Objekt/Feld tiefer" (Hyp. 93-117) ist laenger als die 3-Schritte-Regel. Nach Hyp. 117 NICHT Hyp. 118 in derselben Kette: stattdessen (a) Snapshot-Diff `scripts/snap_diff` 140 s vs 175 s, (b) Snapshot-Walk Vektor vor/nach X-Press, oder (c) Umgehung (Guard-Patch) + direkt zum naechsten Blocker nach der Ladephase. Heisenbug: Guard-Survivor-Laeufe weiterverfolgen statt Race-Ursache.
+- **Statisch vor Lauf:** Aufrufer-Baum (`xref.py --call`, `gdis.py --fn`) komplett durchgehen, erst dann EIN Lauf. Kein Lauf pro Einzelfrage.
+- **Laeufe bündeln:** `-Parallel 3-4` (hdd0 getrennt) mit mehreren Varianten/Flags pro Batch (z.B. Exit-Race: 4 Laeufe mit `PS3_CALLTRACE_TO`+`CALLTRACE_AFTER=60`), nicht sequentiell. `-Boot` nicht innerhalb eines Batches mischen (boot.adc geteilt).
+- **Uebergabe nur bei Kontext ~120k oder Blocker**, nicht wegen Hypothesen-Zaehler. NEXT_SESSION_PROMPT.md bleibt 1 Absatz.
 
 ## Laeufe (Pflicht: `scripts/probe.ps1`)
 - Alle Probe-/Capture-Laeufe ueber `scripts/probe.ps1`. Es waehlt den neuesten Build, validiert Env/PAD_SCRIPT, archiviert userdb, schreibt in `work/probe_<name>_<ts>_<i>/`, prueft Erwartungszeilen. Parallel starten (`-Parallel 4`) statt sequentiell.
