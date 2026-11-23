@@ -1,3 +1,5 @@
+> **Historical (v1.00 US, `BCUS98296`).** The project now targets EU `BCES01893` + game 1.22 only; see `docs/analysis/STATE.md` for current state.
+
 # Tooling
 
 Short list of what this port uses, what is new, and what is off-limits.

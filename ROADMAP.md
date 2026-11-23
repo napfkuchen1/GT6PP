@@ -4,7 +4,7 @@ Status legend: **done** · **active** · **next** · **blocked** · **later**
 
 ## M0 — Research and media extraction (done)
 
-- [x] Identify the disc: `BCUS98296`, APP_VER `01.00`, PS3 `04.5000`.
+- [x] Identify the disc: EU `BCES01893`, game 1.22 (US `BCUS98296` v1.00 was the first target, now archived in `ARCHIV/v100/`).
 - [x] Parse `PARAM.SFO`, trophy set, ISO/UDF layout.
 - [x] Decrypt and unpack `GT.VOL` with GTToolsSharp: 4,207 TOC entries,
       32,591 files, ~25.1 GB expanded.

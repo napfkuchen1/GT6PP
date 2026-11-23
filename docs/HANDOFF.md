@@ -1,3 +1,5 @@
+> **Historical (v1.00 US, `BCUS98296`).** The project now targets EU `BCES01893` + game 1.22 only; see `docs/analysis/STATE.md` for current state.
+
 # Handoff — where the GT6 port stands
 
 **Date:** 2026-10-31. **Target:** GT6 US disc `BCUS98296` v1.00. **Build:**

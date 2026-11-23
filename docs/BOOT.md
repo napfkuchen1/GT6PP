@@ -1,3 +1,5 @@
+> **Historical (v1.00 US, `BCUS98296`).** The project now targets EU `BCES01893` + game 1.22 only; see `docs/analysis/STATE.md` for current state.
+
 # First boot: what to expect and how to debug
 
 This is the checklist for the first run of `gt6.exe`. It assumes the build

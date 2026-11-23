@@ -220,12 +220,12 @@ while ((Get-Date) -lt $deadline -and ($runs | Where-Object { -not $_.Proc.HasExi
                 if ($allx) { $r.End = "EARLY(outputs)"; $r.EndT = [int]$el }
             }
         }
-        if ($r.End) { try { $r.Proc.Kill($true) } catch { try { $r.Proc.Kill() } catch {} } }
+        if ($r.End) { try { $r.Proc.Kill($true) } catch { try { $r.Proc.Kill() } catch {} }; & taskkill.exe /F /T /PID $r.Proc.Id 2>&1 | Out-Null }
     }
 }
 foreach ($r in $runs) {
     $el = [int]((Get-Date) - $t0).TotalSeconds
-    if (-not $r.End) { if ($r.Proc.HasExited) { $r.End = "RUN DONE"; $r.EndT = $el } else { $r.End = "TIMEOUT"; $r.EndT = $Seconds; try { $r.Proc.Kill() } catch {} } }
+    if (-not $r.End) { if ($r.Proc.HasExited) { $r.End = "RUN DONE"; $r.EndT = $el } else { $r.End = "TIMEOUT"; $r.EndT = $Seconds; try { $r.Proc.Kill() } catch {}; & taskkill.exe /F /T /PID $r.Proc.Id 2>&1 | Out-Null } }
     try { [void]$r.Proc.WaitForExit(5000) } catch {}
     $line = if ($r.End -eq "STALLED") { "STALLED@$($r.EndT)s flips=$($r.Flips) (heartbeat unchanged ${FreezeSec}s)" } else { "$($r.End) $($r.EndT)s flips=$($r.Flips)" }
     Add-Content (Join-Path $r.Dir "boot.txt") $line

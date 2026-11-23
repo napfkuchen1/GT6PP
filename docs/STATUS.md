@@ -11,8 +11,8 @@
 | Item | Value |
 |---|---|
 | Title | Gran Turismo 6 (USA) |
-| Title ID | `BCUS98296` |
-| APP_VER | `01.00` |
+| Title ID | `BCES01893` (EU) |
+| APP_VER | game 1.22 (current state: `docs/analysis/STATE.md`) |
 | PS3 system version | `04.5000` |
 | ISO | 25,293,815,808 bytes |
 | `EBOOT.BIN` | 72,920 bytes, SCE SELF → 143,064-byte decrypted ELF |

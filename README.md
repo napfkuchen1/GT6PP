@@ -115,7 +115,7 @@ The automation is [`.github/workflows/sync-progress.yml`](.github/workflows/sync
 ## Quick start
 
 ### Requirements
-- Your own **Gran Turismo 6** disc (USA `BCUS98296` v1.00 recommended)
+- Your own **Gran Turismo 6** disc (EU `BCES01893`, game update 1.22; the only supported line. The old US v1.00 line is archived in `ARCHIV/v100/`)
 - Windows 10/11 x64
 - CMake, Ninja, [LLVM-MinGW](https://github.com/mstorsjo/llvm-mingw)
 - [ps3recomp](https://github.com/sp00nznet/ps3recomp) cloned into `third_party/ps3recomp`
