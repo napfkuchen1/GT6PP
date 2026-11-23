@@ -21,8 +21,6 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 ## Erledigt / widerlegt (Einzeiler)
 - Pad/Dialog-Kette (Hyp. 1-14): alles ohne Wirkung, durch Umgehung (15) hinfaellig. RPCS3 `--no-gui` als Orakel tot (Shader-Precompile).
-- Hyp. 49: v0.20-SDK (build-v020, orig 4200, probe_h49v020orig) rendert AdjustScreen FEHLERFREI (4 Eck-Marker, Pfeile, kein Blaurechteck) = Render-Bug war SDK-Backend, in v0.20 behoben.
-- Hyp. 51: einziger Guest-Aufrufer cellPadGetData = A39F00 (Pad-Manager, Poll-Funktion ab ~A39EE0, Puffer r21+0xa0+port*0x84). Validitaetscheck button[1]>>4==7 passt (Runtime setzt 0x70|len/2).
 - Plan B Pad-Replay: PAD_LOG=<pfad> (patches/gt6-v020-padlog.patch, build-v020 neu gebaut, getestet) + scripts/live-padlog.ps1: user spielt live, Log -> PAD_SCRIPT-Replay.
 - Hyp. 55 (Snapshot orig 100 s): alle Pad-Gates OK (mgr+0 =7, +4 =1, +8 sysinfo 0, port_status 1, raw len 0x18 b1 0x7C). Padobj 0x165B1A8 (vt 148A128) +0x54=7C,+0x58 digital,Sticks 80 -> Kopie ok. GetState=A395F0 (vt+8), Aufrufer offen.
 - SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
@@ -34,10 +32,11 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 59: Pressure-Bytes OK (cellPad.c setzt 255 bei Digital-Bit, PRESS_ON, len 0x18). Pad-Datenpfad bis Padobj verifiziert; Konsument im AdjustScreen unbekannt.
 - Hyp. 60: Per-Frame-Walker A1C1F8 ruft je Frame 8B2C28 (2x, leere Listener-Liste), A3B384, A39CD8 (Pad), A2CD98, A2ADA8, 1138C, 1136C. Kein UI-Pad-Leser unter den Callbacks.
 - Hyp. 61: orig ohne Pad: Frame 10500/13000/18000 in 300/330/420 s NICHT erreicht (9000 war ~162 s) = Flip-Rate bricht nach ~9000 ein oder Stall. Zeitpunkt unklar.
+- Hyp. 62: Frame 9000 ~159 s reproduzierbar, 9600 in 260 s NICHT. Spiellogik tickt weiter (padcnt GetData #15000 @300 s ~50/s) = RSX-Render-Frames stagnieren, kein Gesamt-Stall.
 - probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate userdb/Lauf offen (hdd0 fest in main.cpp:722).
 
 ## Naechster Schritt (EINER)
-**Hyp. 62:** Flip-Einbruch lokalisieren: Capture Frame 9600 (250 s) + 10000; Flip-Rate/CPU-Auslastung im Lauf vergleichen (Stall vs langsam).
+**Hyp. 63:** Warum stagnieren RSX-Frames nach ~9000? WD/EVQSTAT bei 200/280 s + SetPrepareFlip/Draw-Zaehler vergleichen; -Frame ueberschreibt RSX_CAP-Env.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
