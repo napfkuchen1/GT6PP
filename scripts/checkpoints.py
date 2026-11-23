@@ -29,7 +29,7 @@ def main():
         if os.path.exists(p): log += open(p, errors="ignore").read()
     boot = (re.search(r"boot=(\w+)", txt) or [0, "?"])[1]
     c = {}
-    c["C0"] = "gt6.exe" in txt and "unresolved NID" not in log and len(log) > 1000 and "FROZEN@" not in txt
+    c["C0"] = "gt6.exe" in txt and "unresolved NID" not in log and len(log) > 1000 and "STALLED@" not in txt
     frac = None; f0 = os.path.join(pd, "frame_00", "backbuffer.bmp")
     if os.path.exists(f0): frac, d0 = nonblack(f0)
     c["C1"] = frac is not None and frac > 0.05
@@ -46,9 +46,11 @@ def main():
     lang = (re.search(r"PS3_LANG=([\w-]+)", txt) or [0, ""])[1]
     row = "%s | %s | 1.22 | %s | %s | %s | non-black=%s%s" % (
         datetime.date.today(), com, boot, flag.strip(), os.path.basename(pd),
-        "n/a" if frac is None else "%.0f%%" % (frac * 100), (" lang=" + lang) if lang else "")
+        "nocapture" if frac is None else "%.0f%%" % (frac * 100), (" lang=" + lang) if lang else "")
     pr = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "analysis", "PROGRESS.md")
     if "--dry" in sys.argv: print(row); return
+    if frac is None and "--force" not in sys.argv:
+        print("NOT appended (no frame capture = C1 unmeasured; run with -Frame N or --force):", row); return
     with open(pr, "ab") as f: f.write((row + "\r\n").encode())
     print(row)
 

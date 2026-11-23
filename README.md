@@ -58,7 +58,7 @@ The port **boots**, opens a 1280×720 window, parses the full boot script, and l
 
 **Next milestone:** resume the state-2 menu project continuation through the original callback/update path, then observe K/IE / K/WD and render the first non-black legal frame (oot.adc -> PresentsRootSCEA).
 
-The genuine frame is still the black cover. See [docs/analysis/boot-project-handoff-fix.md](docs/analysis/boot-project-handoff-fix.md) for the full state-2 analysis.
+The genuine frame is still the black cover. See [ARCHIV/docs-analysis/boot-project-handoff-fix.md](ARCHIV/docs-analysis/boot-project-handoff-fix.md) for the full state-2 analysis.
 
 See [ROADMAP.md](ROADMAP.md) for the full plan.
 
@@ -82,13 +82,10 @@ Key entry points:
 
 ## Documentation
 
-Detailed analysis lives in `docs/analysis/`. Start here:
+Detailed analysis lives in `docs/analysis/` (older check/fix notes: `ARCHIV/docs-analysis/`). Start here:
 
-- `boot-project-handoff-fix.md` - the state-2 boot-project blocker
 - `first-draw-audit.md` - first-draw audit
-- `legal-gpb-draw-fix.md` - GPB draw fix notes
 - `lwcond-experiment.md` - lwcond generation experiment
-- `pfs-mount-device-check.md` - PFS mount/device issue
 - `rpcs3-oracle.md` - RPCS3 oracle findings
 
 See `ROADMAP.md` for the full plan and `CONTRIBUTORS.md` to join.

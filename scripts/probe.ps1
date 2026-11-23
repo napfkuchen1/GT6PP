@@ -11,7 +11,8 @@
 # -Env      : "K=V;K2=V2" (separator ';', values must not contain ';')
 # -Expect   : regexes that MUST appear in stdout/stderr, else the run is INVALID (not "hypothesis refuted")
 # -Frame    : >0 enables RSX capture at that frame (windowed run, PS3_HEADLESS removed) + pixel stats
-# -FreezeSec: abort own run when log silent this long (after PAD_SCRIPT/SNAP/CALLTRACE_AFTER times); writes FROZEN@<s> to boot.txt. -1 = off
+# -FreezeSec: STALLED kill when SetPrepareFlip heartbeat unchanged this long after arming (log size ignored); writes STALLED@<s> to boot.txt. -1 = off
+# -StopOn   : regex, early kill when it appears in the log. With -Frame: early kill once capture frames exist + pad done + -Expect met.
 # -Seconds  : 0 (default) = derive from -PadScript (last key + 60) else 220
 # -KeepDb   : keep the persistent userdb in the per-run hdd0 copy (default: fresh db). Shared work\gt6_hdd0 is never modified.
 # -Boot     : orig|noadj|notut - which boot.adc variant is installed (from work\ARCHIV\boot.adc.*); omitted = keep current.
@@ -19,7 +20,8 @@
 param(
     [Parameter(Mandatory)][string]$Name,
     [int]$Seconds = 0,          # 0 = derive: PadScript -> last key + 60 s, else 220 (steady-state)
-    [int]$FreezeSec = 45,       # kill own run if logs show no growth for this long after all timed events; -1 = off
+    [int]$FreezeSec = 30,       # STALLED: kill if the SetPrepareFlip heartbeat (not log size) is unchanged this long after arming; -1 = off
+    [string]$StopOn = "",       # regex: early kill as soon as it appears in the log (e.g. PDIPFS/59/FI)
     [int]$Parallel = 1,
     [string]$Env = "",
     [string[]]$Expect = @(),
@@ -177,30 +179,63 @@ try {
 }
 Write-Host "Started $Parallel run(s), waiting up to ${Seconds}s ..."
 $t0 = Get-Date; $deadline = $t0.AddSeconds($Seconds)
-foreach ($r in $runs) { $r | Add-Member -NotePropertyMembers @{ Size = -1; LastGrow = $t0; End = ""; EndT = 0; LastFlips = 0 } }
+foreach ($r in $runs) { $r | Add-Member -NotePropertyMembers @{ Pos = @{}; Flips = 0; LastBeat = $t0.AddSeconds($armAt); End = ""; EndT = 0 } }
+$capCount = 1
+if ($pairs.Contains("RSX_CAP")) { $pp = ($pairs["RSX_CAP"] -split ":"); if ($pp.Count -ge 2) { $capCount = [int]$pp[1] } }
+$padDone = 0; if ($PadScript) { $padDone = $last + 5 }
 while ((Get-Date) -lt $deadline -and ($runs | Where-Object { -not $_.Proc.HasExited -and -not $_.End })) {
     Start-Sleep -Seconds 2
     $now = Get-Date; $el = ($now - $t0).TotalSeconds
     foreach ($r in $runs) {
         if ($r.Proc.HasExited -or $r.End) { continue }
-        $sz = 0; foreach ($f in @($r.Log, "$($r.Log).err")) { if (Test-Path $f) { $sz += (Get-Item $f).Length } }
-        if ($sz -ne $r.Size) { $r.Size = $sz; $r.LastGrow = $now }
-        elseif ($FreezeSec -gt 0 -and $el -gt $armAt -and ($now - $r.LastGrow).TotalSeconds -ge $FreezeSec) {
-            # frame counter decides: count flips in log tail (log size static => no new flips either)
-            $tail = ""; foreach ($f in @($r.Log, "$($r.Log).err")) { if (Test-Path $f) { $tail += ((Get-Content $f -Tail 400 -ErrorAction SilentlyContinue) -join "`n") } }
-            $r.LastFlips = ([regex]::Matches($tail, "SetPrepareFlip|SetFlip")).Count
-            $r.End = "FROZEN"; $r.EndT = [int]$el
-            try { $r.Proc.Kill() } catch {}
+        # heartbeat: count only SetPrepareFlip lines in NEW log bytes (log spam does not count)
+        $newFlips = 0; $newText = ""
+        foreach ($f in @($r.Log, "$($r.Log).err")) {
+            if (-not (Test-Path $f)) { continue }
+            try {
+                $fs = [IO.File]::Open($f, 'Open', 'Read', 'ReadWrite')
+                $pos = if ($r.Pos.ContainsKey($f)) { $r.Pos[$f] } else { 0L }
+                if ($fs.Length -gt $pos) {
+                    $buf = New-Object byte[] ($fs.Length - $pos); [void]$fs.Seek($pos, 'Begin'); [void]$fs.Read($buf, 0, $buf.Length)
+                    $r.Pos[$f] = $fs.Length
+                    $t = [Text.Encoding]::ASCII.GetString($buf)
+                    $newFlips += ([regex]::Matches($t, "SetPrepareFlip")).Count
+                    if ($StopOn) { $newText += $t }
+                }
+                $fs.Close()
+            } catch {}
         }
+        if ($newFlips -gt 0) { $r.Flips += $newFlips; $r.LastBeat = $now }
+        if ($FreezeSec -gt 0 -and $el -gt $armAt -and ($now - $r.LastBeat).TotalSeconds -ge $FreezeSec) {
+            $r.End = "STALLED"; $r.EndT = [int]$el
+        }
+        elseif ($StopOn -and $newText -match $StopOn) { $r.End = "EARLY(StopOn)"; $r.EndT = [int]$el }
+        elseif ($Frame -gt 0 -and $el -gt $padDone) {
+            # early kill: all expected outputs exist (capture frames written, pad done, -Expect satisfied)
+            $capOk = $true
+            for ($ci = 0; $ci -lt $capCount; $ci++) { if (-not (Test-Path (Join-Path $r.Dir ("frame_{0:D2}ackbuffer.bmp" -f $ci)))) { $capOk = $false } }
+            if ($capOk) {
+                $txt = ""; foreach ($f in @($r.Log, "$($r.Log).err")) { if (Test-Path $f) { $txt += (Get-Content $f -Raw -ErrorAction SilentlyContinue) } }
+                $allx = $true; foreach ($rx in $Expect) { if ($txt -notmatch $rx) { $allx = $false } }
+                if ($allx) { $r.End = "EARLY(outputs)"; $r.EndT = [int]$el }
+            }
+        }
+        if ($r.End) { try { $r.Proc.Kill($true) } catch { try { $r.Proc.Kill() } catch {} } }
     }
 }
 foreach ($r in $runs) {
     $el = [int]((Get-Date) - $t0).TotalSeconds
     if (-not $r.End) { if ($r.Proc.HasExited) { $r.End = "RUN DONE"; $r.EndT = $el } else { $r.End = "TIMEOUT"; $r.EndT = $Seconds; try { $r.Proc.Kill() } catch {} } }
-    $line = if ($r.End -eq "FROZEN") { "FROZEN@$($r.EndT)s lastflips_in_tail=$($r.LastFlips)" } else { "$($r.End) $($r.EndT)s" }
+    try { [void]$r.Proc.WaitForExit(5000) } catch {}
+    $line = if ($r.End -eq "STALLED") { "STALLED@$($r.EndT)s flips=$($r.Flips) (heartbeat unchanged ${FreezeSec}s)" } else { "$($r.End) $($r.EndT)s flips=$($r.Flips)" }
     Add-Content (Join-Path $r.Dir "boot.txt") $line
     Write-Host ("run {0}: END {1}" -f $r.I, $line)
 }
+# no gt6 may survive the probe: sweep our own PIDs (process trees)
+foreach ($r in $runs) { try { if (-not $r.Proc.HasExited) { $r.Proc.Kill($true) } } catch {} }
+Start-Sleep -Milliseconds 500
+$left = @(Get-Process gt6 -ErrorAction SilentlyContinue)
+Write-Host ("gt6 processes left after probe: {0}" -f $left.Count)
 foreach ($r in $runs) { Remove-RunHdd0 (Join-Path $r.Dir 'hdd0') }
 Start-Sleep -Milliseconds 500
 
