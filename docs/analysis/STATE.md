@@ -28,13 +28,8 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate hdd0-Kopie/Lauf (GT6_HDD0, main.cpp, build-v020 neu): -Parallel ohne Lock, getestet 2x.
 
 
-- Hyp. 59-64: Pad-Pfad ok; Frames stagnieren ab ~9000 (162 s); tid 1 haengt in Event-Wait 568C94->A21D50 (obj 0x7FEAC018), Signal A21D8C kommt nie. Details: work/ARCHIV/STATE_pre_h69_2026-11-23.md.
 
-- Hyp. 65-70: tid 1 Dauer-Haenger. Servicer 568A0C (thunk -> 568658, Zustand obj+0x48 1>2>3>4>5>6) laeuft als FIBER (A14824: CreateFiber A2FC54, Entry A2F464); PS3_FIBERLOG=1 (patches/gt6-v020-fiberlog.patch).
-- Hyp. 71/72: gt6_cellFiberPpuWaitFlag (stubs.cpp) yieldet READY, gibt nach 2 ms auf -> RunFibers (A2FAD0) kehrt nie zurueck. GT6_REALFLAG=1 (SDK WaitFlagEx) -> A2FAD0 wiederholt, tid 1 haengt trotzdem.
-- Hyp. 73/74/75: Servicer ruft 7FEAC000 wiederholt; Snapshot(REALFLAG,100s): obj+0x48=3 = Pollschleife 3>4>3: Kinder obj+0x1D8/1DC +0x91==0 -> 5C406C, State bleibt 3. Weck-Schleife OK (Node in Liste).
 
-- Hyp. 77: PS3_FIBERRATE=1 (fiberlog.patch): Original = Fiber-Resume-Busyspin (~6 Mio/s, CPU-Burn); REALFLAG = nur ~60 Resumes/s gesamt (Wake A2FAD0 ~60 Hz). Frames/Flips beide stagnierend.
 
 - Hyp. 78-80: Tick-Fn 6D51xx ruft pro Frame A2FAD0 (60 Hz ok). REALFLAG (WaitFlagEx statt Spin) = DEFAULT in stubs.cpp (GT6_REALFLAG=0 = alt). orig/Frame4200: Dialog rendert KORREKT (4 Ecken, Bug weg).
 - Hyp. 80: noadj + REALFLAG: Prozess endet nach ~52 s (exit-chain code=0x1, Threads 2/31 exit) - mit REALFLAG=0 kein Exit (black 99,5 %). Das Spiel quittet nun selbst.
@@ -49,8 +44,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 84/85: Vektor-Puffer/Header per GUARD nicht fassbar (Heap-Adressen wandern, Header nie neu geschrieben). 88B878 = Frame-Update-Kette (802004>1AE7CC>..>7D083C>7CD628), kein Teardown.
 - Hyp. 86: Prozess-Affinitaet 1 Kern (work/_aff.ps1, 3 Laeufe noadj): Exit IMMER bei 52 s (3/3) = deterministisch reproduzierbar, Logik-/Zeitfehler, kein reines Data-Race.
 
+- Hyp. 87: pinned+GUARD auf Elementpuffer: Push via 88B9D4 (new 0x48 + vector push EE82C0, global Lock 159C830). Guard perturbt Timing, kein Exit. NULL-Element = Push mit NULL?
+
 ## Naechster Schritt (EINER)
-**Hyp. 87:** Pinned-Lauf (work/_aff.ps1) ist deterministisch -> Heap-Adressen stabil. GT6_GUARD auf Vektor-Elementpuffer/NULL-Quelle im pinned Lauf; erster null-call: tid 18 lr 817F20 (r12=48000048).
+**Hyp. 88 (Strategiewechsel):** Statt Zeiger-Jagd: in 88B9D4 nach new (B880A8) r3==0 loggen (malloc NULL?). Pinned-Lauf mit work/_aff.ps1 (AFF_NAME/AFF_ENV).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
