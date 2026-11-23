@@ -1,2 +1,1 @@
-# Naechste Session GT6PP (Stand Hyp. 112)
-Lies `docs/analysis/STATE.md`, dann CLAUDE.md-Regeln. Weiter mit Hyp. 113: 1AE074 (Cleanup-Aufruf 1AAC8C bei 1AE1E8) disassemblieren: Ausloeser + Befuellung Singleton-Vektor. GSTACK-Kette in STATE.md.
+Stand Hyp. 113: A25C64-Wipe = leerer Vektor (begin=end=0, end-8 wrap). Guard in generated/ppu_recomp_023.cpp (gitignored, Backup work/_bk_h113). Weiter mit Hyp. 114: Guard-Serie 8x orig+X85s, Exit-Rate + Menue pruefen; dann erste Null-Write-Quellen (CAC2D4/A14FCC). Details in STATE.md.

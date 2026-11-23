@@ -30,19 +30,19 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 90/91: orig wartet im AdjustScreen auf X; Snap-Diff 140s vs 175s: kein Freeze (scripts/snap_diff.py).
 - Hyp. 92: orig + PAD X (80-140s) -> Frame 9000 = GT-Logo+Spinner. AdjustScreen passiert.
 - Hyp. 93-96: orig+Pad (X 80-140s): Snap-Diff 200 vs 280s = Dauer-Churn, kein Freeze; Frame 15000 (450s) noch Logo+Spinner; 25000 in 600s nicht erreicht.
-- Hyp. 97: IsLoaded(NP2)-Poll = NP-Manager-Tick (A79C5C), harmlos. Hyp. 98 (WD 200s): Main tid1 laeuft, ~20 Worker in lwcond_wait (idle), Fiber-Runner aktiv.
-- Hyp. 104: A21CBC/A21D50 = Thread-Run-Wrapper, keine Wartebedingung. Tasten START/CIRCLE/TRI/SQ 165-255s: Lauf ok, Frame 9000 in 300s nicht erreicht -> Wirkung unbekannt.
 - Hyp. 105: Frame 4200 = AdjustScreen (frueh, nutzlos). orig+X: Exit exakt bei 1. X-Press (80s h104, 86s h105b) in 2 von 4 Laeufen = gleicher Exit wie noadj (A25C64). Loading-"Haenger" evtl. nur Ueberlebende.
 - Hyp. 106: Exit-Laeufe (h104, h105b) haben je 3x "SPU program with no lifted image" (soc-job, size 34704/53280/64912, fp weicht von registrierten ab); Survivor-Laeufe (h104b/h105/h106b) 0 MISS -> Image-Inhalt race-abhaengig?
 - Hyp. 107: MISS-Image (fp 68FDB056..) ist komplett 0x00; registriertes F523F26F liegt statisch im ELF-Seg1 @0x139D280 (eaBinary). Survivor: Bytes ok. Exit-Lauf: Speicher schon genullt = Folge des Wipes (Hyp. 83), kein SPU-Lift-Problem.
 - Hyp. 109-111: statische Kette Wipe: 7D083C (Wrapper, Singleton 0x159FD890) > 7CD628 > 88B878 > bl A25C64 (je 1 Aufrufer, 7D083C ohne direkten). CALLTRACE_TO auf 7D083C/7CD628/88B878/88B8E0: 0 Treffer (Exit-Laeufe h110 4/4 mit CALLTRACE=200, 88B8E0 ist ein bl-Site).
 - Hyp. 112: GSTACK im Exit-Lauf (run.log.err, h110): Worker tid32 "9qstY" (A304D0>7FB1F0>7FB090>7DF57C>7DFF44>7DF7DC>802004>1AE7CC>1AE5E4>1AE074>1AAC8C>7D083C>7CD628>88B878>A25C64). Unfiltered Calltrace: kein Exit (Heisenbug).
 - 1AAC8C = Cleanup-Task (Obj+0x1F30: 7D0904,7D0DE8,7D0FC0,7D083C,7D08DC), einziger Aufrufer 1AE1E8 in 1AE074. Frage: warum laeuft Cleanup beim X-Press, Singleton-Vektor 71E4455C hat NULL-Element.
+- Hyp. 113: A25C64 = Fill [begin,end-8] mit 0 (Vektor elem+0x2C: begin@+8, end@+0xC). Leer begin=end=0 -> end-8 wrap (unsigned) -> Fill 0..FFFFFFF8 = Wipe.
+  Elem-Objekt unkonstruiert/genullt (race). Loop-Log: normale Laeufe 2 Elemente ok (7FFEE090/E0D8); 2. Exit-Typ: erster NULL-Write aus CAC2D4 (1AE074+0x488), nicht A25C64 -> generelle Race.
+- Umgehung: Guard in func_00A25C64 (generated 023): end<8 -> return, Log "H113 GUARD". Backups work/_bk_h113/. h113g: 0/4 Exits in 200s (Guard 0x gefeuert).
 - user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 113:** 1AE074 (+0x178 ruft Cleanup 1AAC8C bei 1AE1E8) disassemblieren (gdis): welche Bedingung loest Cleanup aus (Fehlerpfad? Job-Ende?) und was fuellt den Singleton-Vektor (7CD628+0x490/+0x534). Exit-Lauf: PS3_CALLTRACE=200;CALLTRACE_AFTER=60;CALLTRACE_TO=0x7D083C + X 85s (4/4 Exit).
-(Hyp. 101-103: Main-WaitFlag = Timed-Sleep, KEIN Haenger. Main-Stack 6C54DC>9C6184>... Script-VM.)
+**Hyp. 114:** Guard-Lauf-Serie (8x orig+X85s, -Seconds 200): Exit-Rate + "H113 GUARD"-Treffer; Capture/Frame ab ~150s auf Menue pruefen. Danach 1. Null-Write-Quellen (CAC2D4/A14FCC) analysieren.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
