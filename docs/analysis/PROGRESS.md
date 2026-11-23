@@ -22,4 +22,4 @@ Oracle RPCS3 (Game 1.22) erreicht C6. Unsere 1.22-Laeufe: bisher alle FAIL bei C
 
 2026-11-23 | 3e76e25 | orig | ok FAIL - - - - - | probe_ctxf_20261123_172901_1 | non-black=0% lang=en-gb
 2026-11-23 | 3e76e25 | orig | ok FAIL - - - - - | probe_ctxf2_20261123_173240_1 | non-black=0% lang=en-gb
-- 2026-11-23 Schicht 2: fdflush (p3) kausal Quit weg; p4 cache-fill kein Effekt; C1 schwarz frame 3500
+2026-11-23 | c9a73e1 | notut | ok FAIL - - - - - | probe_fdfcap_20261123_200537_1 | non-black=0%
