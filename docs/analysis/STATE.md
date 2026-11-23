@@ -38,7 +38,8 @@ Hyp. guard/freeloop: tid30-Spin = Free-Loop AD4334 (Kopie-Liste next=0); Guards 
 Hyp. rv: A7E044/A7E6BC/A52140 liefern 1; Run-Methode 13D90 kehrt normal zurueck (kein Fehlerpfad) -> 13FFC Term -> Shutdown-Wait 90DC1C. Details eu-boot-log.md.
 Main (tid1) wartet in A52140->A7E6BC auf Task 0x7FFCEE90; Job 0x7FFCEE70 (tid30): 6166A4 = AD4294 + vt-Slot 0x154 (6C6BC8 -> obj+0x9d8 vslot 0xC). Job endet -> Main faehrt runter.
 Hyp. job9d8: obj+0x9d8=0 (nur Ctor) -> Slot 0x154 No-op; Job = Notify, endet normal. Listener 'processEventLoop' (Thread-Obj 0x701F80F0). Wait A30028 pollt A2F290 (0/1/3=fertig).
-Naechster Schritt: Submit von Job 0x7FFCEE70/Task 0x7FFCEE90 finden (xref.py --call der Submit-Fkt um 7B5208) + fehlt ein Game-Main-Thread? ppu_thread_create-Namen loggen. Alternativ GT5P vergleichen.
+Hyp. submit: Job = Script-VM-Task (Reflection-Factory 7A05D8). Hyp. npterm: sceNp Term (Stub 10BBF28) nur Cleanup in Wrapper AF9780 (Init->Op->Term, Aufrufer 11A94) = KEIN Exit-Trigger.
+Naechster Schritt: wer beendet Main-Wait frueher als erwartet? Task 0x7FFCEE90-Zustand (A2F290) im Snapshot 6 s vs Ende; Script-VM-Task 'initialize'/'finalize' (7A0900): wird finalize statt langlaufender Task gestartet? GT5P-Vergleich.
 Infra: probe.ps1 killt gt6 jetzt zusaetzlich per taskkill /T (hing in ppu_thread_join).
 
 ## Roadmap-Bezug
