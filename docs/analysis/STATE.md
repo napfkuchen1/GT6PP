@@ -39,8 +39,8 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hooks 1.22 portiert (tools/port_hooks.py: Stream r/s/t, 3 FileDevice-Guards, Host-Open AB080C). Probe hk122 noadj 220 s: unresolved=0, Frame 4200 schwarz 100%, kein PDIPFS/59. Script-Hooks/Menue-Pump fehlen.
 - rp122 (RPCS3-hdd0, noadj 220 s): kein 59/FI. Open-Diff: Oracle oeffnet 9/PR/MF (Worker MkZA-) nach 8G/RB, wir 8Y/Y0 (Oracle nie); 26 Oracle-Opens vor EE/3C fehlen, EE/3C nie erreicht.
 ## Naechster Schritt
-Hyp. ctxfiber: cellFiberPpuContext* (gt6/src/gt6_ctxfiber.cpp) -> Gast quittet nicht mehr, Run/ReturnToThread-Schleife tid 30. Offen: AD4294-Notify-Schleife spinnt (Copy-Listen-Kopf 0, ~0x7FFFEB70).
-Guard-Patch tools/guard_notify.py (gen 023, GT6_NO_NOTIFYGUARD=1 aus) gebaut? -> `-Name guard -Boot orig -Seconds 90 -Frame 4200 -StopOn`, pruefen ob Spinner weg/naechster Blocker. mempool-HLE schreibt nicht ins Gast-RAM (ausgeschlossen).
+Hyp. guard (2026-11-23): 3 Laeufe orig 70-90 s (guard / GT6_NO_NOTIFYGUARD / +GT6_NO_CTXFIBER): ALLE identisch ~100 Flips, Gast-Quit nach ~30 s (sceNp Term, cellKb End). Null-Call-Sturm 0-1 mal -> Guard/ctxfiber nicht ursaechlich. Blocker = Quit-Kette AFDFC0 (poll AFE38C, Quit-Test AD2998).
+Naechster: statisch AFE38C/AD2998 -> wer setzt Quit-Event (Event-Struct 0x1798F00 +0x30/+0x31). Befund: gt6 haengt nach Quit im Shutdown (ppu_thread_join) -> probe.ps1 Stall-Kill muss gt6 selbst killen.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
