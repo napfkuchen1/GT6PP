@@ -8,6 +8,7 @@ $A = Join-Path $Root "work\analysis\emain122"
 $Generated = Join-Path $Root "gt6-122\generated"
 $Sdk = Join-Path $Root "third_party\ps3recomp-v020"
 $Gt5p = Join-Path $Root "third_party\GT5P"
+$env:PYTHONPATH = Join-Path $Sdk "tools"   # gen_hle_stubs.py imports elf_parser (old path third_party/ps3recomp is archived)
 & (Join-Path $PSScriptRoot "verify-inputs.ps1") -Inputs "scripts\inputs122.json" -Files "work/bin122/EMAIN.elf"
 if (-not (Test-Path (Join-Path $A "functions_corrected.json"))) { & (Join-Path $PSScriptRoot "gen-functions-gt6-122.ps1"); if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
 New-Item -ItemType Directory -Force -Path $Generated | Out-Null

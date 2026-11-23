@@ -51,7 +51,9 @@ uint32_t vm_read32(uint64_t addr);
 /* Generated MENU::mMenuGameObjectManager::processEventLoop state machine
  * (guest 0x568658).  It has C++ linkage, like every function in the lifted
  * tree; see gt6/generated/ppu_recomp.h. */
-void func_00568658(ppu_context* ctx);
+#ifndef GT6_V122
+void func_00568658(ppu_context* ctx);  /* 1.00 address; 1.22 port pending, see PORT_122.md */
+#endif
 void func_005EBEBC(ppu_context* ctx);
 void func_005FA6C8(ppu_context* ctx);
 
@@ -1771,7 +1773,9 @@ extern "C" void gt6_menu_project_tick(ppu_context* ctx, uint32_t worker_arg)
      * register file because the hook is injected in the middle of its loop. */
     ppu_context saved = *ctx;
     ctx->gpr[3] = mgr;
+#ifndef GT6_V122
     func_00568658(ctx);
+#endif
     /* Hyp. 42: a cross-fragment fallthrough leaves g_trampoline_fn pending; the next
      * DRAIN_TRAMPOLINE of the caller would run it with the wrong register file. */
     while (g_trampoline_fn) { void (*tf)(void*) = g_trampoline_fn; g_trampoline_fn = 0; tf(ctx); }

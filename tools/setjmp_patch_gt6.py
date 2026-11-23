@@ -23,8 +23,9 @@ import re
 import sys
 from pathlib import Path
 
-SETJMP = "00B98168"
-LONGJMP = "00B9828C"
+import os
+SETJMP = os.environ.get("GT6_SETJMP", "00B98168")  # 1.22: 00C61F88
+LONGJMP = os.environ.get("GT6_LONGJMP", "00B9828C")  # 1.22: 00C620AC
 
 DECLS = """
 /* ---- setjmp_patch_gt6.py --------------------------------------------- */

@@ -27,6 +27,7 @@ param(
     [int]$Frame = 0,
     [switch]$KeepDb,
     [switch]$AllowOldBuild,
+    [ValidateSet("build-v020", "build-v122")][string]$BuildDir = "build-v020",
     [string]$Hdd0Src = "",
     [ValidateSet("", "orig", "noadj", "notut")][string]$Boot = ""
 )
@@ -36,14 +37,14 @@ $Ts = Get-Date -Format "yyyyMMdd_HHmmss"
 
 # --- build selection -------------------------------------------------------
 # CANON (docs/analysis/LEDGER.md): gt6\build-v020 = ps3recomp v0.20.0. Older builds (v0.19) only with -AllowOldBuild.
-$cands = @(Get-Item (Join-Path $Root "gt6\build-v020\gt6.exe"))
+$cands = @(Get-Item (Join-Path $Root "gt6\$BuildDir\gt6.exe"))
 if ($env:GT6_BUILD_DIR) { $cands = @(Get-Item (Join-Path $Root "$($env:GT6_BUILD_DIR)\gt6.exe")) }
-if (($cands[0].FullName -notmatch 'build-v020') -and -not $AllowOldBuild) {
+if (($cands[0].FullName -notmatch 'build-v020|build-v122') -and -not $AllowOldBuild) {
     throw "Non-canonical build $($cands[0].FullName) (not ps3recomp v0.20). Use gt6\build-v020 or pass -AllowOldBuild."
 }
 $Exe = ($cands | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
 if (-not $Exe) { throw "No gt6.exe found. Build first (scripts\build-gt6.ps1)." }
-$Elf = Join-Path $Root "work\bin\EMAIN.elf"
+$Elf = if ($BuildDir -eq "build-v122") { Join-Path $Root "work\bin122\EMAIN.elf" } else { Join-Path $Root "work\bin\EMAIN.elf" }
 if (-not (Test-Path $Elf)) { throw "Missing $Elf." }
 $srcNewest = Get-ChildItem -Path (Join-Path $Root "gt6\src"), (Join-Path $Root "third_party\ps3recomp-v020\runtime"), (Join-Path $Root "third_party\ps3recomp-v020\libs") `
     -Recurse -Include *.c, *.cpp, *.h -File -ErrorAction SilentlyContinue |

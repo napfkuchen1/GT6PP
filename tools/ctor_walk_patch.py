@@ -28,6 +28,11 @@ PATCHED = "_gt6_ctor_slot31"
 
 
 def main(argv: list[str]) -> int:
+    global FUNC, CALL
+    if len(argv) == 4:  # 1.22 line: <gen> <func_hex> <lr_hex>, see docs/analysis/PORT_122.md
+        FUNC = "func_%08X" % int(argv[2], 16)
+        CALL = "ctx->lr = 0x%08X; ps3_indirect_call(ctx); DRAIN_TRAMPOLINE(ctx);" % int(argv[3], 16)
+        argv = argv[:2]
     if len(argv) != 2:
         print(__doc__.strip().splitlines()[-1], file=sys.stderr)
         return 2

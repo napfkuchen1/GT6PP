@@ -18,6 +18,7 @@ $Analysis = Join-Path $Root "work\analysis\emain"
 $Generated = Join-Path $Root "gt6\generated"
 $Sdk = Join-Path $Root "third_party\ps3recomp-v020"
 $Gt5p = Join-Path $Root "third_party\GT5P"
+$env:PYTHONPATH = Join-Path $Sdk "tools"   # gen_hle_stubs.py imports elf_parser (old path third_party/ps3recomp is archived)
 
 if (-not (Test-Path $Elf)) {
     throw "Missing $Elf. Decrypt EMAIN.SELF first (docs/BUILDING.md step 2)."
