@@ -36,6 +36,7 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 53: noadj + CROSS-Presses 60-140 s, Frame 9000: weiter black 99,5 % (Logo+Spinner) = Pad aendert nichts am noadj-Zustand.
 - Hyp. 54: noadj 580 s ohne Pad: Frame 18000 nicht erreicht (~14k Flips). IsLoaded(NP2) 19681x gepollt, NP2 geladen = nur Per-Frame-Check, kein Haenger-Indiz.
 - Hyp. 52 (statisch): Pad-Mgr 0x165AD40, Poll 0xA39CD8. Gates: getInfo2!=0, port_status&1, GetData rc/len/button[1]; A390E4 kopiert Digital nach padobj+0x58/5A nur wenn system_info&1==0. Consumer ungeklaert.
+- Plan B Pad-Replay: PAD_LOG=<pfad> (patches/gt6-v020-padlog.patch, build-v020 neu gebaut, getestet) + scripts/live-padlog.ps1: user spielt live, Log -> PAD_SCRIPT-Replay.
 - SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
 - Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
 

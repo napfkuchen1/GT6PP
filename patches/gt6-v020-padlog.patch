@@ -1,0 +1,25 @@
+diff --git a/libs/input/cellPad.c b/libs/input/cellPad.c
+index 331b8c86..c265d5a5 100644
+--- a/libs/input/cellPad.c
++++ b/libs/input/cellPad.c
+@@ -1096,6 +1096,20 @@ skip_inject: ;
+               data->button[CELL_PAD_BTN_OFFSET_DIGITAL2] |= (u16)((held_mask >> 8) & 0xFF); }
+       } }
+ 
++    /* PAD_LOG=<path>: record (seconds since first poll, final button mask) on
++     * every change of port 0 -- same encoding as PAD_SCRIPT, so a live
++     * session can be replayed with PAD_SCRIPT="<sec>:0x<mask> ...". */
++    { static int s_pl = -1; static FILE* s_plf; static clock_t s_pl_t0; static unsigned s_pl_last = 0;
++      if (s_pl < 0) { const char* e = getenv("PAD_LOG");
++                      s_pl = (e && *e) ? 1 : 0;
++                      if (s_pl) { s_plf = fopen(e, "w"); s_pl_t0 = clock(); if (!s_plf) s_pl = 0; } }
++      if (s_pl && port_no == 0) {
++          unsigned m = (unsigned)(data->button[CELL_PAD_BTN_OFFSET_DIGITAL1] & 0xFF)
++                     | ((unsigned)(data->button[CELL_PAD_BTN_OFFSET_DIGITAL2] & 0xFF) << 8);
++          if (m != s_pl_last) {
++              fprintf(s_plf, "%.2f:0x%04X\n", (double)(clock() - s_pl_t0) / CLOCKS_PER_SEC, m);
++              fflush(s_plf); s_pl_last = m; } } }
++
+     /* Analog sticks */
+     /* PAD_STICK="lx,ly,rx,ry" (0-255, 128 = centred): hold the analog sticks at
+      * fixed positions. Rubber Ducky drives its camera from the sticks and never
