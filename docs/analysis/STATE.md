@@ -6,7 +6,7 @@ Regeln/Fallen: `CLAUDE.md`. Voller Verlauf Hyp. 1-35: `docs/analysis/STATE_full_
 
 ## Ziel / Problem
 Hauptmenue (gtmode) erreichen. Erststart-Dialoge sind per `boot.adc`-Gates umgehbar (Hyp. 15, `scripts/patch-boot-adc.py`).
-user sieht im laufenden gt6.exe das Menue nach dem ersten Testrace, aber unvollstaendig/fehlerhaft -> "Haengt" evtl. falsch.
+KORREKTUR 2026-11-23: Live-Lauf user (live-padlog, Pad-Log work/padlog_20261123_104620.txt): Screen-Size-Menue, Eingaben akzeptiert, danach Hang in GT-Logo+Spinner = identisch zu Probes. "Menue sichtbar" war frueher falsch/ueberbewertet. Probe-Setup ist KEIN Fehler; Hang ist echt.
 
 ## Baseline-Varianten (probe.ps1 `-Boot`)
 `orig` = Original | `noadj` = Dialog+Adjust uebersprungen, Tutorial-Rennen laeuft | `notut` = alles uebersprungen, 27-Track-Schleife.
