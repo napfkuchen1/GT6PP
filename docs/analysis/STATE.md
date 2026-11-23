@@ -31,10 +31,11 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 59-64: Pad-Pfad ok; Frames stagnieren ab ~9000 (162 s); tid 1 haengt in Event-Wait 568C94->A21D50 (obj 0x7FEAC018), Signal A21D8C kommt nie. Details: work/ARCHIV/STATE_pre_h69_2026-11-23.md.
 - Hyp. 65-68: tid 1 Dauer-Haenger ab <=100 s (auch v0.19). Servicer 56865C = OPD 14BF800->568A0C (obj 0x7FEAC000), gestartet via 56B948->A14824 (Factory 0x7FFBE280). Kein Thread mit dem Entry.
 - Hyp. 69: A14824 laeuft frueh (CALLTRACE ohne AFTER): vt+8 A2F93C, vt+0xC A2FC54 = cellFiberPpuCreateFiber (NID 7C2F4034, Entry-OPD 14E0848). Es ist ein FIBER, kein Thread.
-- Hyp. 69b: Fiber-Runner = vt+0x14 (OPD 14E0858->A2F8B8, ruft cellFiberPpuRunFibers). CALLTRACE_TO=A2F8B8: 0 Treffer in 60 s, kein direkter Aufrufer = Runner nie gerufen -> Fiber (Servicer) laeuft nie.
+- Hyp. 69b/70: Runner A2FAD0 (vt+0x1C, RunFibers) laeuft in tid 32 (567D74+0x2A4). PS3_FIBERLOG=1 (cellFiber.c Patch, build-v020): Fiber 7FF0C800 opd 14E0848 wird erzeugt+resumed.
+- => Hyp. 66-68 'Thread nie gestartet' FALSCH: Servicer laeuft als FIBER (CALLTRACE sieht Fiber-Entry nicht). Fiber resume/back state=0 (READY=Yield) in Dauerschleife = pollt.
 
 ## Naechster Schritt (EINER)
-**Hyp. 70:** Wer ruft vt+0x14 (A2F8B8) der Factory 0x7FFBE280-Klasse (vt 1489DE0)? Scheduler-Thread fehlt. Callers von 7F85C4/A2F4xx pruefen; evtl. fehlt ein Guest-Thread-Create (HLE) oder cellFiber-RunFibers wird nie von Pool gerufen.
+**Hyp. 71:** Fiber yieldet dauernd (state=0). Wer yieldet (gt6_cellFiberPpuWaitFlag stubs.cpp:1382 / cellFiberPpuYield) und worauf pollt er (flag_ea)? Danach: setzt irgendwer obj+0x48 1->2 im Fiber?
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
