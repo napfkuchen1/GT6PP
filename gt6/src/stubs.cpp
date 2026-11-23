@@ -1412,8 +1412,8 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
             fprintf(stderr, "\n");
         }
     }
-    {   /* Hyp. 72: GT6_REALFLAG=1 parks the fiber (SDK WaitFlagEx) so RunFibers returns and the wake loop runs again */
-        static const bool real = getenv("GT6_REALFLAG") != nullptr;
+    {   /* Hyp. 72/79: real fiber park (SDK WaitFlagEx) is DEFAULT (fixes AdjustScreen render bug); GT6_REALFLAG=0 = old spin-yield */
+        static const bool real = !(getenv("GT6_REALFLAG") && getenv("GT6_REALFLAG")[0]==0x30);
         if (real && flag && cellFiberPpuWaitFlagEx(flag, value) == 0) { ctx->gpr[3] = 0; return; }
     }
     if (flag) {

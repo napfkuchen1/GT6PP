@@ -36,8 +36,11 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 - Hyp. 77: PS3_FIBERRATE=1 (fiberlog.patch): Original = Fiber-Resume-Busyspin (~6 Mio/s, CPU-Burn); REALFLAG = nur ~60 Resumes/s gesamt (Wake A2FAD0 ~60 Hz). Frames/Flips beide stagnierend.
 
+- Hyp. 78-80: Tick-Fn 6D51xx ruft pro Frame A2FAD0 (60 Hz ok). REALFLAG (WaitFlagEx statt Spin) = DEFAULT in stubs.cpp (GT6_REALFLAG=0 = alt). orig/Frame4200: Dialog rendert KORREKT (4 Ecken, Bug weg).
+- Hyp. 80: noadj + REALFLAG: Prozess endet nach ~52 s (exit-chain code=0x1, Threads 2/31 exit) - mit REALFLAG=0 kein Exit (black 99,5 %). Das Spiel quittet nun selbst.
+
 ## Naechster Schritt (EINER)
-**Hyp. 78:** (Teil: 567FF8 = Warte-Schleife 'while !quit && t<limit { 7DC184 vcall }', Obj 1596C24; A2FAD0-Aufruf noch unklar) Wer ruft A2FAD0 (tid 32, 567D74+0x2A4, r4=0x880)? Ist die Wake-Rate 60 Hz korrekt, oder soll pro Wake mehrfach gelaufen werden? Pro Fiber-Resume genau 1 Servicer-Schritt = 1 Main-Loop-Tick?
+**Hyp. 81:** Warum quittet noadj+REALFLAG mit code 1? Log vor [exit-chain] (work/probe_h80_noadj_*/run.log.err, 40 Zeilen davor), wer ruft sys_process_exit / setzt Quit-Flag 0x164AB90 (xref --field 0x10 w, Obj 0x164AB80).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
