@@ -1,0 +1,59 @@
+diff --git a/libs/spurs/cellFiber.c b/libs/spurs/cellFiber.c
+index b7254a25..37ea0c4e 100644
+--- a/libs/spurs/cellFiber.c
++++ b/libs/spurs/cellFiber.c
+@@ -24,6 +24,8 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++static int fl_n(void){ static int c=0; static int en=-1; if(en<0){const char*e=getenv("PS3_FIBERLOG"); en=e?1:0;} return en && c++<300; }
++#define FL(...) do{ if(fl_n()) { fprintf(stderr,"[FIBER] " __VA_ARGS__); fputc(10,stderr);} }while(0)
+ 
+ #ifdef _WIN32
+ #define WIN32_LEAN_AND_MEAN
+@@ -306,9 +308,11 @@ static void fiber_body(Fiber* f)
+     f->ctx.gpr[1] = (f->stack_ea + f->stack_size - FIBER_STACK_TOP_PAD) & ~0xFull;
+     f->ctx.gpr[3] = f->arg;
+     f->ctx.cia    = f->opd;
++    FL("body start fiber=%08X opd=%08X tramp=%p", f->ea, f->opd, (void*)g_ppu_thread_entry_trampoline);
+     if (g_ppu_thread_entry_trampoline)
+         g_ppu_thread_entry_trampoline(&f->ctx);   /* runs the entry to completion; its r3 is the status */
+ 
++    FL("body END fiber=%08X status=%d", f->ea, (int)f->ctx.gpr[3]);
+     LOCK();
+     fiber_finish_locked(f, (s32)f->ctx.gpr[3]);
+     UNLOCK();
+@@ -451,6 +455,7 @@ s32 cellFiberPpuCreateFiber(CellFiberPpuScheduler* scheduler, CellFiberPpu* fibe
+         free(f);
+         return rc;
+     }
++    FL("create fiber=%08X opd=%08X arg=%llX stack=%08X sz=%X sched=%08X", fiber_ea, entry, (unsigned long long)arg, stack_ea, sizeStack, sched_ea);
+     WAKE();
+     return CELL_OK;
+ }
+@@ -464,6 +469,7 @@ s32 cellFiberPpuRunFibers(CellFiberPpuScheduler* scheduler)
+     const u32 ea = (u32)(uintptr_t)scheduler;
+     if (!ea) return (s32)CELL_FIBER_ERROR_NULL_POINTER;
+ 
++    FL("RunFibers sched=%08X", ea);
+     LOCK();
+     Sched* s = find_sched(ea);
+     if (!s) { UNLOCK(); return (s32)CELL_FIBER_ERROR_INVAL; }
+@@ -485,7 +491,9 @@ s32 cellFiberPpuRunFibers(CellFiberPpuScheduler* scheduler)
+         ppu_context* saved_active = g_active_ctx;
+         t_cur        = f;
+         g_active_ctx = &f->ctx;
++        FL("resume fiber=%08X opd=%08X", f->ea, f->opd);
+         host_resume(s, f);       /* back here when f blocks, yields or ends */
++        FL("back fiber=%08X state=%d flag_ea=%08X val=%X", f->ea, f->state, f->flag_ea, f->flag_val);
+         g_active_ctx = saved_active;
+         t_cur        = NULL;
+ 
+@@ -552,6 +560,7 @@ s32 cellFiberPpuYield(void)
+     if (!f) return (s32)CELL_FIBER_ERROR_PERM;
+ 
+     LOCK();
++    FL("Yield fiber=%08X lr=%08X", f->ea, (unsigned)f->ctx.lr);
+     f->state = F_READY;
+     f->seq   = s_seq++;          /* behind the other fibers of its priority */
+     UNLOCK();

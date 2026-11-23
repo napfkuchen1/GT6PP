@@ -29,13 +29,13 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 
 - Hyp. 59-64: Pad-Pfad ok; Frames stagnieren ab ~9000 (162 s); tid 1 haengt in Event-Wait 568C94->A21D50 (obj 0x7FEAC018), Signal A21D8C kommt nie. Details: work/ARCHIV/STATE_pre_h69_2026-11-23.md.
-- Hyp. 65-68: tid 1 Dauer-Haenger ab <=100 s (auch v0.19). Servicer 56865C = OPD 14BF800->568A0C (obj 0x7FEAC000), gestartet via 56B948->A14824 (Factory 0x7FFBE280). Kein Thread mit dem Entry.
-- Hyp. 69: A14824 laeuft frueh (CALLTRACE ohne AFTER): vt+8 A2F93C, vt+0xC A2FC54 = cellFiberPpuCreateFiber (NID 7C2F4034, Entry-OPD 14E0848). Es ist ein FIBER, kein Thread.
-- Hyp. 69b/70: Runner A2FAD0 (vt+0x1C, RunFibers) laeuft in tid 32 (567D74+0x2A4). PS3_FIBERLOG=1 (cellFiber.c Patch, build-v020): Fiber 7FF0C800 opd 14E0848 wird erzeugt+resumed.
-- => Hyp. 66-68 'Thread nie gestartet' FALSCH: Servicer laeuft als FIBER (CALLTRACE sieht Fiber-Entry nicht). Fiber resume/back state=0 (READY=Yield) in Dauerschleife = pollt.
+
+- Hyp. 65-70: tid 1 Dauer-Haenger. Servicer 568A0C (thunk -> 568658, Zustand obj+0x48 1>2>3>4>5>6) laeuft als FIBER (A14824: CreateFiber A2FC54, Entry A2F464); PS3_FIBERLOG=1 (patches/gt6-v020-fiberlog.patch).
+- Hyp. 71/72: gt6_cellFiberPpuWaitFlag (stubs.cpp) yieldet READY, gibt nach 2 ms auf -> RunFibers (A2FAD0) kehrt nie zurueck. GT6_REALFLAG=1 (SDK WaitFlagEx) -> A2FAD0 wiederholt, tid 1 haengt trotzdem.
+- Hyp. 73: Fiber A2F464 ruft Servicer 568A0C wiederholt (r4=0, bctrl A2F4AC). Snapshot h67: obj+0x48=3 (Body durch, 3>4 fehlt?). CALLTRACE_FROM der Servicer-Funktion liefert 0 Treffer (Name unklar).
 
 ## Naechster Schritt (EINER)
-**Hyp. 71:** Fiber yieldet dauernd (state=0). Wer yieldet (gt6_cellFiberPpuWaitFlag stubs.cpp:1382 / cellFiberPpuYield) und worauf pollt er (flag_ea)? Danach: setzt irgendwer obj+0x48 1->2 im Fiber?
+**Hyp. 74:** obj+0x48 LIVE lesen (Watchdog-Dump bzw. Snapshot bei REALFLAG, obj 0x7FEAC000, Heap variiert!). Bleibt 3 -> Block bei 5687B4 (bl 97922c) oder 3>4-CAS; 5/6 -> 568898ff lesen: wer signalisiert A21D8C (568C94 wartet).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

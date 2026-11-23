@@ -1378,6 +1378,7 @@ static void gt6_net_inet_pton(ppu_context* ctx)
  * an error and WaitFlag gives up instead of spinning.
  */
 extern "C" int32_t cellFiberPpuYield(void);
+extern "C" int32_t cellFiberPpuWaitFlagEx(uint32_t flag_ea, uint32_t value);
 
 static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
 {
@@ -1410,6 +1411,10 @@ static void gt6_cellFiberPpuWaitFlag(ppu_context* ctx)
             }
             fprintf(stderr, "\n");
         }
+    }
+    {   /* Hyp. 72: GT6_REALFLAG=1 parks the fiber (SDK WaitFlagEx) so RunFibers returns and the wake loop runs again */
+        static const bool real = getenv("GT6_REALFLAG") != nullptr;
+        if (real && flag && cellFiberPpuWaitFlagEx(flag, value) == 0) { ctx->gpr[3] = 0; return; }
     }
     if (flag) {
         /* Inside a fiber: yield to the scheduler. On a plain thread Yield
