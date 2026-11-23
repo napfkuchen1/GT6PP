@@ -5,7 +5,7 @@ Einzige Linie: Game v1.22 + ps3recomp v0.20.0. 1.00-Historie: `ARCHIV/HISTORIE.m
 ## 1. Kanon (Build/Runtime)
 - Build: `scripts\build-all.ps1` (decrypt-Check -> function list -> PPU lift -> post-lift -> clang-cl/Ninja). Ergebnis `gt6\build\gt6.exe`. Kein Versionsschalter, kein GT6_V122.
 - Runtime: `third_party/ps3recomp-v020` (v0.20.0). Lift: `gt6/generated` (EMAIN 1.22, 74935 Fn, 41 Chunks). SPU: `gt6/src/gen` (16 Job-Images, PM id5, 1 Embedded-ELF).
-- Beleg 2026-11-23: build-all Voll-Build ~8 min (16 Kerne), inkrementell (stubs.cpp) 4 s; probe smoke: boot.txt exe=gt6buildgt6.exe, unresolved=0.
+- Beleg 2026-11-23: build-all Voll-Build ~8 min (16 Kerne), inkrementell (stubs.cpp) 4 s; probe smoke: boot.txt exe=gt6\build\gt6.exe, unresolved=0.
 - Gast: `work/bin/EMAIN.elf` (1.22, sha256 in scripts/inputs.json, NPDRM-entschluesselt: `tools/self_decrypt_np.py`, Klic 9ff234b1..4724 aus RPCS3-Log Z.3478, keys gt6/data/keys nicht im Repo).
 - Orakel RPCS3 (user, gleiche EU-Disc, Game 1.22): Log `...\v1.2_beta4_GT6-Launcher-win64\data\rpcs3\log\RPCS3.log` (Kopie work/oracle/), Daten `...\dev_hdd0\game\BCES01893\USRDIR` nur LESEN.
 - Port-Details/Tabelle: `docs/analysis/PORT.md`. Adress-Mapping alt->neu: `tools/map_funcs.py`.
