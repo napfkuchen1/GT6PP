@@ -117,6 +117,38 @@ if (-not $KeepDb -and $false) {  # replaced by per-run hdd0 copy (GT6_HDD0): no 
     }
 }
 
+# --- per-run hdd0: junctions to big read-only parts, small parts copied (gate < 200 MB) ---
+function New-RunHdd0([string]$Src, [string]$Dst) {
+    $usr = "game\BCES01893\USRDIR"
+    New-Item -ItemType Directory -Force -Path (Join-Path $Dst $usr) | Out-Null
+    Get-ChildItem $Src -Force | Where-Object { $_.Name -ne "game" } | ForEach-Object {
+        if ($_.PSIsContainer) { cmd /c mklink /J "$Dst\$($_.Name)" "$($_.FullName)" | Out-Null } else { Copy-Item $_.FullName $Dst -Force }
+    }
+    Get-ChildItem (Join-Path $Src "game") -Force | Where-Object { $_.Name -ne "BCES01893" } | ForEach-Object {
+        if ($_.PSIsContainer) { cmd /c mklink /J "$Dst\game\$($_.Name)" "$($_.FullName)" | Out-Null } else { Copy-Item $_.FullName (Join-Path $Dst "game") -Force }
+    }
+    Get-ChildItem (Join-Path $Src "game\BCES01893") -Force | Where-Object { $_.Name -ne "USRDIR" } | ForEach-Object {
+        if ($_.PSIsContainer) { cmd /c mklink /J "$Dst\game\BCES01893\$($_.Name)" "$($_.FullName)" | Out-Null } else { Copy-Item $_.FullName (Join-Path $Dst "game\BCES01893") -Force }
+    }
+    Get-ChildItem (Join-Path $Src $usr) -Force | ForEach-Object {
+        $t = Join-Path $Dst "$usr\$($_.Name)"
+        if ($_.PSIsContainer -and $_.Name -in @("db","replay","savedata")) { Copy-Item $_.FullName $t -Recurse -Force }
+        elseif ($_.PSIsContainer) { cmd /c mklink /J "$t" "$($_.FullName)" | Out-Null }
+        else { Copy-Item $_.FullName $t -Force }
+    }
+    # gate: real (non-junction) size must stay small
+    $sz = 0; Get-ChildItem $Dst -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) } | ForEach-Object { $sz += $_.Length }
+    if ($sz -gt 200MB) { throw "run hdd0 too big: $([int]($sz/1MB)) MB (gate 200 MB)" }
+}
+function Remove-RunHdd0([string]$Dst) {
+    if (-not (Test-Path $Dst)) { return }
+    # junctions first via rmdir (never recursive into source), then remaining small copy
+    Get-ChildItem $Dst -Recurse -Force -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint } | Sort-Object { $_.FullName.Length } -Descending | ForEach-Object { cmd /c rmdir "$($_.FullName)" | Out-Null }
+    Remove-Item $Dst -Recurse -Force -ErrorAction SilentlyContinue
+}
+$free = (Get-PSDrive C).Free / 1GB
+if ($free -lt 100) { Write-Host ("ABORT: C: only {0:N0} GB free (<100 GB)" -f $free); exit 2 }
+if ($Parallel -gt 2) { Write-Host "Parallel capped to 2"; $Parallel = 2 }
 # --- launch ----------------------------------------------------------------
 foreach ($k in $pairs.Keys) { Set-Item "Env:$k" $pairs[$k] }
 if ($Frame -le 0) { $env:PS3_HEADLESS = "1" } else { Remove-Item Env:PS3_HEADLESS -ErrorAction SilentlyContinue }
@@ -130,7 +162,7 @@ try {
         # per-run hdd0 copy without userdb (fresh db); shared work\gt6_hdd0 stays untouched
         $hd = Join-Path $dir "hdd0"
         $src0 = if ($Hdd0Src) { $Hdd0Src } else { Join-Path $Root "work\gt6_hdd0" }
-        Copy-Item $src0 $hd -Recurse -Force
+        New-RunHdd0 $src0 $hd
         if (-not $KeepDb) { Get-ChildItem (Join-Path $hd "game\BCES01893\USRDIR\db") -Filter "userdb*.dat" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue }
         $env:GT6_HDD0 = $hd
         Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.FullName, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
@@ -169,6 +201,7 @@ foreach ($r in $runs) {
     Add-Content (Join-Path $r.Dir "boot.txt") $line
     Write-Host ("run {0}: END {1}" -f $r.I, $line)
 }
+foreach ($r in $runs) { Remove-RunHdd0 (Join-Path $r.Dir 'hdd0') }
 Start-Sleep -Milliseconds 500
 
 # --- verify ----------------------------------------------------------------
