@@ -3,7 +3,7 @@
 # Usage: powershell -File scripts/verify-inputs.ps1 [-Strict] [-Files work/bin/EMAIN.elf]
 #   default: only EMAIN.elf is mandatory; lists are checked if present (warn on mismatch).
 #   -Strict: every listed file must exist and match.
-param([switch]$Strict, [string[]]$Files)
+param([switch]$Strict, [string[]]$Files, [string]$Inputs = "scripts/inputs.json")
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $exp = Get-Content (Join-Path $Root "scripts\inputs.json") -Raw | ConvertFrom-Json
