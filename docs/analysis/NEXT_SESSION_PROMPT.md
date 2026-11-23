@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: letzter Commit siehe git log. Quit (~30 s) direkt nach "LOAD complete GAME6" (SaveDataUtil.load AUTO -> ProgressDialog.open -> _autoLoad). userdb-Hyp. widerlegt (initUserDB nie erreicht). VM-Task endet dort still.
-Naechster Schritt: 1.22-Script-VM-Poll/Handler-Tabelle finden (Hyp.-31-Adressen 9EEA88/9F0748 sind 1.00, 0 Calls), CALLTRACE_FROM darauf mit AFTER=3, letzte Opcodes vor Quit lesen. Wenn letzter Opcode ein Native-Call: Ziel pruefen/HLE fixen; sonst ProgressDialog.open/DialogFrame.appear-Pfad.
-Nicht wiederholen: Quit-Flag 0x1796DC8, savedata Rueckgabe, sceNp Term, Task-State 0x28, userdb/abortDiskFull (LEDGER 1.22, STATE).
-Laeuft noch: nichts. gt6/generated/ppu_recomp_022/023.cpp tragen [SETST]/[WAITST]/[QCHK]-Diagnose (Backups work/_bk_022, _bk_023); vor Baseline zurueckspielen + build-all.ps1.
-Lesen: STATE.md, dieser Prompt.
+Stand: Quit ~30 s GELOEST durch port_hooks p3 (FileDeviceHost-Flush AC7418/AC75B0, GT6_NO_FDFLUSH=1 = alt). 90 s: ~5770 Flips, kein Teardown. Capture Frame 3500 schwarz (1 Draw). p4 (b5b260 cache-fill) kein Effekt. Letzter Commit c9a73e1.
+Naechster Schritt: schwarzes Bild/Ladephase: warum nur 1 Draw, kein 59/FI-Open, cellMusicInitialize2 nie gerufen. Statisch Aufrufer-Baum, dann Probe -Seconds 90. PackageNullGuard 5F81B0: 1.22-Anker per Signatur aus work/bin/_t100.elf suchen; H113 A25C64: kein 1.00-Code im git (nur PORT.md "offen") -> verwerfen.
+Nicht wiederholen: LEDGER 1.22 (Quit-Flag, userdb, savedata, sceNp) + Quit-Jagd; SPURS/a3/AdjustScreen erst nach Ladephase.
+Laeuft noch: nichts. ppu_recomp_022 tragen noch [SETST]-Diagnose (work/_bk_022; _bk_023 vor p3 neu patchen).
+Lesen: STATE.md, PORT_HOOKS.md.
