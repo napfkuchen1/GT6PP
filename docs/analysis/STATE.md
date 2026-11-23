@@ -36,9 +36,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 - Hyp. 56: A395F0 WIRD jeden Frame gerufen (probe_h56ct2), aber nur von func_00811370 (lr 8113B0, Combo-Checker, r3=Stack-Buf, padobj+0x540). UI-Leser = andere Aufrufer von A1A6E8 (004EE*,00951*,A3AF24).
 - Hyp. 57: Pad-Poll A39CD8 laeuft jeden Frame (Aufrufer A1C1F8), GetState nur vom Combo-Checker. Listener-Objekt 0x165F340 (vt 148A250): A3CCC0/CC80/CE18/CBCC/CC40 NIE gerufen = Pad-Events erreichen UI nicht.
+- Hyp. 58: Listener-Liste (head mgr+0x43c) hat 2 Padobj-Knoten, A39CD8 verteilt Rohdaten per A390E4. Padobj-vt +0/+4/+C NIE gerufen; nur vt+8 (Combo). UI liest Pad nicht ueber Padobj-Methoden.
 
 ## Naechster Schritt (EINER)
-**Hyp. 58:** Wo verteilt A39CD8 an Listener (*(mgr+0x43c)+4)? Ist Liste leer (Snapshot h55 snap_walk) -> wer registriert (xref Add-Listener)? Strategiewechsel: Snapshot statt Calltrace.
+**Hyp. 59:** UI liest Padobj-Felder direkt? Leser von +0x58/+0x5A (61 Treffer xref) nach Code im AdjustScreen filtern: Snapshot-Frame-Funktionen oder CALLTRACE_FROM auf Treffer-Funktionen; oder user-Log.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
