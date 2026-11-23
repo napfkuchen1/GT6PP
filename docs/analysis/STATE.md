@@ -32,10 +32,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 - Hyp. 65-70: tid 1 Dauer-Haenger. Servicer 568A0C (thunk -> 568658, Zustand obj+0x48 1>2>3>4>5>6) laeuft als FIBER (A14824: CreateFiber A2FC54, Entry A2F464); PS3_FIBERLOG=1 (patches/gt6-v020-fiberlog.patch).
 - Hyp. 71/72: gt6_cellFiberPpuWaitFlag (stubs.cpp) yieldet READY, gibt nach 2 ms auf -> RunFibers (A2FAD0) kehrt nie zurueck. GT6_REALFLAG=1 (SDK WaitFlagEx) -> A2FAD0 wiederholt, tid 1 haengt trotzdem.
-- Hyp. 73: Fiber A2F464 ruft Servicer 568A0C wiederholt (r4=0, bctrl A2F4AC). Snapshot h67: obj+0x48=3 (Body durch, 3>4 fehlt?). CALLTRACE_FROM der Servicer-Funktion liefert 0 Treffer (Name unklar).
+- Hyp. 73/74/75: Servicer ruft 7FEAC000 wiederholt; Snapshot(REALFLAG,100s): obj+0x48=3 = Pollschleife 3>4>3: Kinder obj+0x1D8/1DC +0x91==0 -> 5C406C, State bleibt 3. Weck-Schleife OK (Node in Liste).
 
 ## Naechster Schritt (EINER)
-**Hyp. 74:** obj+0x48 LIVE lesen (Watchdog-Dump bzw. Snapshot bei REALFLAG, obj 0x7FEAC000, Heap variiert!). Bleibt 3 -> Block bei 5687B4 (bl 97922c) oder 3>4-CAS; 5/6 -> 568898ff lesen: wer signalisiert A21D8C (568C94 wartet).
+**Hyp. 76:** Kinder 7FF07000/7FF07800 (vt 0145FAD8, State +0x88=0, +0x91=0) stepped by 5C406C (Handler-Tabelle 145D0D4+8*state). Warum bleibt +0x88=0? Setter +0x88 (xref --field 0x88 --rw w), Handler 5C1B3C lesen. CALLTRACE_AFTER=60 greift nicht im Steady-State -> Snapshot-Analyse bevorzugen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
