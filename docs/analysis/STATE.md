@@ -33,8 +33,11 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 64: Wait=A21D50 (Event obj 0x7FEAC018: +0x28 wait=1, +0x29 signaled=0, auch im Snapshot h55), Signal=A21D8C (7 Aufrufer: 6BFDE0,7D8124,7FD0AC/D4,A350D0). Owner 0x7FEAC000 vt 145FC88. Aufrufer 6C5478<-6C54DC<-9C6184 (Script-VM). Signal kommt nie.
 - probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate hdd0-Kopie/Lauf (GT6_HDD0, main.cpp, build-v020 neu): -Parallel ohne Lock, getestet 2x.
 
+- Hyp. 65: WD dicht 100-170 s (probe_h65, patches/gt6-v020-wd-multi.patch): tid 1 steht in ALLEN 8 Samples gleich = Dauer-Haenger ab <=100 s. Wait 568C94 setzt obj+0x48=1, wartet Event obj+0x18 (6C5478 Script-VM).
+- Servicer = Fkt 56865C (CAS obj-State 1->2, setzt +0x48=3, signalt); in KEINEM Thread-Stack, kein --call/--imm-Treffer. Alle Threads ausser tid1 idle/sleep (Pool 9F83D4, tid 18/20 sleep 1 s). Wer startet 56865C?
+
 ## Naechster Schritt (EINER)
-**Hyp. 65:** Ist tid-1-Wait 0x7FEAC018 Dauer-Haenger oder per-Frame-Sync? Dichte WD-Samples (PS3_WD_AT erweitern auf >2) bzw. HLE-sys_lwcond_signal-Zaehler/Lost-Wakeup pruefen; 9 Pool-Worker idle in 9F83D4, tid mit 5A68C8-Kette (A4842C sleep) ansehen.
+**Hyp. 66:** Thread-Entry-Struct (arg 0x7FFE63F0.. je sys_ppu_thread_create, Wrapper 14E0898) per Snapshot lesen -> echte Entry-OPDs; fehlt 56865C/Umgebung = Thread nie gestartet/beendet. Alternativ obj 0x7FEB6000 +0x48-State per snap_walk.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

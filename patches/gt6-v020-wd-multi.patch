@@ -1,0 +1,25 @@
+diff --git a/runtime/ppu/ppu_loader.cpp b/runtime/ppu/ppu_loader.cpp
+index 6b831506..ac2049d2 100644
+--- a/runtime/ppu/ppu_loader.cpp
++++ b/runtime/ppu/ppu_loader.cpp
+@@ -3519,13 +3519,14 @@ extern "C" void ppu_rpage_arm(void);
+  * lr/in-flight lv2 syscall + HLE at those uptimes (seconds). */
+ static DWORD WINAPI ps3_wd_thread(LPVOID p)
+ {
+-    int a = 0, b = 0;
+-    sscanf((const char*)p, "%d,%d", &a, &b);
++    /* any number of ascending uptimes: PS3_WD_AT=100,110,...,200 */
++    int t[32], n = 0; const char* q = (const char*)p;
++    while (n < 32 && *q) { t[n++] = atoi(q); const char* c = strchr(q, ','); if (!c) break; q = c + 1; }
+     extern void ppu_report_guest_lrs_ex(const char*);
+-    for (int i = 0; i < 2; i++) {
+-        Sleep((DWORD)((i ? b - a : a) * 1000));
+-        fprintf(stderr, "[WATCHDOG] sample at %ds\n", i ? b : a);
+-        ppu_report_guest_lrs_ex(i ? "b" : "a");
++    for (int i = 0; i < n; i++) {
++        Sleep((DWORD)((i ? t[i] - t[i-1] : t[0]) * 1000));
++        fprintf(stderr, "[WATCHDOG] sample at %ds\n", t[i]);
++        ppu_report_guest_lrs_ex(i & 1 ? "b" : "a");
+     }
+     return 0;
+ }
