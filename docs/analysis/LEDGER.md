@@ -3,7 +3,7 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 
 ## 1. Kanon (Build/Runtime) - HIER nachschauen, nicht raten
 - Gueltiger Build: `gt6\build-v020\gt6.exe` = Runtime ps3recomp v0.20.0 (Klon `third_party/ps3recomp-v020`). PFLICHT: `$env:GT6_BUILD_DIR='gt6\build-v020'`.
-- VERALTET (v0.19, nur Vergleich): `gt6\build`, `gt6\build-clangcl`, `third_party/ps3recomp`. `build-v020-vk` = Vulkan-Variante (Vergleich).
+- ARCHIVIERT 2026-11-23 (nicht geloescht): alte Builds `gt6build`, `build-clangcl` (v0.19), `build-v020-vk` -> `ARCHIV/old-builds/`; alte Snapshots -> `work/ARCHIV/snaps/` (2 neueste bleiben im Root). `third_party/ps3recomp` = v0.19, veraltet: Archivierung offen (CMake-Default + Skripte erst auf -v020 umstellen).
 - Fix 2026-11-23: probe.ps1 nimmt jetzt build-v020 als Default; alte Builds nur mit `-AllowOldBuild`. Lauf-Log `boot.txt` nennt EXE-Pfad.
 - Gast-Basis: EMAIN.elf aus EU-Disc BCES01893 v1.00 (`work/bin`, 8843160 B SELF, 22371400 B ELF), Lift `gt6/generated` (75538 Fn), per-fp Post-Lift-Patches `tools/apply_gt6_post_lift.py`.
 - RPCS3-Orakel (user): Log `...\v1.2_beta4_GT6-Launcher-win64\data\rpcs3\log\RPCS3.log`, Daten `...\data\rpcs3\dev_hdd0\game\BCES01893\USRDIR` (nur LESEN). Game v1.22, gleiche EU-Disc.
