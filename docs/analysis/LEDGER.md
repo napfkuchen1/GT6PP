@@ -34,3 +34,9 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 ## 6. Arbeitsregeln (Ueberwacher)
 - Vor jeder Hyp.: LEDGER lesen. Neue gesicherte Erkenntnis -> hier 1 Zeile mit Beleg. Widerlegtes -> Abschnitt 4.
 - Immer GT6_BUILD_DIR/Kanon pruefen (Abschnitt 1) und im Lauf-Log EXE verifizieren, bevor Ergebnis gilt.
+
+## 7. SELF-Decrypt v1.22 (Ueberwacher 2026-11-23, getestet)
+- `rpcs3.exe --decrypt`: v1.00 EMAIN OK (SHA ACB00C19.. identisch), v1.22 EBOOT.BIN OK (-> `work/bin122/EBOOT_122.elf`, 278344 B). v1.22 EMAIN.SELF und v1.14 FIXEDELF114: "SELF: Failed to decrypt SELF metadata info!"
+- Gleiches Ergebnis mit tools/RPCS3 (v0.0.43-20641 master) und User-RPCS3 (v0.0.43-eee3f0f7 gt6-Build). Nicht an Pfad/Rechten/Build-Variante.
+- RPCS3 bootet dieselbe Datei trotzdem: EBOOT 1.22 ruft sceNpDrmIsAvailable(EMAIN.SELF) + sceNpDrmProcessExitSpawn2 (Orakel-Log Z.3479). Verdacht: EMAIN 1.22 ist NPDRM-SELF, Klic kommt vom EBOOT, nicht im --decrypt-Pfad.
+- Naechster Test: Klic (16 B) in EBOOT_122.elf an den sceNpDrm*-Aufrufen suchen; mit Klic per RPCS3-Decrypt (GUI Utilities) oder eigenem Skript entschluesseln. Kein Credential noetig.
