@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: Arbeit8. AutoLoad2 wird erreicht (GAME6 -4, BKUP6 -4 / mit Alt-Save LOAD complete), dann sceNp Term statt LoadModule 0xF044 + sceNpTrophyInit (Oracle). C1 FAIL. Details STATE.md Arbeit8-Zeilen.
-Naechster Schritt: (1) Caller von sceNpTerm nach LOAD complete finden (Snapshot work/snap_a8s50 stack/threads oder PS3_CALLTRACE_TO), Entscheidungswert: Save-Ergebnis obj+0xb0 (Wrapper AF5620/AF5704). Wenn Term aus Save-Fehlerpfad: Alt-Saves (gamedata/ = 1.00-Format GT6.N) gegen Oracle-Format GT6_1.N 16 MB pruefen; Oracle-Retry (3x neue Threads) nachbilden. (2) sonst Snapshot-Diff vertiefen.
-Nicht wiederholen: LEDGER §4; GT6_SAVE_CBRES/NODATA-Variante (kein Effekt), leeres Save-Root (gleiche Term-Folge), Prefix-String-Suche im RAM (GT6_1 nicht vorhanden).
+Stand: Arbeit8 (ctx ~170k). AutoLoad2 erreicht; Oracle laeuft danach LoadModule 0xF044 + sceNpTrophyInit (Kette 10BDD20<-B36E00<-B36F80<-B37980 / B376E4<-B359CC), bei uns nie (CALLTRACE_TO B37980/B359CC = 0 Treffer, 60 s). sceNpTerm bei uns = Prozess-Teardown (main-Return, bekannt). C1 FAIL.
+Naechster Schritt: Wer ruft B37980/B359CC im Oracle? Oracle-Log (work/oracle/RPCS3_user_oracle.log) Threads T025/T034 ab Z.155344: Thread-Erzeuger/LR; dann Gast-Pfad dorthin statisch (xref/gdis), pruefen welche Bedingung bei uns fehlt (HLE-Rueckgabewert davor). Wenn Wurzel ueber vtable: snap_walk find32 0x00B37980.
+Nicht wiederholen: Save-Return-Varianten (CBRES/NODATA), leeres Save-Root, Prefix-String-Suche, NP-Term-Bedingung.
 Laeuft noch: nichts.
-Lesen: STATE.md, eu-boot-log.md Z.217 (grep).
+Lesen: STATE.md.
