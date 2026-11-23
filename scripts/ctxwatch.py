@@ -1,9 +1,10 @@
 """ctxwatch.py [--limit 180000] [--session <id-prefix>]
-Schaetzt den Kontext der laufenden Claude-Session aus dem Transcript (.jsonl, chars/3.6 + 25k Fixanteil).
-Exit 0 = ok, 10 = Handoff faellig (>= limit). Grobe Schaetzung, bewusst konservativ."""
-import glob, os, sys
+Kontext der laufenden Claude-Session aus dem Transcript (.jsonl): echte usage-Werte der letzten
+Assistant-Antwort (input + cache_creation + cache_read). Fallback: chars/3.6 + 90k Fixanteil.
+Exit 0 = ok, 10 = Handoff faellig (>= limit)."""
+import glob, json, os, sys
 
-FIX = 25000  # System-Prompt + Tools + CLAUDE.md + Memory
+FIX = 90000  # gemessener Startkontext (Tools+System+CLAUDE.md), nur Fallback
 a = sys.argv[1:]
 limit = int(a[a.index("--limit") + 1]) if "--limit" in a else 180000
 sess = a[a.index("--session") + 1] if "--session" in a else ""
@@ -18,7 +19,6 @@ def is_worker(p):
     except OSError:
         return False
 f = next((p for p in fs if is_worker(p)), fs[0])  # Arbeitssession bevorzugt, nicht den Ueberwacher
-import json
 def txt(o):
     if isinstance(o, str): return len(o)
     if isinstance(o, list): return sum(txt(x) for x in o)
@@ -26,12 +26,19 @@ def txt(o):
         if o.get("type") == "image": return 1500
         return sum(txt(v) for k, v in o.items() if k in ("text", "content", "input", "thinking", "command"))
     return 0
-chars = 0
+chars, last = 0, 0
 for ln in open(f, errors="ignore"):
-    try: m = json.loads(ln).get("message")
+    try: o = json.loads(ln)
     except ValueError: continue
-    if isinstance(m, dict): chars += txt(m.get("content"))
-est = FIX + int(chars / 3.6)
+    m = o.get("message")
+    if not isinstance(m, dict): continue
+    chars += txt(m.get("content"))
+    u = m.get("usage")
+    if isinstance(u, dict):
+        t = (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
+        if t: last = t
+est = last if last else FIX + int(chars / 3.6)
+src = "usage" if last else "schaetz"
 state = "HANDOFF" if est >= limit else "ok"
-print(f"ctxwatch {os.path.basename(f)[:8]} ~{est//1000}k Token (Limit {limit//1000}k) -> {state}")
+print(f"ctxwatch {os.path.basename(f)[:8]} ~{est//1000}k Token [{src}] (Limit {limit//1000}k) -> {state}")
 sys.exit(10 if est >= limit else 0)
