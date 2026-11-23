@@ -1,5 +1,5 @@
 # One entry point for GT6 probe / capture / soak runs. Replaces ad-hoc run-gt6/cap-gt6/soak calls.
-# - picks the newest build (gt6\build-clangcl preferred), warns if sources are newer than the exe
+# - picks the newest build (gt6\build-v020 only; older builds need -AllowOldBuild), warns if sources are newer than the exe
 # - validates env + PAD_SCRIPT up front (fails loud instead of running an invalid test)
 # - archives userdb (never deletes), writes each run to work\probe_<Name>_<ts>_<i>\
 # - runs N instances in parallel, then checks the expected probe lines in every log
