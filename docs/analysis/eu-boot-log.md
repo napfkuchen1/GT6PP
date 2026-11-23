@@ -802,4 +802,12 @@ ERGEBNISSE 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, b
 ## PDIPFS-Orakel-Test (2026-11-23, probe pdi)
 - fsv (PS3_VERBOSE=1, 140 s, normale hdd0): 118 PDIPFS-Opens ok, 0 fehlgeschlagen, kein Zugriff auf PDIPFS/59.
 - pdi: hdd0 = Kopie RPCS3-USRDIR (14 GB, 17,5k Dateien, work/gt6_hdd0_rp; Originale unberuehrt), -KeepDb, orig, 300 s, X@100s: 18,8k Flips, 3,1M null-writes, 9,7k NPN-IsLoaded, kein Open PDIPFS/59, kein Pamf/Dmux/Vdec-Treffer im Err-Log. Identisch zum Standard-Spinner.
-- Region: RPCS3-Daten JP (BCJS37016, Ordner GT6_1.N), unsere EU (GT6.N). Spinner-Zustand unabhaengig von PDIPFS-Inhalt -> Install/Daten-Hypothese verworfen.
+- Region: KORREKTUR: RPCS3 nutzt dieselbe EU-Disc BCES01893 (BCJS37016 = interner Savedata-Name); GT6_1.N vs GT6.N = Update-Staende der Daten. RPCS3-Log = 1:1-Orakel. Spinner-Zustand unabhaengig von PDIPFS-Inhalt -> Install/Daten-Hypothese verworfen.
+
+## Gast-PC-Sampler + RPCS3-Abgleich (2026-11-23, probe gprof)
+- Sampler: gt6/src/gt6_gprof.cpp (GT6_GPROF=1, GT6_GPROF_SEC=n), tastet ctx.cia + prof_pc (letzter Syscall-Callsite) alle 5 ms. cia ist bei Threads immer Entry (0x14E0898), nur prof_pc taugt.
+- Run work/probe_gprof_20261123_121842_1 (build-v020, orig, 220 s): Steady-State 37 Threads je 2,7 %: 29 pc=0xA4305C (sys_lwcond_wait-Wrapper), MpAnk F543AC, pnZ 27465C, prsIy A4F6E4, lgFF A61B80, SpuEvH A564EC. Kein Spin.
+- Schluss: Deadlock-Wait, kein Busyloop. Loader 9qstY (tid 32) steht in lwcond_wait; im RPCS3-Log ab Zeile 157234 laeuft derselbe Thread weiter (LoadModule 0x2a/0x2d, PDI-Thread 0x100003a/b, Worker-Stat 59/FI).
+- RPCS3 ZBm9Y IsLoaded(0x38)-Poll (1857x) laeuft dort auch bis Session-Ende: kein Unterschied zu uns.
+- VERSION: RPCS3-USRDIR EMAIN.SELF 9209104 B / EBOOT.BIN 165712 B / Daten GT6_1.N (gepatcht, Update). Unsere Basis work/bin: EMAIN 8843160 B / EBOOT 72920 B / GT6.N. Oracle ist also Update-Stand, nicht Disc-Basis.
+- Offen: lwcond-Adresse + Signaler von tid 32 ermitteln; pruefen ob Basis-EMAIN den 59/FI-Request kennt.

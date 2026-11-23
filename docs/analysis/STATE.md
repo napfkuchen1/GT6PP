@@ -6,7 +6,7 @@ Regeln/Fallen: `CLAUDE.md`. Voller Verlauf Hyp. 1-35: `docs/analysis/STATE_full_
 
 ## Ziel / Problem
 Hauptmenue (gtmode) erreichen. Erststart-Dialoge sind per `boot.adc`-Gates umgehbar (Hyp. 15, `scripts/patch-boot-adc.py`).
-KORREKTUR 2026-11-23: Live-Lauf user (live-padlog, Pad-Log work/padlog_20261123_104620.txt): Screen-Size-Menue, Eingaben akzeptiert, danach Hang in GT-Logo+Spinner = identisch zu Probes. "Menue sichtbar" war frueher falsch/ueberbewertet. Probe-Setup ist KEIN Fehler; Hang ist echt.
+KORREKTUR 2026-11-23: Live-Lauf user (Pad-Log work/padlog_20261123_104620.txt): nach Screen-Size-Menue Hang in GT-Logo+Spinner = wie Probes. Probe-Setup ok, Hang echt.
 
 ## Baseline-Varianten (probe.ps1 `-Boot`)
 `orig` = Original | `noadj` = Dialog+Adjust uebersprungen, Tutorial-Rennen laeuft | `notut` = alles uebersprungen, 27-Track-Schleife.
@@ -25,12 +25,15 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Befund 4 Audit offen: BgmPlaybackStatus, paramsfo memset, cellSync Layout, cellFs/SaveData.
 - Tools: probe.ps1 (-KeepDb, -Hdd0Src), PAD_LOG, scripts/live-padlog.ps1. Runtime = ps3recomp v0.20 (build-v020).
 
-## RPCS3-Orakel (Ueberwacher, JP BCJS37016 + Save)
+## RPCS3-Orakel (Ueberwacher, gleiche EU-Disc BCES01893; BCJS37016 = nur interner Savedata-Name)
 - RPCS3 nach AutoSave2 BKUP6: open PDIPFS/59/FI (535 MB Intro-Film), dann Pamf/Dmux/Vdec. Unser hdd0: PDIPFS 24 MB, kein 59/FI. fsv-Lauf (VERBOSE): 0 fehlgeschlagene PDIPFS-Opens, 118 ok.
-- Test pdi: RPCS3-USRDIR-Kopie (work/gt6_hdd0_rp, 14 GB) als hdd0, -KeepDb 300 s: NEGATIV: 18,8k Flips, GT-Logo+Spinner, NPN-IsLoaded-Schleife wie sonst; kein Open auf PDIPFS/59. Daten fehlen NICHT als Ursache.
+- Test pdi: RPCS3-USRDIR-Kopie (work/gt6_hdd0_rp) als hdd0, 300 s: NEGATIV, GT-Logo+Spinner, kein Open auf PDIPFS/59. Daten fehlen NICHT als Ursache.
+- Gast-PC-Sampler (gt6/src/gt6_gprof.cpp, GT6_GPROF=1, GT6_GPROF_SEC=n; Build build-v020): Spinner = 37 Threads geparkt, 29 in sys_lwcond_wait-Wrapper (pc 0xA4305C), kein Spin/Busyloop.
+- Loader 9qstY (tid 32) haengt in lwcond_wait; RPCS3 laeuft dort weiter (PDI-Thread -> 59/FI-Open -> Pamf/Vdec). Ausloeser des 59/FI-Requests unbekannt.
+- VERSIONS-DIVERGENZ: RPCS3 fuehrt gepatchtes Spiel (EMAIN 9209104 B, EBOOT 165712 B, Daten GT6_1.N); wir recompilen Disc-Basis (work/bin EMAIN 8843160 B, EBOOT 72920 B, GT6.N).
 
 ## Naechster Schritt
-Hot-Guest-Funktion-Sampling im Spinner: PS3_GUEST_PROF/Debug-Konsole nur in runtime/ppu/tests/boot_main.cpp (gt6 nutzt es nicht) -> Sampler nach gt6 portieren ODER Audit #1/#2. PDIPFS-Hypothese erledigt.
+lwcond von 9qstY (tid 32) + Signaler per Snapshot/xref finden (war Signal verloren oder Bedingung nie erzeugt?). Parallel pruefen: ob Basis-EMAIN den 59/FI-Pfad ueberhaupt kennt (Update-Differenz).
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
