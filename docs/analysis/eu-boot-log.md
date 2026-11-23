@@ -196,3 +196,10 @@ ERGEBNISSE 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, b
 - 1.22-Recomp Schritt 1 FERTIG: work/bin122/EMAIN.elf (23787792 B) per tools/self_decrypt_np.py, Klic aus RPCS3-Log; 1.00-Selbsttest identisch. Naechster: Diff 1.00/1.22, Lift in generated122.
 - 1.22 Lift+Build: gt6-122/generated (74914 Funcs, code-end 0x10B8154), build-v122 linkt (GT6_V122-Guard stubs.cpp), ctor 0x1183C/lr 0x11880, setjmp C61F88/longjmp C620AC gepatcht. Probe v122b laeuft.
 - 1.22 build-v122: memset/switch-Entries + setjmp-Guards (scripts/post-lift-122.ps1) -> 0 unresolved, 0 setjmp-overflow, ~9480 Flips/150 s; Frame 4200 schwarz (Hooks fehlen).
+
+## STATE-Archiv 2026-11-23 (aus STATE.md Erledigt)
+- 1.22 SPU-Lift: 16 Job-Images (fp-Scan tools/find_spu_jobs_122.py), PM id5 (byteidentisch, 0x14DAA80), 1 Embedded-ELF -> gt6/src/gen122 + gt6-122/generated/spu_lifted. 0 dispatch MISS, ~11400 Flips/180 s.
+- Spinner-Frage 1.22 (VERBOSE-fs, orig+noadj 200-220 s): 30 PDIPFS-Opens, KEIN PDIPFS/59/FI, kein Pamf. Update-EMAIN allein loest Spinner nicht.
+- Oracle-Diff (oracle_seq.py, PS3_HLE_TRACE_ARM): Sysmodule-Folge + frisches Savedata = KEINE Divergenz. PDIPFS/9-Opens = Oracle bis EE/3C, danach Oracle 59/FI, wir 85/H2... Divergenz NACH EE/3C.
+- Hooks 1.22 portiert (tools/port_hooks.py: Stream r/s/t, 3 FileDevice-Guards, Host-Open AB080C). Probe hk122 noadj 220 s: unresolved=0, Frame 4200 schwarz 100%, kein PDIPFS/59. Script-Hooks/Menue-Pump fehlen.
+- rp122 (RPCS3-hdd0, noadj 220 s): kein 59/FI. Open-Diff: Oracle oeffnet 9/PR/MF (Worker MkZA-) nach 8G/RB, wir 8Y/Y0 (Oracle nie); 26 Oracle-Opens vor EE/3C fehlen, EE/3C nie erreicht.

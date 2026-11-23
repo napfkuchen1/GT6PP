@@ -33,16 +33,13 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - VERSIONS-DIVERGENZ: RPCS3 fuehrt gepatchtes Spiel (EMAIN 9209104 B, EBOOT 165712 B, Daten GT6_1.N); wir recompilen Disc-Basis (work/bin EMAIN 8843160 B, EBOOT 72920 B, GT6.N).
 - Basis-EMAIN (work/bin, 8843160 B) statisch: Movie-Code (tv_*.pam, cellPamf/Dmux/Vdec/Sail), PDIPFSNetworkPatch*, MSystemPatch vorhanden. Kein UPDATENODEINFO/PATCHSEQUENCE.
 - Basis nutzt /APP_DATA/%s.%d (GT6.N), GT6_1.N nur im Update-EMAIN. Stack-Walk tid 32 (snap_rf1) nur Altlasten; lwcond-Signaler offen.
-- 1.22 SPU-Lift: 16 Job-Images (fp-Scan tools/find_spu_jobs_122.py), PM id5 (byteidentisch, 0x14DAA80), 1 Embedded-ELF -> gt6/src/gen122 + gt6-122/generated/spu_lifted. 0 dispatch MISS, ~11400 Flips/180 s.
-- Spinner-Frage 1.22 (VERBOSE-fs, orig+noadj 200-220 s): 30 PDIPFS-Opens, KEIN PDIPFS/59/FI, kein Pamf. Update-EMAIN allein loest Spinner nicht.
-- Oracle-Diff (oracle_seq.py, PS3_HLE_TRACE_ARM): Sysmodule-Folge + frisches Savedata = KEINE Divergenz. PDIPFS/9-Opens = Oracle bis EE/3C, danach Oracle 59/FI, wir 85/H2... Divergenz NACH EE/3C.
-- Hooks 1.22 portiert (tools/port_hooks.py: Stream r/s/t, 3 FileDevice-Guards, Host-Open AB080C). Probe hk122 noadj 220 s: unresolved=0, Frame 4200 schwarz 100%, kein PDIPFS/59. Script-Hooks/Menue-Pump fehlen.
-- rp122 (RPCS3-hdd0, noadj 220 s): kein 59/FI. Open-Diff: Oracle oeffnet 9/PR/MF (Worker MkZA-) nach 8G/RB, wir 8Y/Y0 (Oracle nie); 26 Oracle-Opens vor EE/3C fehlen, EE/3C nie erreicht.
 ## Naechster Schritt
 Hyp. guard (2026-11-23): 3 Laeufe orig 70-90 s (guard / NO_NOTIFYGUARD / +NO_CTXFIBER) identisch: ~100 Flips, Gast-Quit nach ~30 s. Null-Call-Sturm 0-1x -> Guard/ctxfiber nicht ursaechlich.
 Quit-Kette 1.22 (korrigiert): Hauptloop 0x146E8 endet wenn AD2998 !=0 = Byte 0x1796DC8 (Objekt 0x1796DB8+0x10). PPU_WWATCH=1796DB0 LEN 32: KEIN Store setzt es !=0 -> Writer ist ungehookt (HLE-memcpy/Host-Pointer, z.B. cellSaveData-Load GT6.0-5 direkt vor Term) oder Flag via anderen Pfad.
 AFDFC0/0x179ECF0-Struct = Titel-ID-Strcmp ("BCES01893"), NICHT der Quit-Weg (Alt-Annahme 0x1798F00 falsch).
-Naechster: (1) Savedata-Load-Ziel (fileBuf der 6 Reads) vs 0x1796DC8 pruefen; Quit pruefen mit leerem/anderem Save (-KeepDb aus); (2) sonst Snapshot kurz vor Term + snap_walk 0x1796DB8.
+Hyp. fileBuf: Savedata-fileBuf = 0x901A0000/0x931C0000 (16 MB), kein Overlap mit 0x1796DC8 -> Savedata-HLE entlastet.
+Hyp. snap: SNAP_AT 6 s: Main (tid1) noch in INIT, wartet (lwcond) auf Task-Objekt 0x7FFCEE90; Stack A30028<-A7E6CC<-A521CC<-13D94(ctr)<-109C4. Ab 8 s schon Shutdown-Wait (while [0x1710E3C] usleep 5ms). Flag 0x1796DC8 in allen Snaps 0 -> Quit NICHT ueber Loop 146E8, Init-Wait bricht ab/Fehlerpfad.
+Naechster: Produzent des Tasks bei 0x7FFCEE90 finden (Vtable 0x15C3888, Future-Vtable 0x15C4360; xref auf Vtable-Ctor) + warum Wait bei ~7 s endet (Snap 7 s, Main-Stack gdis). tid30 lr=AD4344 laeuft (null-call-Notify AD4294).
 Infra: probe.ps1 killt gt6 jetzt zusaetzlich per taskkill /T (hing in ppu_thread_join).
 
 ## Roadmap-Bezug

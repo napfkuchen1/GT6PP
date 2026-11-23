@@ -28,3 +28,4 @@ Einzige Linie: Game v1.22 + ps3recomp v0.20.0.
 
 - 1.22: Menue-Pump 616C80 portiert (86302b5); Packages arcade/option/gtmode/garage/gtauto laden, danach Gast-Quit (Loop 0x146E8 endet wenn Byte 0x1796DC8 !=0, kein gehookter Store setzt es; AFDFC0 = Titel-ID-Strcmp, nicht Quit) ODER Null-Call-Schleife (AD3DFC Kopie, NULL-Element). Beleg: side-session befund_1.22_nullcall.md
 - GT5P-Check (b): GT6 laedt Script main.adc ('[GT6] script override' im Log) + 30 PDIPFS-Opens -> Mount/Script-Load laufen; GT5P-Ursache P12 trifft nicht zu. (a) lwcond-Sender fuer Loader 9qstY weiter offen (ein Lauf mit lwcond_signal-Zaehler noetig).
+- 1.22 Quit: Snap-Serie 6-40 s zeigt Flag 0x1796DC8 immer 0; Main bei 6 s in Init-Wait (Task 0x7FFCEE90), ab 8 s Shutdown -> Quit nicht ueber Loop 146E8; Savedata-fileBuf (0x901A0000/0x931C0000) kein Overlap.
