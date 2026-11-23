@@ -1,6 +1,6 @@
 # GT6PP LEDGER - dauerhafte Fakten (Ueberwacher, 2026-11-23). Nur ergaenzen/korrigieren, nie neu anfangen.
 Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was gesichert ist. Jede Zeile mit Beleg. Zeilen <=200 Zeichen.
-Einzige Linie: Game v1.22 + ps3recomp v0.20.0. 1.00-Historie: `ARCHIV/HISTORIE.md`.
+Einzige Linie: Game v1.22 + ps3recomp v0.20.0.
 
 ## 1. Kanon (Build/Runtime)
 - Build: `scripts\build-all.ps1` (decrypt-Check -> function list -> PPU lift -> post-lift -> clang-cl/Ninja). Ergebnis `gt6\build\gt6.exe`. Kein Versionsschalter, kein GT6_V122.
@@ -14,12 +14,12 @@ Einzige Linie: Game v1.22 + ps3recomp v0.20.0. 1.00-Historie: `ARCHIV/HISTORIE.m
 - Runtime-Fixes gelten versionsunabhaengig (ps3recomp-v020): generation-keyed lwcond, host-font sync, FileDevice-flush-guard, sys_timer One-Shot, sys_mempool, cellMusic, cellFiber WaitFlag parkend, SPURS-Job-Walker.
 ## 3. Gesichert 1.22
 - SPU: 16 von 20 bekannten Job-fps gefunden, WWS-PM byteidentisch (0 dispatch MISS). memset-Duff + 6er-Switch A2F158 manuelle Entries (tools/add_computed_entries.py).
-- Spinner-Stall auf 1.22 identisch zu 1.00 (Hooks fehlen): 37 Threads geparkt (pc 0xB03BAC lwcond-Wrapper), kein Spin, 30 PDIPFS-Opens, kein PDIPFS/59/FI.
+- Spinner-Stall auf 1.22: 37 Threads geparkt (pc 0xB03BAC lwcond-Wrapper), kein Spin, 30 PDIPFS-Opens, kein PDIPFS/59/FI.
 - SELF-Decrypt: EMAIN 1.22 = NPDRM (self_type 8, license 3); rpcs3 --decrypt allein scheitert.
 - Hooks Stream/FileDevice/Host-Open auf 1.22 (Fuzzy-Map, Match 0.84-0.97) allein: Frame 4200 schwarz, kein PDIPFS/59 (probe hk122, 2026-11-23).
 ## 4. Widerlegt/Symptom (NICHT wiederholen)
 - Pad/Dialog-Kette Hyp. 1-14; Exit-Race Hyp. 83-117; fresh vs persistente db; PRIO_START/LOCKSTEP/RESV_OFF; Fiber-Liste/Busyloop; Snap-Diff 140 vs 175 s; PDIPFS-Daten fehlen; RPCS3 --no-gui als Orakel.
-- Version (1.00 vs 1.22) ist NICHT die Ursache des Spinners; Sysmodule-Ladeliste und frisches Savedata (PS3_GAMEDATA_ROOT) keine Divergenz zum Oracle.
+- Sysmodule-Ladeliste und frisches Savedata (PS3_GAMEDATA_ROOT) keine Divergenz zum Oracle.
 ## 5. Offene Kernfrage
 - RPCS3 oeffnet nach PDIPFS/9/EE/3C `PDIPFS/59/FI` (Movie, PDI-Thread 0x100003b, Pamf/Vdec); wir oeffnen 85/H2, 8M/A9, 6W/RR, 75/M8, SG/LW, SC/IC, 8M/0K, 4J/0E und parken in lwcond (Loader 9qstY).
 - Naechster Offline-Diff: Oracle-Aufrufer (LR) von 59/FI, Ausloeser der Movie-Entscheidung nach EE/3C, jetzt auf dem 1.22-Build gegen RPCS3 (gleiche Version). Hooks zuerst portieren.
