@@ -35,7 +35,7 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 73/74/75: Servicer ruft 7FEAC000 wiederholt; Snapshot(REALFLAG,100s): obj+0x48=3 = Pollschleife 3>4>3: Kinder obj+0x1D8/1DC +0x91==0 -> 5C406C, State bleibt 3. Weck-Schleife OK (Node in Liste).
 
 ## Naechster Schritt (EINER)
-**Hyp. 76:** Kinder 7FF07000/7FF07800 (vt 0145FAD8, State +0x88=0, +0x91=0) stepped by 5C406C (Handler-Tabelle 145D0D4+8*state). Warum bleibt +0x88=0? Setter +0x88 (xref --field 0x88 --rw w), Handler 5C1B3C lesen. CALLTRACE_AFTER=60 greift nicht im Steady-State -> Snapshot-Analyse bevorzugen.
+**Hyp. 77:** Hyp. 76: Kinder enden nur bei Quit-Flag 0x164AB90 (A13644, nie !=0) -> Servicer = normaler Main-Loop-Fiber, tid 1 wartet darauf (NORMAL, kein Hang). Echtes Symptom = Frames stagnieren ab ~9000. Fiber-Takt messen: Wake-Rate A2FAD0 (tid 32) und Fiber-Iterationen/s mit REALFLAG vs. Original; Frame-/Flip-Zaehler vs. Fiber-Zaehler.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
