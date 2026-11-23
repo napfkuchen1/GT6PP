@@ -32,10 +32,12 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 93-96: orig+Pad (X 80-140s): Snap-Diff 200 vs 280s = Dauer-Churn, kein Freeze; Frame 15000 (450s) noch Logo+Spinner; 25000 in 600s nicht erreicht.
 - Hyp. 96 (VERBOSE=1): nach 140s nur Flip-Zyklus + cellSysmodule IsLoaded(NP2) pro Frame (OK); soc-job-Chains laufen durch; keine neuen FS-/Map-Aktionen.
 - Hyp. 97: IsLoaded(NP2)-Poll = NP-Manager-Tick (A79C5C), harmlos. Hyp. 98 (WD 200s): Main tid1 laeuft, ~20 Worker in lwcond_wait (idle), Fiber-Runner aktiv.
+- Hyp. 104: A21CBC/A21D50 = Thread-Run-Wrapper, keine Wartebedingung. Tasten START/CIRCLE/TRI/SQ 165-255s: Lauf ok, Frame 9000 in 300s nicht erreicht -> Wirkung unbekannt.
 - user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 104:** Hyp. 101-103: Main-WaitFlag = Timed-Sleep (7DBF48), wird pro Frame von A2FAD0 (wake-all) geweckt -> KEIN Haenger. Waker A2F8B8 (vtable 1489DE0+0x14, Obj 7FFBE280) nie aufgerufen. Ladephase: Main-Stack-Kette (WD h98: A21CBC>568C94>6C5478>6C54DC>9C6184>...) auf Wartebedingung lesen; Script-VM-Zustand per snap_walk.
+**Hyp. 105:** Pad-Test (Tasten waehrend Ladephase) wiederholen mit `-Frame 4200` (Capture ~290s, nach letzter Taste 255s), Bildwechsel pruefen. Sonst Snapshot (SNAP_AT=280) vs snap_h100 per snap_diff.py.
+(Hyp. 101-103: Main-WaitFlag = Timed-Sleep, KEIN Haenger. Main-Stack 6C54DC>9C6184>... Script-VM.)
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
