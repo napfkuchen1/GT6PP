@@ -14,7 +14,7 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 if (-not $Elf) { $Elf = Join-Path $Root "work\bin\EMAIN.elf" }
-$Sdk = Join-Path $Root "third_party\ps3recomp"
+$Sdk = Join-Path $Root "third_party\ps3recomp-v020"
 $Out = Join-Path $Root "work\spu_analysis\pm_rebuild"
 $Lifted = Join-Path $Root "gt6\generated\spu_lifted\pm_wwsjob"
 $Registry = Join-Path $Root "gt6\src\gen\spu_workloads_pm.c"

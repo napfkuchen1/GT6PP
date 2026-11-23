@@ -73,12 +73,12 @@ def _import_ppu_disasm():
     if env:
         candidates.append(env)
     candidates += [
-        os.path.join(_REPO, "third_party", "ps3recomp", "tools"),
-        os.path.join(_HERE, "..", "third_party", "ps3recomp", "tools"),
+        os.path.join(_REPO, "third_party", "ps3recomp-v020", "tools"),
+        os.path.join(_HERE, "..", "third_party", "ps3recomp-v020", "tools"),
     ]
     here = _HERE
     for _ in range(6):
-        candidates.append(os.path.join(here, "third_party", "ps3recomp", "tools"))
+        candidates.append(os.path.join(here, "third_party", "ps3recomp-v020", "tools"))
         parent = os.path.dirname(here)
         if parent == here:
             break
@@ -91,7 +91,7 @@ def _import_ppu_disasm():
             return ppu_disasm
     raise SystemExit(
         "cannot find ppu_disasm.py; set PS3RECOMP_TOOLS to the "
-        "third_party/ps3recomp/tools directory"
+        "third_party/ps3recomp-v020/tools directory"
     )
 
 

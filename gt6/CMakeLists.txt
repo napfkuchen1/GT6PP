@@ -18,7 +18,7 @@ endif()
 # =============================================================================
 # ps3recomp runtime
 # =============================================================================
-set(PS3RECOMP_DIR "${CMAKE_SOURCE_DIR}/../third_party/ps3recomp" CACHE PATH "Path to ps3recomp")
+set(PS3RECOMP_DIR "${CMAKE_SOURCE_DIR}/../third_party/ps3recomp-v020" CACHE PATH "Path to ps3recomp")
 
 if(NOT EXISTS "${PS3RECOMP_DIR}/CMakeLists.txt")
     message(FATAL_ERROR

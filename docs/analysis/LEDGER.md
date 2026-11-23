@@ -3,12 +3,14 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 
 ## 1. Kanon (Build/Runtime) - HIER nachschauen, nicht raten
 - Gueltiger Build: `gt6\build-v020\gt6.exe` = Runtime ps3recomp v0.20.0 (Klon `third_party/ps3recomp-v020`). PFLICHT: `$env:GT6_BUILD_DIR='gt6\build-v020'`.
-- ARCHIVIERT 2026-11-23 (nicht geloescht): alte Builds `gt6build`, `build-clangcl` (v0.19), `build-v020-vk` -> `ARCHIV/old-builds/`; alte Snapshots -> `work/ARCHIV/snaps/` (2 neueste bleiben im Root). `third_party/ps3recomp` = v0.19, veraltet: Archivierung offen (CMake-Default + Skripte erst auf -v020 umstellen).
+- ARCHIVIERT 2026-11-23 (nicht geloescht): alte Builds `gt6\build`, `build-clangcl` (v0.19), `build-v020-vk` -> `ARCHIV/old-builds/`; alte Snapshots -> `work/ARCHIV/snaps/` (2 neueste bleiben im Root). `third_party/ps3recomp` = v0.19, veraltet: Archivierung offen (CMake-Default + Skripte erst auf -v020 umstellen).
 - Fix 2026-11-23: probe.ps1 nimmt jetzt build-v020 als Default; alte Builds nur mit `-AllowOldBuild`. Lauf-Log `boot.txt` nennt EXE-Pfad.
 - Gast-Basis: EMAIN.elf aus EU-Disc BCES01893 v1.00 (`work/bin`, 8843160 B SELF, 22371400 B ELF), Lift `gt6/generated` (75538 Fn), per-fp Post-Lift-Patches `tools/apply_gt6_post_lift.py`.
 - RPCS3-Orakel (user): Log `...\v1.2_beta4_GT6-Launcher-win64\data\rpcs3\log\RPCS3.log`, Daten `...\data\rpcs3\dev_hdd0\game\BCES01893\USRDIR` (nur LESEN). Game v1.22, gleiche EU-Disc.
 - Version-Divergenz: RPCS3 = v1.22 (EMAIN 9209104 B, EBOOT 165712 B, Daten GT6_1.N). Wir = v1.00 (GT6.N). Recomp v1.22 freigegeben (User 2026-11-23), additiv in neuen Pfaden.
-
+- Umstellung 2026-11-23: PS3RECOMP_DIR-Default + scripts (build-gt6, gen-functions, lift-spu*, relift, probe) + boundary_audit.py -> ps3recomp-v020. Test: build-gt6-clangcl -BuildName build-v020 gruen.
+- v0.19-Runtime `third_party/ps3recomp` -> `ARCHIV/ps3recomp-v019/`; 47 `work/_bk_*` (kein Skript referenziert sie) -> `work/ARCHIV/bk/` (inkl. _bk_gt6_v020.exe).
+- v1.22 SELF->ELF BLOCKIERT: decrypt_self.py braucht gt6/data/keys (fehlt, nie im Repo); rpcs3.exe --decrypt erzeugt stumm nichts. Dep: Keys oder GUI-Decrypt (User). work/bin122/EMAIN.SELF = Kopie.
 ## 2. Historie (belegt per git)
 - 2026-10-31/11-01 Upstream (xynnpg, USA-Disc): Boot bis schwarzes Fenster, MGOM.start("boot"), Manager Zustand 2. KEIN Menue. (docs/STATUS.md, progress.json)
 - 2026-11-20..22 Fork: EU-Disc kompatibel (eu-bces01893-compat.md). Erster echter Frame, Sprachauswahl sichtbar (eu-boot-log "First real frame").

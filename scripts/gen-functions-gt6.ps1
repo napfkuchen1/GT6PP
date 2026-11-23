@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $Elf = Join-Path $Root "work\bin\EMAIN.elf"
 $A = Join-Path $Root "work\analysis\emain"
-$Sdk = Join-Path $Root "third_party\ps3recomp\tools"
+$Sdk = Join-Path $Root "third_party\ps3recomp-v020\tools"
 & (Join-Path $PSScriptRoot "verify-inputs.ps1") -Files "work/bin/EMAIN.elf"
 New-Item -ItemType Directory -Force -Path $A | Out-Null
 function Step($t, [scriptblock]$b) { Write-Host $t; & $b; if ($LASTEXITCODE -ne 0) { throw "$t failed ($LASTEXITCODE)" } }

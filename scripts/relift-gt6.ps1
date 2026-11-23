@@ -16,7 +16,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Elf = Join-Path $Root "work\bin\EMAIN.elf"
 $Analysis = Join-Path $Root "work\analysis\emain"
 $Generated = Join-Path $Root "gt6\generated"
-$Sdk = Join-Path $Root "third_party\ps3recomp"
+$Sdk = Join-Path $Root "third_party\ps3recomp-v020"
 $Gt5p = Join-Path $Root "third_party\GT5P"
 
 if (-not (Test-Path $Elf)) {

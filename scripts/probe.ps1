@@ -45,7 +45,7 @@ $Exe = ($cands | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
 if (-not $Exe) { throw "No gt6.exe found. Build first (scripts\build-gt6-clangcl.ps1)." }
 $Elf = Join-Path $Root "work\bin\EMAIN.elf"
 if (-not (Test-Path $Elf)) { throw "Missing $Elf." }
-$srcNewest = Get-ChildItem -Path (Join-Path $Root "gt6\src"), (Join-Path $Root "third_party\ps3recomp\runtime"), (Join-Path $Root "third_party\ps3recomp\libs") `
+$srcNewest = Get-ChildItem -Path (Join-Path $Root "gt6\src"), (Join-Path $Root "third_party\ps3recomp-v020\runtime"), (Join-Path $Root "third_party\ps3recomp-v020\libs") `
     -Recurse -Include *.c, *.cpp, *.h -File -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch '\\gen\\' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Write-Host ("EXE: {0}  ({1})" -f $Exe.FullName, $Exe.LastWriteTime)

@@ -30,7 +30,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 if (-not $DumpDir) { $DumpDir = Join-Path $Root "work\spu_jobs\dump" }
 if (-not (Test-Path $DumpDir)) { throw "Missing dump dir $DumpDir" }
 
-$Sdk = Join-Path $Root "third_party\ps3recomp"
+$Sdk = Join-Path $Root "third_party\ps3recomp-v020"
 $Work = Join-Path $Root "work\spu_jobs\analysis"
 $JobsDir = Join-Path $Root "gt6\generated\spu_lifted\jobs"
 $Registry = Join-Path $Root "gt6\src\gen\spu_workloads_jobs.c"

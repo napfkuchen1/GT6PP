@@ -33,7 +33,7 @@ if ($Clean -and (Test-Path $build)) {
     Remove-Item -Recurse -Force $build
 }
 
-$sdk = (Resolve-Path (Join-Path $Root "third_party\ps3recomp")).Path -replace '\\','/'
+$sdk = (Resolve-Path (Join-Path $Root "third_party\ps3recomp-v020")).Path -replace '\\','/'
 $src = (Resolve-Path (Join-Path $Root "gt6")).Path
 
 python -m cmake -S $src -B $build -G Ninja `
