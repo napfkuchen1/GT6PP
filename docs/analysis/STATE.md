@@ -29,9 +29,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 83: Exit = A25C64 (vector.clear) aus 88B8E0, NULL-Element im Zeigervektor 71E4455C -> zeroed 14E4000..FFFFFFF0. Hyp. 84-89: Puffer/new/Lock nicht Ursache (Heisenbug).
 - Hyp. 90/91: orig wartet im AdjustScreen auf X; Snap-Diff 140s vs 175s: kein Freeze (scripts/snap_diff.py).
 - Hyp. 92: orig + PAD X (80-140s) -> Frame 9000 = GT-Logo+Spinner. AdjustScreen passiert.
+- Hyp. 93-96: orig+Pad (X 80-140s): Snap-Diff 200 vs 280s = Dauer-Churn, kein Freeze; Frame 15000 (450s) noch Logo+Spinner; 25000 in 600s nicht erreicht.
+- Hyp. 96 (VERBOSE=1): nach 140s nur Flip-Zyklus + cellSysmodule IsLoaded(NP2) pro Frame (OK); soc-job-Chains laufen durch; keine neuen FS-/Map-Aktionen.
 
 ## Naechster Schritt (EINER)
-**Hyp. 93:** Was blockiert Ladephase nach AdjustScreen? orig+Pad, PS3_SNAP_AT 200 vs 280, snap_diff + Flip-Rate vgl.
+**Hyp. 97:** Welcher Gast-Code pollt NP2-IsLoaded (LR)? Pro-Frame-Warteschleife im Loading: Aufrufer-LR loggen (stubs), dann xref/gdis auf Wartebedingung.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
