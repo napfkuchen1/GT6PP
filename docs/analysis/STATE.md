@@ -31,6 +31,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Gast-PC-Sampler (gt6/src/gt6_gprof.cpp, GT6_GPROF=1, GT6_GPROF_SEC=n; Build build-v020): Spinner = 37 Threads geparkt, 29 in sys_lwcond_wait-Wrapper (pc 0xA4305C), kein Spin/Busyloop.
 - Loader 9qstY (tid 32) haengt in lwcond_wait; RPCS3 laeuft dort weiter (PDI-Thread -> 59/FI-Open -> Pamf/Vdec). Ausloeser des 59/FI-Requests unbekannt.
 - VERSIONS-DIVERGENZ: RPCS3 fuehrt gepatchtes Spiel (EMAIN 9209104 B, EBOOT 165712 B, Daten GT6_1.N); wir recompilen Disc-Basis (work/bin EMAIN 8843160 B, EBOOT 72920 B, GT6.N).
+- Basis-EMAIN (work/bin, 8843160 B) statisch: kennt Movie-Code (movies/tv_*.pam, .pam, cellPamf/Dmux/Vdec/Sail), PDIPFSNetworkPatch*/PatchInstall, MSystemPatch(existPatch/installedPatch). Kein UPDATENODEINFO/PATCHSEQUENCE.
+- Basis nutzt Format /APP_DATA/%s.%d (GT6.N); GT6_1.N nur im Update-EMAIN. Basis-Pfad laeuft auf Disc ohne Update-Zwang. Stack-Walk tid 32 (snap_rf1) liefert nur Altlasten, lwcond-Signaler offen.
+- ABSCHAETZUNG Recomp Patch-EMAIN 1.22 (RPCS3 EMAIN.SELF 9209104 B; FIXEDELF114 = 1.14, 9059040 B), NICHT gestartet, User entscheidet:
+  1) SELF->ELF: gt6/scripts/decrypt_self.py braucht pycryptodome (fehlt) + Keys/RAP; ELF liegt dann als work/patchelf/. Aufwand ~1-2 h, Risiko Keys.
+  2) Lift + Gen (relift-gt6/gen-functions-gt6, ~1 h Rechenzeit) und Neu-Build ~2 min; alle Adress-Patches/Guards (H113 A25C64, boot.adc-Gates) neu portieren: 0,5-1 Tag. Gesamt ~1-2 Tage.
 
 ## Naechster Schritt
 lwcond von 9qstY (tid 32) + Signaler per Snapshot/xref finden (war Signal verloren oder Bedingung nie erzeugt?). Parallel pruefen: ob Basis-EMAIN den 59/FI-Pfad ueberhaupt kennt (Update-Differenz).
