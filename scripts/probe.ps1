@@ -26,6 +26,7 @@ param(
     [string]$PadScript = "",
     [int]$Frame = 0,
     [switch]$KeepDb,
+    [string]$Hdd0Src = "",
     [ValidateSet("", "orig", "noadj", "notut")][string]$Boot = ""
 )
 $ErrorActionPreference = "Stop"
@@ -131,7 +132,8 @@ try {
         $log = Join-Path $dir "run.log"
         # per-run hdd0 copy without userdb (fresh db); shared work\gt6_hdd0 stays untouched
         $hd = Join-Path $dir "hdd0"
-        Copy-Item (Join-Path $Root "work\gt6_hdd0") $hd -Recurse -Force
+        $src0 = if ($Hdd0Src) { $Hdd0Src } else { Join-Path $Root "work\gt6_hdd0" }
+        Copy-Item $src0 $hd -Recurse -Force
         if (-not $KeepDb) { Get-ChildItem (Join-Path $hd "game\BCES01893\USRDIR\db") -Filter "userdb*.dat" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue }
         $env:GT6_HDD0 = $hd
         Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.Name, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
