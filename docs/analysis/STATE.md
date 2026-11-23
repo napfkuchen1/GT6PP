@@ -21,12 +21,9 @@ Baseline-Probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; `-Boot orig
 
 
 - GAME-LOOP 1.22 = 0x616C80 (1.00: 568800), Thread-Eintritt 6170AC, Tick 68FF84, laeuft (tid1/tid30); Details eu-boot-log.md.
-- Arbeit8: AutoLoad2 WIRD erreicht (Prompt-Annahme falsch): GAME6 -4, dann ok/BKUP6 -4; gamedata/ im Repo-Root (PS3_GAMEDATA_ROOT) hat Alt-Saves GT6.N (1.00-Format). Return CBRESULT statt NODATA (GT6_SAVE_CBRES=1): kein Effekt.
-- Arbeit8 Oracle (RPCS3-Log Z.155401): GAME6 AutoLoad2 3x (je neuer Thread 'PDI', -4,-4, 3. ok mit GT6_1.N 16MB), dann LoadModule 0xF044 + sceNpTrophyInit; AutoSave2 BKUP6 +4 s. Wir: nach Load sofort sceNp Term (kein 0xF044/Trophy), kein Retry. Snaps work/snap_a8s50/a8s100: Worker 50 s aktiv, 100 s alle lwcond_wait, tid1 im Shutdown (lwmutex_destroy).
-- Arbeit8 Trophy-Kette: sceNpTrophyInit-Stub 10BDD20 <- B36E4C (Fn B36E00 TrophyMgr-Init) <- B36F80 <- B379E0 (Fn B37980, 0 direkte Aufrufer) bzw. B377BC (Fn B376E4) <- B359F0 (Fn B359CC, 0 Aufrufer). Beide Wurzeln nur indirekt (vtable/Task). Oracle main_thread: Stufen laufen, 146E8-Loop endet auch dort legitim (Arbeit6); main lebt dort in 13FD0-Finalizer-Wait weiter, Game in Threads.
 ## Naechster Schritt
-(Arbeit8) CALLTRACE_TO B37980 und B359CC (probe_a8ct1/2, 60 s): 0 Treffer -> Trophy-Wurzeln werden bei uns nie indirekt gerufen. Naechster: Oracle-Erzeuger der Threads T025/T034 (Log ab Z.155344, Thread-Create-LR) + Gast-Pfad dorthin; ggf. Wurzel per vtable-Scan (be32 0x00B37980 in ELF-Data/Heap).
-sceNpTerm-Caller = AF9870 (einziger, Fn ~AF9780: NP-Routine ruft 10BC740 NID E6C8F3F9, dann Term, unload sysmodule 0x16/0). Oracle: sceNpInit 76.08 s -> AutoLoad2 76.15 s, Term erst 106 s (Exit). Wir: Init -> Load -> Term sofort. AF9870 steht hinter strtol-artigem AF9448 + Unload 0x16/0 = Prozess-Teardown (main-Return, bekannte Quit-Maske), NICHT NP-Bedingung. Oracle: main_thread lebt bis 106 s. Frage: was haelt main im Oracle am Leben (Wait nach Stufe BFF0A0/Save-Load?) -> Oracle-Log main_thread-Calls 76-106 s (Z.155344-162073, nur main_thread filtern) vs unser tid1-Ende; kein weiterer NP/Save-Tiefgang.
+(Arbeit9) Trophy/F044 = Script-Pfad: boot_sequence_common.ad Z.254-269 ruft Login.checkNpEula nur wenn LoginUtil.isOnline() (= Byte [PDINetwork+0x6850], Setter A0893C <- A0A110 <- native 9AE5D4). CALLTRACE_TO 9AE5D4/1954C/9D0458/AF8E34: 0 Treffer. Details eu-boot-log.md "Arbeit9".
+Naechster: (1) Wer ruft 9AE5D4 im Script (Methodenname via OPD 0x162D7A0, String 0x11B5758) und wo im .adc (grep adch_disasm-Dump); (2) warum bei uns nie: Bedingung davor (MNetworkInterface.isUp? NP-Status). Wenn isUp/NP-Status: HLE sceNpManagerGetStatus/sceNetCtl auf ONLINE-aequivalent pruefen (Oracle-Log), 1 Lauf.
 Offene Hook-Anker: PackageNullGuard 5F81B0 (1.22-Anker per Signatur aus work/bin/_t100.elf), H113 A25C64 (kein 1.00-Code im git -> verwerfen). Danach SPURS-Walker, a3, AdjustScreen REALFLAG, ZWAP.
 
 ## Widerlegt / Symptom (nicht wiederholen)

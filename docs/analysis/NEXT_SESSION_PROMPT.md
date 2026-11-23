@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: Arbeit8 (ctx ~170k). AutoLoad2 erreicht; Oracle laeuft danach LoadModule 0xF044 + sceNpTrophyInit (Kette 10BDD20<-B36E00<-B36F80<-B37980 / B376E4<-B359CC), bei uns nie (CALLTRACE_TO B37980/B359CC = 0 Treffer, 60 s). sceNpTerm bei uns = Prozess-Teardown (main-Return, bekannt). C1 FAIL.
-Naechster Schritt: Wer ruft B37980/B359CC im Oracle? Oracle-Log (work/oracle/RPCS3_user_oracle.log) Threads T025/T034 ab Z.155344: Thread-Erzeuger/LR; dann Gast-Pfad dorthin statisch (xref/gdis), pruefen welche Bedingung bei uns fehlt (HLE-Rueckgabewert davor). Wenn Wurzel ueber vtable: snap_walk find32 0x00B37980.
-Nicht wiederholen: Save-Return-Varianten (CBRES/NODATA), leeres Save-Root, Prefix-String-Suche, NP-Term-Bedingung.
-Laeuft noch: nichts.
-Lesen: STATE.md.
+Stand: Arbeit9. Trophy/F044-Kette ist SCRIPT-Pfad (boot_sequence_common.ad, Dump work/_a9_boot_dis.txt via `python -X utf8 -I tools/adch_disasm.py work/gt6_vol/projects/gt6/boot/boot.adc --max-ins 8000`): unter `if network_available` (Z.116) kommen OnlineUtility/OnlineSession/Lobby/PDINetwork.initialize("Gran Turismo 6")/startUpdate; Z.254-269 checkSaveDataBind + isOnline -> Login.checkNpEula (MNpEula, laedt F044); beginInitTrophy (boot_functions.ad Z.1174) ruft PDINetwork.initializeTrophy. CALLTRACE_TO 9AE5D4 (PDINetwork.initialize), 1954C (checkNpEula), 9D0458, AF8E34: 0 Treffer. isOnline = Byte [obj+0x6850] (A09D34), Setter A0893C <- A0A110 <- 9AE5D4. Details eu-boot-log.md "Arbeit9".
+Naechster Schritt: probe_a9_9B0098 (isDummy) / probe_a9_9AFCE4 (isOnline) CALLTRACE-Ergebnisse auswerten (grep '^\[CALL\] ->' run.log.err, STDERR!). 9B0098 gerufen -> Script erreichte Z.103, network_available=true, dann Wurzel in Z.116-Kette suchen (initRaceOperator/OnlineUtility Natives per CALLTRACE_TO). 9B0098 NICHT gerufen -> boot_sequence_common erreicht Z.102 nie: vorherigen Script-State/Bedingung finden (adch-Dump Z.6570-6800).
+Nicht wiederholen: Save-Return-Varianten, Prefix, NP-Term-Bedingung (ist Teardown), direkte Calls mit CALLTRACE (sieht nur indirekte; Ausgabe in run.log.err).
+Laeuft noch: nichts (probe_a9_9B0098/9AFCE4 Hintergrund, ggf. fertig).
+Lesen: STATE.md, eu-boot-log.md Abschnitt "Arbeit9" (tail -15).
