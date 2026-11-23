@@ -5,3 +5,8 @@ Zustand obj+0x48 (1..6). Probe-Setup: `$env:GT6_BUILD_DIR='gt6\build-v020'`, `-E
 Uncommitted-Reste: SDK-Klon `third_party/ps3recomp-v020` cellFiber.c (Patch in patches/gt6-v020-fiberlog.patch).
 Hinweis: Hypothesen-Limit pro Turn = 8, danach Uebergabe.
 Hinweis: "func_XXXX+0xNNN" im Log ist KEIN Byte-Offset (Statement-Index); Aufrufstelle per xref --call / lr suchen, nicht gdis(func+off).
+
+Hinweis Peer-Session (Workflow-Optimierung): Kette Hyp. 63-89 ist eine Kette -> Strategiewechsel. Vorschlaege:
+(1) Snapshot-Diff 140 s vs 175 s (snap_walk) fuer die Frame-Stagnation ab ~9000/159 s (REALFLAG=0).
+(2) 3 Varianten orig/noadj/notut je 200 s, Flip-Rate pro 10 s vergleichen.
+(3) GT6_UNBUF=1 etc. gegen v0.20-Flip-Pacing testen.
