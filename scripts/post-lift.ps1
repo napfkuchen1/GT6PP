@@ -9,4 +9,5 @@ $env:GT6_SETJMP = "00C61F88"; $env:GT6_LONGJMP = "00C620AC"
 Push-Location tools
 & $P -c "import sys; sys.path.insert(0,'.'); from pathlib import Path; import apply_gt6_post_lift as a; print('setjmp guards', a.add_setjmp_guards(Path('../gt6/generated')))"
 Pop-Location
-# TODO (PORT.md): script hooks, file-device guards, boot-presents hooks, menu pump, host-open wrapper, ADCH switch
+& $P -I tools/port_hooks.py gt6/generated
+# TODO (PORT.md): script hooks (1.00 9BB020/9BB11C/9BAFE0 -> A67E1C/A67F60/A67DC4 unsure), FileDeviceHost flush guard, boot-presents, menu pump

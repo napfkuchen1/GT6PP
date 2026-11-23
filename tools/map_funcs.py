@@ -41,4 +41,5 @@ def main(a):
         h = idx.get(k, [])
         st = 'unique' if len(h) == 1 else ('none' if not h else 'ambiguous(%d)' % len(h))
         print('%08X -> %s | %s | %d' % (t, ','.join('%08X' % x for x in h[:3]) or '-', st, k[1]))
-main(sys.argv[1:])
+if __name__ == "__main__":
+    main(sys.argv[1:])
