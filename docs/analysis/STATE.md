@@ -39,8 +39,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 78-80: Tick-Fn 6D51xx ruft pro Frame A2FAD0 (60 Hz ok). REALFLAG (WaitFlagEx statt Spin) = DEFAULT in stubs.cpp (GT6_REALFLAG=0 = alt). orig/Frame4200: Dialog rendert KORREKT (4 Ecken, Bug weg).
 - Hyp. 80: noadj + REALFLAG: Prozess endet nach ~52 s (exit-chain code=0x1, Threads 2/31 exit) - mit REALFLAG=0 kein Exit (black 99,5 %). Das Spiel quittet nun selbst.
 
+- Hyp. 81: noadj+REALFLAG Exit: vorher tid 18 'bctr to NULL' in func_00819250+0x97B (r12=0x48000044/0x28000084 = Code-Bytes als OPD gelesen), LWM ESRCH, dann alle Threads exit code=1.
+
 ## Naechster Schritt (EINER)
-**Hyp. 81:** Warum quittet noadj+REALFLAG mit code 1? Log vor [exit-chain] (work/probe_h80_noadj_*/run.log.err, 40 Zeilen davor), wer ruft sys_process_exit / setzt Quit-Flag 0x164AB90 (xref --field 0x10 w, Obj 0x164AB80).
+**Hyp. 82:** gdis 0x819250+0x97B (=0x819BCB) lesen: welches Objekt/Feld ergibt den Zeiger mit Code-Bytes (Fehlinterpretation/Stack-Ueberschreibung, SPU-Job 53505501 im Stack)? Snapshot vor Exit (PS3_SNAP_AT ~40).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
