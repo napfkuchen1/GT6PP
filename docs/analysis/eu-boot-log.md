@@ -221,3 +221,4 @@ cellSaveData.c: env GT6_SAVE_NODATA=1 gibt NODATA statt compat-OK zurueck. Orig-
 - PPU_WWATCH is hex, tag [ww]; probe 'ww' worked (earlier grep 'watch' was wrong).
 - Open: why tid1 enters 0x14884 (main-return) ~135 ticks after gtauto load.
 - loop135b: tid1 after gtauto load ~5000 indirect calls = shared_ptr release (A1EAD0/A1EA64) + dtor 76B7B4; last call before teardown is a dtor. main.adc strings: IsExitGame, execShutdown, shutdown_module, abortDiskFull, MINIMUM_HDD_SPACE. No cellFsGetFreeSize call in run; cellGame free=40GiB-256KiB; no sys_tty output; no [quit] sysutil request from us.
+- exitgame: IsExitGame native reg at 0x828514 (name str 0x11A1278), impl AD2998 (lock B03998, getter 449384 on obj 0x1796DB8). Only writes to 0x1796DC8: init 0 by F7B0D4. Other task state machine writes not seen (WWATCH MAX 80, 10 hits).
