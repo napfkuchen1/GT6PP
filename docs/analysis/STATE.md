@@ -41,8 +41,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 - Hyp. 81: noadj+REALFLAG Exit: vorher tid 18 'bctr to NULL' in func_00819250+0x97B (r12=0x48000044/0x28000084 = Code-Bytes als OPD gelesen), LWM ESRCH, dann alle Threads exit code=1.
 
+- Hyp. 82: Exit ist RACE (3 Laeufe noadj 150 s: 2x exit-chain, 1x ok black 99 %). Davor: null-reads in fn 820FD4/8190A4/8210D8/B97434, OPDs 14E4848/4858/4868 leer (code 0).
+
 ## Naechster Schritt (EINER)
-**Hyp. 82:** gdis 0x819250+0x97B (=0x819BCB) lesen: welches Objekt/Feld ergibt den Zeiger mit Code-Bytes (Fehlinterpretation/Stack-Ueberschreibung, SPU-Job 53505501 im Stack)? Snapshot vor Exit (PS3_SNAP_AT ~40).
+**Hyp. 83:** Wer fuellt OPD 14E4848/4858/4868 (xref --imm / snap_walk obj 0x14E4848 im Snapshot snap_245313093)? Leer = Funktionszeiger-Tabelle nicht initialisiert (Fiber-/Thread-Init der Tid-27-Gruppe, Entry 14E0898).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
