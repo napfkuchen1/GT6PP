@@ -25,21 +25,16 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
 - Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
 
-- Hyp. 59: Pressure-Bytes OK (cellPad.c setzt 255 bei Digital-Bit, PRESS_ON, len 0x18). Pad-Datenpfad bis Padobj verifiziert; Konsument im AdjustScreen unbekannt.
-- Hyp. 60: Per-Frame-Walker A1C1F8 ruft je Frame 8B2C28 (2x, leere Listener-Liste), A3B384, A39CD8 (Pad), A2CD98, A2ADA8, 1138C, 1136C. Kein UI-Pad-Leser unter den Callbacks.
-- Hyp. 61: orig ohne Pad: Frame 10500/13000/18000 in 300/330/420 s NICHT erreicht (9000 war ~162 s) = Flip-Rate bricht nach ~9000 ein oder Stall. Zeitpunkt unklar.
-- Hyp. 62: Frame 9000 ~159 s reproduzierbar, 9600 in 260 s NICHT. Spiellogik tickt weiter (padcnt GetData #15000 @300 s ~50/s) = RSX-Render-Frames stagnieren, kein Gesamt-Stall.
-- Hyp. 63: WD 120/200 s (probe_h63b): Haupt-tid 1 steht in lwcond_wait (func_00A21CBC<-A21D50<-568C94+0x38, cond 0x7FEAC030/obj 0x7FEAC018), gleiche Stelle bei 120+200 s = Hauptthread blockt auf Worker/Job. Wer signalt?
-- Hyp. 64: Wait=A21D50 (Event obj 0x7FEAC018: +0x28 wait=1, +0x29 signaled=0, auch im Snapshot h55), Signal=A21D8C (7 Aufrufer: 6BFDE0,7D8124,7FD0AC/D4,A350D0). Owner 0x7FEAC000 vt 145FC88. Aufrufer 6C5478<-6C54DC<-9C6184 (Script-VM). Signal kommt nie.
 - probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate hdd0-Kopie/Lauf (GT6_HDD0, main.cpp, build-v020 neu): -Parallel ohne Lock, getestet 2x.
 
-- Hyp. 65: WD dicht 100-170 s (probe_h65, patches/gt6-v020-wd-multi.patch): tid 1 steht in ALLEN 8 Samples gleich = Dauer-Haenger ab <=100 s. Wait 568C94 setzt obj+0x48=1, wartet Event obj+0x18 (6C5478 Script-VM).
-- Hyp. 66: 56865C (CAS +0x48 1->2->3, signalt) umschliesst Hauptloop 568800; kein Thread-Entry (alle 15 Entry-OPDs aus arg+0x18 geprueft), kein Aufrufer/OPD-Treffer. Alt-Build v0.19 hat identischen tid-1-Haenger (kein Regress).
-- Hyp. 67/68: Servicer 56865C = Thread-Entry-OPD 14BF800->568A0C (arg obj 0x7FEAC000), gestartet in 56B950 via A14824 (vcall-Thread-Factory), Jobobjekt-Name 'Esse..Loop'. KEIN Thread mit Entry 14BF800 unter 53 creates; CALLTRACE_TO=56865C 0 Treffer.
-- => Event-Loop-Thread der Loader-Objekte wird nie gestartet (oder A14824-vcall scheitert). tid 1 wartet im Boot-Poll auf ihn. Obj +0x48=3 im Snapshot (Writer nur 5687B0).
+
+- Hyp. 59-64: Pad-Pfad ok; Frames stagnieren ab ~9000 (162 s); tid 1 haengt in Event-Wait 568C94->A21D50 (obj 0x7FEAC018), Signal A21D8C kommt nie. Details: work/ARCHIV/STATE_pre_h69_2026-11-23.md.
+- Hyp. 65-68: tid 1 Dauer-Haenger ab <=100 s (auch v0.19). Servicer 56865C = OPD 14BF800->568A0C (obj 0x7FEAC000), gestartet via 56B948->A14824 (Factory 0x7FFBE280). Kein Thread mit dem Entry.
+- Hyp. 69: A14824 laeuft frueh (CALLTRACE ohne AFTER): vt+8 A2F93C, vt+0xC A2FC54 = cellFiberPpuCreateFiber (NID 7C2F4034, Entry-OPD 14E0848). Es ist ein FIBER, kein Thread.
+- Hyp. 69b: Fiber-Runner = vt+0x14 (OPD 14E0858->A2F8B8, ruft cellFiberPpuRunFibers). CALLTRACE_TO=A2F8B8: 0 Treffer in 60 s, kein direkter Aufrufer = Runner nie gerufen -> Fiber (Servicer) laeuft nie.
 
 ## Naechster Schritt (EINER)
-**Hyp. 69:** 56B950-Funktion (Start per gdis rueckwaerts) laeuft sie? Ziel von A14824 vcall (vt+8/+0xC der Factory-Objekt A2FC10): ruft es sys_ppu_thread_create? Per CALLTRACE_TO=A14824 + Args.
+**Hyp. 70:** Wer ruft vt+0x14 (A2F8B8) der Factory 0x7FFBE280-Klasse (vt 1489DE0)? Scheduler-Thread fehlt. Callers von 7F85C4/A2F4xx pruefen; evtl. fehlt ein Guest-Thread-Create (HLE) oder cellFiber-RunFibers wird nie von Pool gerufen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
