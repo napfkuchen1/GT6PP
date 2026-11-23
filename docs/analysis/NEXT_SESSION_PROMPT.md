@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: Quit nur maskiert (p3-Guard parkt tid1). main()=0x14010 kehrt <12 s zurueck, Main-Loop 146E8 lief 0 Iterationen: Task AFDFC0 = legitimer Boot-Check (strcmp BCES01893), kein Fehler. Flips ~5770 = Runtime-Ticker, Game zeichnet nicht (1 Draw, C1 FAIL). Letzter Commit: git log.
-Naechster Schritt: 1.22-Gegenstueck des 1.00-Game-Loops 0x568800 finden (Signatur aus work/bin/_t100.elf, Aufrufer AF9350-Tick/cb 0x16CD0C0-0x2F40; 1.00-Quelle `git show 6697a6d:<pfad>`, PORT_HOOKS.md). Wer haelt main auf HW nach 146E8 am Leben (Stufen 141E8/91E464/1414C, 10338->1096C->13FD0)? Statisch (xref.py/gdis.py), dann EIN Lauf mit Capture (-Seconds 90). Wenn Loop nie startet: fehlenden Starter/Hook portieren.
-Nicht wiederholen: AFDFC0/strcmp-Kette; AC746C-Wait-Skip; BFF0A0/BFF578/C1F4C8 harmlos; LEDGER Quit-Flag/IsExitGame.
-Laeuft noch: nichts. generated clean, Binary mit Diagnose -> zuerst scripts\build-all.ps1.
+Stand: Game-Loop 1.22 = 0x616C80 (tid30 via 6170AC, Tick 68FF84) LAEUFT, zeigt nur Legal/Logo (C1 FAIL, wie 1.00-Stand). main()-Rueckkehr legitim. Quit nur maskiert (p3-Guard). Letzter Commit: git log.
+Naechster Schritt: Tick 68FF84 (1.00-Gegenstueck 5C406C, Methodentabelle 145D0D4, Handler4 5B97A0 Jobliste vtbl+0x120==3) statisch auf 1.22 mappen (xref/gdis, SNAP_ELF=work/bin/_t100.elf fuer 1.00); Objekte = *(r28+0x1d4+4i), Done-Byte +0x96. Dann Snapshot+snap_walk.py: Zustand obj+0x88 und Jobliste. Wenn Jobs nie fertig: SPURS soc-job-Completion pruefen (1.00 Hyp. 45).
+Nicht wiederholen: AFDFC0/strcmp; AC746C-Wait-Skip; "Loop startet nie" (widerlegt); LEDGER Quit-Flag/IsExitGame.
+Laeuft noch: nichts. generated clean (Diagnose-Backup work/_bk_a7 nur Kopie), Binary traegt A7-Logs -> build-all.ps1 -Force nicht noetig, generated ist zurueckgespielt: Binary neu bauen.
 Lesen: STATE.md, PORT_HOOKS.md.
