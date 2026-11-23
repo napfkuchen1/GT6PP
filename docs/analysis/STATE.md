@@ -40,6 +40,7 @@ Hyp. setst (SETST/WAITST-Log in func_00A2EA5C/A2F290, work/_bk_022 = Backup): Ta
 Reihenfolge err-Log: BootProject -> PresentsRootSCEE -> dialog.mproject -> ConfirmDialog.gpb -> ProgressDialog.gpb -> Thread-Joins/Shutdown -> mpackages arcade/option/gtmode/garage/gtauto. Frames 90-97 schwarz.
 Offen: Was beendet den App-Run nach ProgressDialog? Naechster Schritt: Dialog-Script-Pfad (ProgressDialog/ConfirmDialog -> Rueckgabewert -> Quit?) statisch; RPCS3-Vergleich: laedt es dort dialog.mproject?
 Hyp. nodata (GT6_SAVE_NODATA=1 in cellSaveData.c, +fresh gamedata): AutoLoad2 GAME6/BKUP6 beide -4 -> echtes NODATA zurueck: KEIN AutoSave2, Quit identisch. Savedata-Rueckgabe NICHT Trigger.
+Hyp. loop135 (PPU_WWATCH 0x16CC8D0): tid30 Engine-Loop (8A7C6C, 135 Ticks) endet weil MAIN tid1 es loescht (8A6EDC <- 88F1BC Finalize-Kette 0x1496C), DANN Join tid30. Main entscheidet Quit.
 Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe nicht ab; PS3_HLE_TRACE_ARM=BD28FDBF (sceNpInit) greift nicht.
 
 ## Roadmap-Bezug
