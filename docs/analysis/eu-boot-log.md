@@ -762,3 +762,9 @@ Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot
 - WD bei 200/320 s identisch: ~20 Worker in sys_lwcond_wait (lr A4309C), tid1/2/3/5 nur lr. EVQSTAT: q4 pushed=205k, q5 64k (pending=3), q7 64k, q1 17k, q9 21k; kein Waiter-Stau.
 - NEU: `[null-write] wrote32 0 to NULL+0x40 by guest-fn A2FAD0` 4,55 Mio x in 340 s (~13k/s), dazu 2x NULL+0x18 by 88B450 beim Boot. A2FAD0 = "wake all" (vtable-Slot 7 Fiber-Thread-Klasse): Schleife ueber Listenknoten, stw 0,0x40(node->+8). Element-Pointer NULL -> Fiber-Liste hat NULL-Eintraege (verwandt mit Hyp. 83 NULL-Element).
 - CALLTRACE_TO=A2FAD0: Aufrufer lr=567DA4 = func_00567D74+0x2A4, tid=32 (Fiber-Run-Thread), r3=0x7FFBE280 r31=0x7FFD8E88. 567D74 hat einen direkten Aufrufer (6D5230); Rest ueber vtable.
+
+### Fiber-Liste Busyloop (2026-11-23, probes nwt/wk/ww2, build-v020 + Diag)
+- null-write tick: ~78M NULL+0x40-Writes/s von tid32 in A2FAD0, konstant 180+ s (nwt) -> Schleife laeuft praktisch dauernd, nicht 13k Aufrufe/s mit kurzer Schleife.
+- [WK]-Diag in Schleife: obj=7FFBE280 cnt=1, hdr(obj+0xC)=7FFFEDC0, hdr.next=0 -> r9=0, Null-Page liest 0, cmpw nie gleich -> Endlosschleife (PS3 wuerde crashen).
+- Mit PPU_WWATCH (Inline-Stores aus, Timing anders): Sentinel EDC0 sauber init (A2F638, tid1), Knoten EDD0 via A2FC54, KEIN Busyloop. Snapshot-Laeufe: Sentinel EDB0 sane, tid32 in lwcond_wait.
+- Fazit: Busyloop = Alloc/Race-abhaengiger Zusatzfehler (Sentinel nullt in manchen Laeufen); Spinner haengt auch in sauberem Regime -> NICHT Ursache der Ladephase.

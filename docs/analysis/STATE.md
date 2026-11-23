@@ -44,9 +44,9 @@ ERGEBNISSE 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, b
 - Spinner-Zustand (wd2/ct): Waiter alle idle, keine Event-Staus. NEU: wake-all A2FAD0 ~13k/s von tid32 (func_00567D74+0x2A4), Fiber-Listenknoten mit NULL-Element (NULL+0x40-Writes, 4,5M). Details eu-boot-log.md.
 
 - Fiber-Liste A/B (snap 200s, REALFLAG 0 vs 1): Obj 7FFBE280 count=1, Knoten-Payload nicht NULL, Struktur identisch -> NULL+0x40 kommt NICHT aus dieser Liste; REALFLAG ohne Einfluss.
+- Fiber-Busyloop: A2FAD0 laeuft 78M NULL-Writes/s, Sentinel obj+0xC hat next=0 (nur in manchen Laeufen, Alloc/Race); Snapshot/WWATCH-Laeufe sauber, Spinner auch dort -> nicht Ursache.
 
-## Naechster Schritt (EINER)
-A2FAD0-Aufrufe zaehlen je r3 (CALLTRACE_TO=A2FAD0), woher NULL-Payload-Liste; cellFiberPpu*-Rueckgaben loggen; danach Audit #1/#2.
+Audit #1/#2 (BgmPlaybackStatus/paramsfo gegen SDK), dann RPCS3-Vergleich: welche Syscalls/Files nach AdjustScreen fehlen in unserem Lauf.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
