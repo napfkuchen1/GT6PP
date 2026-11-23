@@ -95,6 +95,10 @@ if ($mingw) { $env:PATH = "$(Split-Path -Parent $mingw);$env:PATH" }
 
 # --- userdb archive (never delete) -----------------------------------------
 if (-not $KeepDb) {
+    # wait up to ~30 s for a still running gt6.exe (holds the userdb lock); never kill it
+    $waited = 0
+    while ((Get-Process gt6 -ErrorAction SilentlyContinue) -and $waited -lt 30) { Start-Sleep -Seconds 1; $waited++ }
+    if (Get-Process gt6 -ErrorAction SilentlyContinue) { Write-Host "ABORT: gt6.exe still running after 30 s (userdb locked). Not killing it. Retry later."; exit 2 }
     $dbDir = Join-Path $Root "work\gt6_hdd0\game\BCES01893\USRDIR\db"
     $arch = Join-Path $Root "work\ARCHIV"; New-Item -ItemType Directory -Force -Path $arch | Out-Null
     Get-ChildItem $dbDir -Filter "userdb*.dat" -ErrorAction SilentlyContinue | ForEach-Object {
