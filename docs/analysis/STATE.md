@@ -35,7 +35,7 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 100:** Hyp. 99 (1500s, Frame 20000) = weiter Logo+Spinner, nicht nur langsam. Worker-lwcond-Waiter (20 Threads idle): welches Signal fehlt? Snapshot threads.txt + lwcond-Adressen, Signaler per xref.
+**Hyp. 101:** Hyp. 100 (Snap 200s, work/snap_h100/threads.txt): Main tid1 haengt in cellFiberPpuWaitFlag (lr A4309C), Worker idle (lwcond), tid19 lwcond_destroy. Welches Flag (r-Args in threads.txt), wer setzt es (xref --field --rw w), warum nie? Mit REALFLAG=0 vergleichen.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
