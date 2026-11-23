@@ -40,7 +40,8 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 116: TLS-TID-Cache (A3046C) liefert pro r13 eindeutige ids (1,2,5,9..34) -> TID-Duplikat widerlegt. 1AAC8C/1AAD14 laufen JEDEN Frame (kein Wait/Teardown-Trigger) = normal.
 
 ## Naechster Schritt (EINER)
-**Hyp. 117:** Wer schreibt Muell in Elemente des Vektors (obj+0x17055c / 71E4455C)? Snapshot-Walk (snap_walk.py) vor X-Press vs danach: Vektor-Objekt-Adresse + Allokator (new/free) des Elem-Blocks; Heap-Reuse (use-after-free) pruefen.
+**Hyp. 117:** Iterator-Invalidierung? 88B878 cacht r31=begin (88B8B8), ruft 88B53C (mutiert evtl. Vektor/Elem, ruft 88B450) -> 88B53C ab 0x88B5E8 weiterlesen: erase/realloc des Vektors obj+0x17055c? Dann Muell-Elem erklaert.
+Danach (Strategiewechsel): Snapshot-Walk Vektor vor/nach X-Press statt Logs.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
