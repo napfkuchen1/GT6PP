@@ -49,7 +49,7 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 - Detektoren gegen Log-Reihenfolge pruefen, Treffer per Frame-Capture verifizieren (Falsch-Positiv: `arcade.mpackage` laedt in jedem Boot vor LanguageSelectRoot).
 
 ## Fallen (alle schon einmal passiert)
-- Einzige Linie: Game v1.22 + ps3recomp v0.20. Ein Build `gt6\build\gt6.exe` (`scripts\build-all.ps1`), kein Versionsschalter. 1.00 liegt archiviert in `ARCHIV/v100/` (`ARCHIV/HISTORIE.md`), nie bauen. **Vor jeder Hypothese `docs/analysis/LEDGER.md` lesen** (gesicherte Fakten, Fixes, Widerlegtes); neue gesicherte Erkenntnis dort 1 Zeile mit Beleg.
+- Einzige Linie: Game v1.22 + ps3recomp v0.20. Ein Build `gt6\build\gt6.exe` (`scripts\build-all.ps1`), kein Versionsschalter. 1.00 ist verworfen und geloescht (Historie: `ARCHIV/HISTORIE.md`), nie bauen. **Vor jeder Hypothese `docs/analysis/LEDGER.md` lesen** (gesicherte Fakten, Fixes, Widerlegtes); neue gesicherte Erkenntnis dort 1 Zeile mit Beleg.
 - `PAD_SCRIPT` strikt `<sek>:0x<hexmaske>` (CROSS=0x4000, DOWN=0x0040). Namen/ohne 0x ergeben 0/oktal. Im Log `press 0x....` pruefen.
 - `PS3_HEADLESS` ist Praesenz-Flag (auch `"0"`), verhindert RSX-Captures -> Variable entfernen.
 - `-Env`-Werte nie mit Komma (cap-gt6 trennt dort). In probe.ps1 ist Trenner `;`.
