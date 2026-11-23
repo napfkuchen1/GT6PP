@@ -39,7 +39,8 @@ Quit-Kette 1.22 (korrigiert): Hauptloop 0x146E8 endet wenn AD2998 !=0 = Byte 0x1
 AFDFC0/0x179ECF0-Struct = Titel-ID-Strcmp ("BCES01893"), NICHT der Quit-Weg (Alt-Annahme 0x1798F00 falsch).
 Hyp. fileBuf: Savedata-fileBuf = 0x901A0000/0x931C0000 (16 MB), kein Overlap mit 0x1796DC8 -> Savedata-HLE entlastet.
 Hyp. snap: SNAP_AT 6 s: Main (tid1) noch in INIT, wartet (lwcond) auf Task-Objekt 0x7FFCEE90; Stack A30028<-A7E6CC<-A521CC<-13D94(ctr)<-109C4. Ab 8 s schon Shutdown-Wait (while [0x1710E3C] usleep 5ms). Flag 0x1796DC8 in allen Snaps 0 -> Quit NICHT ueber Loop 146E8, Init-Wait bricht ab/Fehlerpfad.
-Naechster: Produzent des Tasks bei 0x7FFCEE90 finden (Vtable 0x15C3888, Future-Vtable 0x15C4360; xref auf Vtable-Ctor) + warum Wait bei ~7 s endet (Snap 7 s, Main-Stack gdis). tid30 lr=AD4344 laeuft (null-call-Notify AD4294).
+Hyp. nullist: tid30 AD4294 (Listener-Notify) kopiert Liste (AD3DFC), ruft je Knoten vcall, gibt Kopie frei; Knoten mit next=0 -> Endlosschleife NULL-read (HOTREAD, cia=OPD 16377C0=fn AF0B94). Liste kaputt/UAF.
+Naechster: Quelle der Liste (r4 an AD42CC) bestimmen, wer Knoten nullt/frei gibt; PPU_WWATCH auf Knoten. Dann warum Main-Init-Wait (7A0F40) endet. WWATCH-Hits stehen in run.log.err.
 Infra: probe.ps1 killt gt6 jetzt zusaetzlich per taskkill /T (hing in ppu_thread_join).
 
 ## Roadmap-Bezug
