@@ -17,3 +17,4 @@ Neu lokalisieren per Signatur/xref (scripts/xref.py, gdis.py); Beleg = Befehl/La
 | Mapper 1.00->1.22 | tools/map_funcs_122.py | 20 eindeutig (u.a. 9F8E40->AB080C, A12170->AD1670, A26510->AE6C34, B5A944->C1F604) | Rest "none": Code geaendert, anderes Matching noetig |
 | setjmp-Guards (add_setjmp_guards) | 16 Funktionen (scan, adressfrei) | 16 Funktionen | `scripts/post-lift-122.ps1`; Probe v122e: `depth overflow` 113 -> 0 |
 | Probe-Stand build-v122 (orig, 150 s) | Game-Loop ~9480 Flips | gleich, 0 unresolved, Frame 4200 schwarz | v122d/v122cap/v122e; Hooks (Script/BootPresents/Pump) noch nicht portiert; SPU-fp 1.22 ohne lifted image (5x) |
+| SPU | 16 Job-Images per fp-Scan, PM id5 byteidentisch @0x14DAA80, 1 Embedded-ELF @0x1346280; Ausgabe gen122 + gt6-122/generated/spu_lifted; CMake GT6_V122 schaltet GT6_SPU_GEN/LIFT | fertig, 0 MISS |

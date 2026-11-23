@@ -46,3 +46,5 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 ## 8. v1.22-Port (2026-11-23)
 - build-v122 = zweiter Kanon (`gt6\build-v122\gt6.exe`, `gt6-122/generated`, EMAIN work/bin122, 74935 Funcs). Probe: `-BuildDir build-v122`.
 - 1.22 memset-Duff + 6er-Switch (A2F158) brauchen manuelle Entries (add_computed_entries.py ... 122); ctor/setjmp relokiert (PORT_122). Beleg: v122b->v122d unresolved 6733->0.
+- 1.22 SPU: Job-Images sind Rohbereiche in EMAIN 1.22 (128-aligned, Header 4x-Worte 0x42/0x43..0x02/0x82); FNV-fp aus Laufzeitlog -> tools/find_spu_jobs_122.py. 16 von 20 bekannten 1.00/1.22-fps gefunden; WWS-PM fp 5510DCB8.. byteidentisch (Beleg: probe_v122g, 0 dispatch MISS).
+- 1.22 Spinner-Test (probe_v122fsv orig, probe_v122noadj noadj; PS3_VERBOSE=1): 30 PDIPFS-Opens, 0x PDIPFS/59, 0x Pamf -> kein Unterschied zu 1.00; Gast-Hooks fehlen aber (Frame 4200 schwarz), also nur Vorbefund.

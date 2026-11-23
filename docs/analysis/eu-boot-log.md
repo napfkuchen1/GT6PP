@@ -811,3 +811,10 @@ ERGEBNISSE 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, b
 - RPCS3 ZBm9Y IsLoaded(0x38)-Poll (1857x) laeuft dort auch bis Session-Ende: kein Unterschied zu uns.
 - VERSION: RPCS3-USRDIR EMAIN.SELF 9209104 B / EBOOT.BIN 165712 B / Daten GT6_1.N (gepatcht, Update). Unsere Basis work/bin: EMAIN 8843160 B / EBOOT 72920 B / GT6.N. Oracle ist also Update-Stand, nicht Disc-Basis.
 - Offen: lwcond-Adresse + Signaler von tid 32 ermitteln; pruefen ob Basis-EMAIN den 59/FI-Request kennt.
+
+## STATE-Archiv 2026-11-23 (1.22-Abschaetzung)
+- ABSCHAETZUNG Recomp Patch-EMAIN 1.22 (RPCS3 EMAIN.SELF 9209104 B; FIXEDELF114 = 1.14, 9059040 B), NICHT gestartet, User entscheidet:
+  1) SELF->ELF: gt6/scripts/decrypt_self.py braucht pycryptodome (fehlt) + Keys/RAP; ELF liegt dann als work/patchelf/. Aufwand ~1-2 h, Risiko Keys.
+  2) Lift + Gen (relift-gt6/gen-functions-gt6, ~1 h Rechenzeit) und Neu-Build ~2 min; alle Adress-Patches/Guards (H113 A25C64, boot.adc-Gates) neu portieren: 0,5-1 Tag. Gesamt ~1-2 Tage.
+
+
