@@ -42,3 +42,4 @@ Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
+Hook-Inventur: docs/analysis/PORT_HOOKS.md. Boot-tragende Hooks aktiv in 1.22; offene (b5b260/ZWAP/SPURS/a3) liegen NACH Quit-Punkt, cellMusicInit2 nie gerufen -> Portieren allein loest Quit nicht.
