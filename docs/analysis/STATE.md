@@ -12,12 +12,13 @@ Schicht fuer Schicht, 1.00-Referenz `git show 6697a6d:<pfad>` -> Hooks nach 1.22
 Baseline-Probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; `-Boot orig|noadj|notut` nie parallel mischen (boot.adc geteilt).
 
 ## Stand
-- Quit ~30 s GELOEST: FileDeviceHost-Flush-Guard portiert (p3, AC7418/AC75B0); 90 s ~5770 Flips, kein Teardown. `GT6_NO_FDFLUSH=1` = altes Verhalten.
+- Quit NUR MASKIERT (Arbeit6): p3-Guard parkt tid1 im Shutdown (AC7418 Event-Wait AC746C, WD@60s). Skip der Wait -> Teardown bei ~98 Flips. Game-Threads laufen weiter.
+- main()=0x14010: alle Stufen laufen, IsExitGame(AD2998)=0 immer. BFF0A0 (Stufe 1414C) ist nur Init-Launcher (malloc ok, C1F4C8=Alloc 0x6000, BFF578=Setup-Stub), returnt SOFORT r3=0 (~Z.460 im Log, vor MenuClassDefine-Loads). tid1 steht bei WD@12s schon im Shutdown-Wait (13FD0 Finalizer) -> main() kehrt <12 s zurueck, Game laeuft in tid3/Workern weiter.
 - C1 FAIL: Capture Frame 3500 schwarz (1 Draw, 0 nonblack). b5b260 Cache-Fill (p4) portiert, kein Effekt, kein 59/FI-Open.
 - Binary traegt noch Diagnose (022/023 generated sind clean, Diagnose in work/_bk_*): vor Baseline `scripts\build-all.ps1`.
 
 ## Naechster Schritt
-Warum nur 1 Draw / kein 59/FI-Open / cellMusicInitialize2 nie gerufen: statisch Aufrufer-Baum (xref.py --call, gdis.py), dann EIN Lauf.
+Welche main()-Stufe (0x14010: 14230,148B4,1416C,147BC,13DE4,143E8,146E8,141E8,91E464) blockiert auf echter HW (Game-Loop) und returnt bei uns sofort? Statisch Stufen lesen (gdis), Ergebnis-Rueckgaben: 143E8=40010010, 141E8=71f320a2, 146E8=1. Danach EIN Lauf. generated clean (Backups work/_bk_fdwait).
 Offene Hook-Anker: PackageNullGuard 5F81B0 (1.22-Anker per Signatur aus work/bin/_t100.elf), H113 A25C64 (kein 1.00-Code im git -> verwerfen). Danach SPURS-Walker, a3, AdjustScreen REALFLAG, ZWAP.
 
 ## Widerlegt / Symptom (nicht wiederholen)

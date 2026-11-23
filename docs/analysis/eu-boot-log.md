@@ -230,3 +230,5 @@ boot_adc.txt: processPatch nur wenn MNetworkInterface.isUp && LoginUtil.isOnline
 - initUserDB nie erreicht (kein Open userdb0101.dat in run.log/.err). Quit direkt nach LOAD complete GAME6 (GT6.0-5 gelesen: 305/23057/9005/1183/36/36 B), dann NP2 IsLoaded + sysutil UnregisterCallback, Teardown.
 - Pfad statisch: SaveDataUtil.load(AUTO) -> openProgressDialog (ProgressDialog.open: DialogFrame.appear, func(args)) -> _load -> sutil.load native (bindCheck) -> _autoLoadGameCallback.
 - CALLTRACE_FROM=9EEA88/9F0748 (AFTER 3/22): 0 Calls; Adressen aus 1.00-Zeit. Probes vmA-vmE in work/.
+
+- 2026-11-23 Arbeit6: Quit nur maskiert. WD@60s tid1 in AC7418+0x54 (Event-Wait AE27AC, obj+0x1ad8) via 13FD0 Finalizer. GT6_SKIP_FDWAIT-Test (AC746C) -> Teardown 98 Flips. MAINSTAGE-Log: alle 9 Stufen von 0x14010 laufen, AD2998=0. BFF0A0 returnt sofort (malloc10 ok, C1F4C8=0). WD@12s tid1 bereits im Finalizer.
