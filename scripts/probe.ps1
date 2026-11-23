@@ -196,5 +196,7 @@ foreach ($r in $runs) {
     if ($status -ne "OK") { $bad++ }
     Write-Host ("run {0}: {1} boot={7} unresolved={2} {3}{4} {5}  -> {6}" -f $r.I, $status, $unres, $dlg, $stat, ($why -join "; "), $r.Dir, $BootName)
 }
+$PyExe = Join-Path $env:USERPROFILE "AppData\Local\Programs\Python\Python313\python.exe"
+foreach ($r in $runs) { if (Test-Path $PyExe) { & $PyExe -I (Join-Path $PSScriptRoot "checkpoints.py") $r.Dir } }
 if ($bad) { Write-Host "WARNING: $bad run(s) INVALID - do not draw conclusions from them."; exit 1 }
 Write-Host "All runs valid. Logs: work\probe_${Name}_${Ts}_*"

@@ -49,3 +49,42 @@ for p in sorted(root.glob("ppu_recomp_*.cpp")):
         p.write_text(s, encoding="latin-1"); n += 1
 want = set(STREAM) | set(GUARDED) | {OPEN}
 print("files patched", n, "hooks present", len(done & want), "/", len(want), "missing", sorted(want - done))
+
+# ---- part 2: script hooks + menu pump (1.00 origin in comments; fuzzy map 2026-11-23) ----
+DECL2 = (
+    'extern "C" void gt6_script_path_hint(uint32_t reader_ea, uint32_t str_ea);\n'
+    'extern "C" int gt6_script_read_override(ppu_context* ctx);\n'
+    'extern "C" int gt6_script_seek_override(ppu_context* ctx);\n'
+    'extern "C" void gt6_menu_project_request(ppu_context* ctx);\n'
+    'extern "C" void gt6_menu_project_tick(ppu_context* ctx, uint32_t worker_arg);\n'
+    'extern "C" void gt6_menu_project_sync_pump(ppu_context* ctx);\n')
+ENTRY = {  # 1.22 func -> hook right after PPU_MM_SNAP
+    "00A67E1C": "if (gt6_script_read_override(ctx)) return;\n",  # 9BB020
+    "00A67F60": "gt6_script_path_hint((uint32_t)ctx->gpr[3], (uint32_t)ctx->gpr[4]);\n",  # 9BB11C
+    "00A67DC4": "if (gt6_script_seek_override(ctx)) return;\n",  # 9BAFE0 (match .42, neighbour order ok)
+    "006171D0": "gt6_menu_project_request(ctx);\n",  # 568C94 MGOM.start pending-project setter
+}
+SYNC_SITE = "        ctx->lr = 0x00617218; func_00AE2844(ctx);"  # 568CCC A21D50 wait
+SYNC_CALL = "        gt6_menu_project_sync_pump(ctx);\n"
+PUMP_LABEL = "loc_00AD16AC:\n"  # A12170 loop label loc_00A121AC (worker idle loop)
+PUMP_CALL = "        gt6_menu_project_tick(ctx, (uint32_t)ctx->gpr[25]);\n"
+done2 = set()
+for p in sorted(root.glob("ppu_recomp_*.cpp")):
+    s = p.read_text(encoding="latin-1"); o = s
+    if INC in s and "gt6_script_read_override" not in s:
+        s = s.replace(INC, INC + DECL2, 1)
+    for name, hook in ENTRY.items():
+        key = f"void func_{name}(ppu_context* ctx) {{\n    PPU_MM_SNAP\n"
+        if key in s:
+            done2.add(name)
+            if (key + "        " + hook) not in s:
+                s = s.replace(key, key + "        " + hook, 1)
+    if SYNC_SITE in s:
+        done2.add("sync")
+        if SYNC_CALL + SYNC_SITE not in s: s = s.replace(SYNC_SITE, SYNC_CALL + SYNC_SITE, 1)
+    if s.count(PUMP_LABEL) == 1:
+        done2.add("pump")
+        if PUMP_LABEL + PUMP_CALL not in s: s = s.replace(PUMP_LABEL, PUMP_LABEL + PUMP_CALL, 1)
+    if s != o:
+        p.write_text(s, encoding="latin-1")
+print("part2 hooks present", len(done2), "/", len(ENTRY) + 2, "missing", sorted((set(ENTRY) | {"sync", "pump"}) - done2))

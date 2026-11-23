@@ -18,3 +18,6 @@ C6 Menue: gtmode-Hauptmenue-Frame
 ## Lauf-Tabelle (neueste unten; Spalten: Datum | Commit | Linie | Boot | C0 C1 C2 C3 C4 C5 C6 | Lauf-Ordner | Notiz)
 2026-11-23 | 44085a5 | 1.00 | orig | ok ok ok ok ok -- -- | (Live user, work/padlog_20261123_104620.txt) | Referenz, Spinner = Hang
 2026-11-23 | a2b97c2 | 1.22 | noadj | ok FAIL - - - - - | probe_hk122 | schwarz, Script-Hooks/Menue-Pump fehlen -> REGRESSION ggue. Referenz
+2026-11-23 | ee62bbc | 1.22 | noadj | ok FAIL - - - - - | probe_lang122_20261123_161107_1 | non-black=n/a lang=en-gb
+2026-11-23 | ee62bbc | 1.22 | orig | ok FAIL - - - - - | probe_pump122_20261123_161949_1 | non-black=0%
+2026-11-23 | ee62bbc | 1.22 | orig | FAIL - - - - - - | probe_pump2_20261123_162746_1 | non-black=n/a lang=en-gb

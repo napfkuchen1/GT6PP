@@ -18,3 +18,14 @@ Neu lokalisieren per Signatur/xref (scripts/xref.py, gdis.py); Beleg = Befehl/La
 | setjmp-Guards (add_setjmp_guards) | 16 Funktionen (scan, adressfrei) | 16 Funktionen | `scripts/post-lift-122.ps1`; Probe v122e: `depth overflow` 113 -> 0 |
 | Probe-Stand build-v122 (orig, 150 s) | Game-Loop ~9480 Flips | gleich, 0 unresolved, Frame 4200 schwarz | v122d/v122cap/v122e; Hooks (Script/BootPresents/Pump) noch nicht portiert; SPU-fp 1.22 ohne lifted image (5x) |
 | SPU | 16 Job-Images per fp-Scan, PM id5 byteidentisch @0x14DAA80, 1 Embedded-ELF @0x1346280; Ausgabe gen122 + gt6-122/generated/spu_lifted; CMake GT6_V122 schaltet GT6_SPU_GEN/LIFT | fertig, 0 MISS |
+
+## Minimalmenge fuer C2 (AdjustScreen), Stand 2026-11-23
+Aus ref-1.00-adjust-ok (tools/apply_gt6_post_lift.py): setjmp-Guards, Script-Hooks (main.adc-Override), PFS-Stream/FileDevice/Host-Open, Menue-Pump, Sync-Pump, boot.adc-Gates.
+| Hook | 1.00 | 1.22 (Fuzzy) | Status |
+|---|---|---|---|
+| Script read/path/seek | 9BB020/9BB11C/9BAFE0 | A67E1C(.71)/A67F60(.82)/A67DC4(.42) | tools/port_hooks.py part2 |
+| MGOM.start Request | 568C94 | 6171D0 (Form+0x48 passt) | part2 |
+| Sync-Pump vor Wait | 568CCC (A21D50) | 617218 (AE2844) | part2 |
+| Worker-Pump Loop | A121AC in A12170 | AD16AC in AD1670 (1.0) | part2 |
+| processEventLoop | 568658 | 616D58 (.82) | stubs.cpp gt6_menu_project_tick |
+| Offen/ungeklaert | PackageNullGuard 5F81B0, FileDeviceHost-Flush A08A74/A08B8C, Boot-Presents (nur Trace) | - | nicht portiert |
