@@ -2,7 +2,13 @@
 
 Projekt: Gran Turismo 6 (EU, BCES01893) als static recomp auf Windows. Ziel aktuell: Hauptmenue.
 Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
-**Einstieg: `docs/analysis/STATE.md` lesen** (Baseline, Hypothesen-Tabelle, naechster Schritt). Aeltere Logs (`eu-boot-log.md`, `CONTINUE-HERE.md`, `HANDOFF.md`, `work/MENU_RUN_NOTES.md`) sind nur Detail-Nachschlagewerk.
+**Einstieg (Kontext-Budget, Fenster 200k): nur `docs/analysis/NEXT_SESSION_PROMPT.md` + `STATE.md` lesen** (zusammen <=6 KB). `LEDGER.md`/`PROGRESS.md`/`LESSONS_GT5P.md`/`PORT.md` NICHT komplett laden, nur per `grep` gezielt (Fakt/Tabellenende `Select -Last 5`). Aeltere Logs (`eu-boot-log.md`, `CONTINUE-HERE.md`, `HANDOFF.md`, `work/MENU_RUN_NOTES.md`) nur Nachschlagewerk. Nie ganze Skripte (probe.ps1 18 KB) lesen, nur Zeilenbereiche.
+
+## Kontext-Hygiene (hart)
+- Nach jedem Probe-Batch und alle ~15 Tool-Calls: `python scripts/ctxwatch.py` (schaetzt Kontext aus dem Transcript). Ausgabe `HANDOFF` (>=110k) -> sofort Uebergabe, kein neuer Batch.
+- Uebergabe = (1) STATE.md Aktive Kette/Naechster Schritt aktuell, (2) `NEXT_SESSION_PROMPT.md` nach Vorlage unten, (3) lokal committen, (4) Turn mit `STOP-GRUND: UEBERGABE`. Der Ueberwacher startet dann eine NEUE Session; nie `/compact` oder Weiterarbeiten im vollen Fenster.
+- Vorlage NEXT_SESSION_PROMPT (<=1,5 KB, genau diese Felder): `Ziel` (1 Satz) | `Stand` (letzter Commit, letzte PROGRESS-Zeile) | `Naechster Schritt` (konkreter Befehl/Datei, Entscheidungsregel wenn X dann Y) | `Nicht wiederholen` (Verweis LEDGER §4, max. 3 neue Punkte) | `Laeuft noch` (Prozesse/Hintergrund, sonst "nichts") | `Lesen` (max. 3 Dateien).
+- Tool-Ausgaben immer begrenzen (`| Select -First 40`, `loganalyze.py`); grosse Auswertung an Subagent.
 
 ## Arbeitsweise
 - **Im Haupt-Checkout arbeiten** (`%USERPROFILE%\Downloads\Games\GT6\ClaudeCode\GT6PP`, Branch `eu-first-build`), NICHT im Worktree: Worktrees haben kein `work/` (45 GB), keinen Build, keine Disc, und Edit/Write-Hooks blockieren dort Haupt-Pfade. Laeuft die Session doch im Worktree: Dateien per PowerShell schreiben.
