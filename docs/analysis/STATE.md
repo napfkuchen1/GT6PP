@@ -35,10 +35,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 104: A21CBC/A21D50 = Thread-Run-Wrapper, keine Wartebedingung. Tasten START/CIRCLE/TRI/SQ 165-255s: Lauf ok, Frame 9000 in 300s nicht erreicht -> Wirkung unbekannt.
 - Hyp. 105: Frame 4200 = AdjustScreen (frueh, nutzlos). orig+X: Exit exakt bei 1. X-Press (80s h104, 86s h105b) in 2 von 4 Laeufen = gleicher Exit wie noadj (A25C64). Loading-"Haenger" evtl. nur Ueberlebende.
 - Hyp. 106: Exit-Laeufe (h104, h105b) haben je 3x "SPU program with no lifted image" (soc-job, size 34704/53280/64912, fp weicht von registrierten ab); Survivor-Laeufe (h104b/h105/h106b) 0 MISS -> Image-Inhalt race-abhaengig?
+- Hyp. 107: MISS-Image (fp 68FDB056..) ist komplett 0x00; registriertes F523F26F liegt statisch im ELF-Seg1 @0x139D280 (eaBinary). Survivor: Bytes ok. Exit-Lauf: Speicher schon genullt = Folge des Wipes (Hyp. 83), kein SPU-Lift-Problem.
 - user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 107:** MISS-Image dumpen: `-Parallel 4`, Pad X 85/105/125, `SPU_DUMP_MISS=work/spu_dump_h107` (Pfad absolut!) bis ein Lauf MISS hat; Dump vs `work/ARCHIV/spu_dump.pre-extract/spujob_CB9BD024..._53280.bin` byteweise diffen -> var_off/var_len -> `spu_workload_register_img_masked` (spu_raw.c:365 nutzt find_img_masked).
+**Hyp. 108:** Wipe (A25C64 vector.clear, NULL-Element) passiert in ~50% der Laeufe beim 1. X-Press (race). `-Parallel 4`, Pad X 85s, `PS3_SNAP_AT=84` je Lauf (vor X): Zeigervektor 71E4455C in Exit- vs Survivor-Lauf per snap_walk/snap_diff vergleichen -> wer fuellt das NULL-Element?
 (Hyp. 101-103: Main-WaitFlag = Timed-Sleep, KEIN Haenger. Main-Stack 6C54DC>9C6184>... Script-VM.)
 
 ## Roadmap-Bezug
