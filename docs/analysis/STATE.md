@@ -31,13 +31,13 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 48a: Captures: noadj 4200+9000 = dunkles Logo+Spinner, orig 4200+6000(+CROSS-Pad) = AdjustScreen, Pad bleibt wirkungslos. orig erreicht Frame 9000 nicht in 600 s.
 - Hyp. 48c: AdjustScreen-Blaurechteck = obere rechte Quadrant 480-912x27-270 (960er Bild), Farbe wie Ecken-Marker. SCREEN_AS_TEX=0 (probe_h49nosct) aendert nichts -> Screen-Copy-Hijack widerlegt.
 - Hyp. 49: v0.20-SDK (build-v020, orig 4200, probe_h49v020orig) rendert AdjustScreen FEHLERFREI (4 Eck-Marker, Pfeile, kein Blaurechteck) = Render-Bug war SDK-Backend, in v0.20 behoben.
-- Hyp. 50: userdb bringt nichts (alle Archive 44871 Nicht-Null-Bytes). PAD_SCRIPT feuert (CROSS/UP/DOWN/CIRCLE, v020, orig, Frame 6000), AdjustScreen reagiert nicht, Marker bewegen sich nicht.
+- Hyp. 50 (wiederholt h52pad, gueltig): Presses 75-115 s UP/DOWN/CROSS, Capture Frame 9000 bei ~162 s = weiter AdjustScreen, Marker unbewegt. Pad feuert, Screen reagiert nicht. userdb irrelevant.
 - Hyp. 51: einziger Guest-Aufrufer cellPadGetData = A39F00 (Pad-Manager, Poll-Funktion ab ~A39EE0, Puffer r21+0xa0+port*0x84). Validitaetscheck button[1]>>4==7 passt (Runtime setzt 0x70|len/2).
 - SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
 - Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
 
 ## Naechster Schritt (EINER)
-**Hyp. 52:** Pad-Manager-Objekt (r21 in A39EE0..A3A418) im Snapshot (PS3_SNAP_AT, snap_walk.py) pruefen: Puffer+0xa0 enthaelt gedrueckte Bits? Wer liest die Ausgabe (Stack 0xbf, Folge ab A3A004)? Parallel: users Dialog-Weg (Frage an Peer gesendet, Antwort steht aus).
+**Hyp. 52:** Wer verarbeitet Pad-Puffer r22+8/+0xa (DIGITAL1/2) nach A39F70 -> A3A004? Statisch (gdis/xref) Folge der Pad-Manager-Ausgabe bis AdjustScreen-Handler; Snapshot nur falls noetig.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
