@@ -88,3 +88,49 @@ for p in sorted(root.glob("ppu_recomp_*.cpp")):
     if s != o:
         p.write_text(s, encoding="latin-1")
 print("part2 hooks present", len(done2), "/", len(ENTRY) + 2, "missing", sorted((set(ENTRY) | {"sync", "pump"}) - done2))
+
+# ---- part 3: FileDeviceHost flush guard (1.00 A08A00 -> 1.22 AC7418, Flush A08B8C -> AC75B0; fuzzy 2026-11-23) ----
+# Runtime off-switch: env GT6_NO_FDFLUSH=1 (checked at call time).
+INIT_ANCHOR = "        ctx->lr = 0x00AC74DC; func_00AAA8EC(ctx); DRAIN_TRAMPOLINE(ctx);\n"
+INIT_CLEAR = "        if (!getenv(\"GT6_NO_FDFLUSH\")) vm_write32(ctx->gpr[29] + 0x1C2C, 0); /* local stream destroyed */\n"
+FLUSH_KEY = "void func_00AC75B0(ppu_context* ctx) {\n    PPU_MM_SNAP\n"
+FLUSH_GUARD = "        if (!getenv(\"GT6_NO_FDFLUSH\") && vm_read8(ctx->gpr[3] + 0x1C29) == 0) return; /* no read active */\n"
+done3 = set()
+for p in sorted(root.glob("ppu_recomp_*.cpp")):
+    s = p.read_text(encoding="latin-1"); o = s
+    if "void func_00AC7418(" in s and INIT_ANCHOR in s:
+        done3.add("init")
+        if INIT_ANCHOR + INIT_CLEAR not in s: s = s.replace(INIT_ANCHOR, INIT_ANCHOR + INIT_CLEAR, 1)
+    if FLUSH_KEY in s:
+        done3.add("flush")
+        if FLUSH_KEY + FLUSH_GUARD not in s: s = s.replace(FLUSH_KEY, FLUSH_KEY + FLUSH_GUARD, 1)
+    if s != o:
+        if "<stdlib.h>" not in s and "<cstdlib>" not in s: s = s.replace(INC, INC + "#include <stdlib.h>\n", 1)
+        p.write_text(s, encoding="latin-1")
+print("part3 hooks present", sorted(done3), "/ init,flush")
+
+# ---- part 4: file-cache fill (1.00 func_00B5B260 -> 1.22 func_00C1FE74; fuzzy by A26510->AE6C34, B5A944->C1F604, F7666C->109DCA8) ----
+# Env off-switch GT6_NO_CACHEFILL=1. Anchor: after AE6C34 result test, success path jumps to loc_00C20488.
+FN4 = "void func_00C1FE74(ppu_context* ctx)"
+CALL4 = "ctx->lr = 0x00C2036C; func_00AE6C34(ctx); DRAIN_TRAMPOLINE(ctx);"
+BR4 = "if ((!((ctx->cr >> 1) & 1))) goto loc_00C20488;"
+FILL4 = ("        if (!getenv(\"GT6_NO_CACHEFILL\")) { uint32_t _o=(uint32_t)ctx->gpr[31]; uint32_t _b=vm_read32(_o+0x28); uint32_t _s=vm_read32(_o+0x30);\n"
+         "          if(_b && _s){\n"
+         "            ctx->gpr[3]=_o; ctx->gpr[4]=0; ctx->lr=0x00C20374; func_00C1F604(ctx); DRAIN_TRAMPOLINE(ctx);\n"
+         "            ctx->gpr[3]=_o; ctx->gpr[4]=_b; ctx->gpr[5]=_s; ctx->lr=0x00C20374; func_0109DCA8(ctx); DRAIN_TRAMPOLINE(ctx);\n"
+         "          } }\n")
+n4 = 0
+for p in sorted(root.glob("ppu_recomp_*.cpp")):
+    s = p.read_text(encoding="latin-1")
+    a = s.find(FN4)
+    if a < 0: continue
+    e = s.find("\nvoid func_", a + 20); e = len(s) if e < 0 else e
+    body = s[a:e]
+    if "GT6_NO_CACHEFILL" in body: print("part4 already"); continue
+    c = body.find(CALL4); b = body.find(BR4, c) if c >= 0 else -1
+    if b < 0: print("part4 anchors missing"); continue
+    nb = body[:b] + FILL4.lstrip() + "        " + body[b:]
+    s = s[:a] + nb + s[e:]
+    if "<stdlib.h>" not in s: s = s.replace(INC, INC + "#include <stdlib.h>\n", 1)
+    p.write_text(s, encoding="latin-1"); n4 += 1
+print("part4 patched", n4)
