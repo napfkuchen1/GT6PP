@@ -34,13 +34,12 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Basis-EMAIN (work/bin, 8843160 B) statisch: Movie-Code (tv_*.pam, cellPamf/Dmux/Vdec/Sail), PDIPFSNetworkPatch*, MSystemPatch vorhanden. Kein UPDATENODEINFO/PATCHSEQUENCE.
 - Basis nutzt /APP_DATA/%s.%d (GT6.N), GT6_1.N nur im Update-EMAIN. Stack-Walk tid 32 (snap_rf1) nur Altlasten; lwcond-Signaler offen.
 ## Naechster Schritt
-Hyp. guard/freeloop: tid30-Spin = Free-Loop AD4334 (Kopie-Liste next=0); Guards (tools/guard_notify.py, guard_free.py) beheben Spin, Gast-Quit ~30 s bleibt -> Spin ist SYMPTOM. Quit-Flag 0x1796DC8 nie gesetzt (LEDGER).
-Hyp. rv: A7E044/A7E6BC/A52140 liefern 1; Run-Methode 13D90 kehrt normal zurueck (kein Fehlerpfad) -> 13FFC Term -> Shutdown-Wait 90DC1C. Details eu-boot-log.md.
-Main (tid1) wartet in A52140->A7E6BC auf Task 0x7FFCEE90; Job 0x7FFCEE70 (tid30): 6166A4 = AD4294 + vt-Slot 0x154 (6C6BC8 -> obj+0x9d8 vslot 0xC). Job endet -> Main faehrt runter.
-Hyp. job9d8: obj+0x9d8=0 (nur Ctor) -> Slot 0x154 No-op; Job = Notify, endet normal. Listener 'processEventLoop' (Thread-Obj 0x701F80F0). Wait A30028 pollt A2F290 (0/1/3=fertig).
-Hyp. submit: Job = Script-VM-Task (Reflection-Factory 7A05D8). Hyp. npterm: sceNp Term (Stub 10BBF28) nur Cleanup in Wrapper AF9780 (Init->Op->Term, Aufrufer 11A94) = KEIN Exit-Trigger.
-Naechster Schritt: wer beendet Main-Wait frueher als erwartet? Task 0x7FFCEE90-Zustand (A2F290) im Snapshot 6 s vs Ende; Script-VM-Task 'initialize'/'finalize' (7A0900): wird finalize statt langlaufender Task gestartet? GT5P-Vergleich.
-Infra: probe.ps1 killt gt6 jetzt zusaetzlich per taskkill /T (hing in ppu_thread_join).
+Befund (Hyp. noguard/freshsave/npop, 2026-11-23): Quit (~10 Flips nach "LOAD complete" -> MapEa 0x72400000 -> sceNp Term -> Pad End) tritt AUCH ohne Notify/Free-Guards und AUCH mit leerem Savedata (PS3_GAMEDATA_ROOT) auf.
+-> Job-Ende, Savedata-Inhalt, NP-Wrapper (AF9780, Ergebnis von 11A94 verworfen) sind NICHT der Trigger. 0x7FFCEE90 ist Stack-Slot (Lock-Muster B038FC/B039AC, von tid1/tid27 wiederverwendet), kein stabiles Task-Objekt.
+Hyp. setst (SETST/WAITST-Log in func_00A2EA5C/A2F290, work/_bk_022 = Backup): Task-Zustandsmaschine (0x28: 1 start, 2 run, 3 done) laeuft normal, keine Anomalie vor dem Quit.
+Reihenfolge err-Log: BootProject -> PresentsRootSCEE -> dialog.mproject -> ConfirmDialog.gpb -> ProgressDialog.gpb -> Thread-Joins/Shutdown -> mpackages arcade/option/gtmode/garage/gtauto. Frames 90-97 schwarz.
+Offen: Was beendet den App-Run nach ProgressDialog? Naechster Schritt: Dialog-Script-Pfad (ProgressDialog/ConfirmDialog -> Rueckgabewert -> Quit?) statisch; RPCS3-Vergleich: laedt es dort dialog.mproject?
+Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe nicht ab; PS3_HLE_TRACE_ARM=BD28FDBF (sceNpInit) greift nicht.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
