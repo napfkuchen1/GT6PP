@@ -46,8 +46,11 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 83: Ursache Exit: GT6_GUARD=14E4000:14E4848 zeigt A25C64 (vector<u64>.clear) aus 88B8E0 (Loop ueber Zeigervektor r30=71E4455C, Elem NULL -> obj+0x2C=0x2C).
   Clear liest begin/end aus Lowmem (0x34/0x38)=14E4000/0 -> zeroed 14E4000..FFFFFFF0 (OPD-Tabelle weg, Absturz). Vektor enthaelt NULL-Element; Quelle unbekannt (Race?).
 
+- Hyp. 84/85: Vektor-Puffer/Header per GUARD nicht fassbar (Heap-Adressen wandern, Header nie neu geschrieben). 88B878 = Frame-Update-Kette (802004>1AE7CC>..>7D083C>7CD628), kein Teardown.
+- Hyp. 86: Prozess-Affinitaet 1 Kern (work/_aff.ps1, 3 Laeufe noadj): Exit IMMER bei 52 s (3/3) = deterministisch reproduzierbar, Logik-/Zeitfehler, kein reines Data-Race.
+
 ## Naechster Schritt (EINER)
-**Hyp. 84:** Wer pusht NULL in Vektor (Container-Obj 71E44558, Fn 88B878 Loop 88B8B8)? Pusher per xref/gdis (Cls-vt) finden; GT6_GUARD auf Vektor-Puffer. GUARD-Muster: probe -Env GT6_GUARD=<page>:<arm>.
+**Hyp. 87:** Pinned-Lauf (work/_aff.ps1) ist deterministisch -> Heap-Adressen stabil. GT6_GUARD auf Vektor-Elementpuffer/NULL-Quelle im pinned Lauf; erster null-call: tid 18 lr 817F20 (r12=48000048).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
