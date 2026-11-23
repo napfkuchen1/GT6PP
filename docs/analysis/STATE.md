@@ -34,6 +34,7 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 50 (wiederholt h52pad, gueltig): Presses 75-115 s UP/DOWN/CROSS, Capture Frame 9000 bei ~162 s = weiter AdjustScreen, Marker unbewegt. Pad feuert, Screen reagiert nicht. userdb irrelevant.
 - Hyp. 51: einziger Guest-Aufrufer cellPadGetData = A39F00 (Pad-Manager, Poll-Funktion ab ~A39EE0, Puffer r21+0xa0+port*0x84). Validitaetscheck button[1]>>4==7 passt (Runtime setzt 0x70|len/2).
 - Hyp. 53: noadj + CROSS-Presses 60-140 s, Frame 9000: weiter black 99,5 % (Logo+Spinner) = Pad aendert nichts am noadj-Zustand.
+- Hyp. 54: noadj 580 s ohne Pad: Frame 18000 nicht erreicht (~14k Flips). IsLoaded(NP2) 19681x gepollt, NP2 geladen = nur Per-Frame-Check, kein Haenger-Indiz.
 - SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
 - Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
 
