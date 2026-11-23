@@ -1,2 +1,2 @@
-# Naechste Session GT6PP (Stand Hyp. 107)
-Lies `docs/analysis/STATE.md`, dann CLAUDE.md-Regeln. Weiter mit Hyp. 108: Wipe (A25C64) beim 1. X-Press race (~50%); Zeigervektor 71E4455C vor X (SNAP_AT=84, -Parallel 4) Exit vs Survivor vergleichen. Befund: SPU-MISS ist nur Folge des Wipes.
+# Naechste Session GT6PP (Stand Hyp. 108)
+Lies `docs/analysis/STATE.md`, dann CLAUDE.md-Regeln. Weiter mit Hyp. 109: Exit-Lauf (Standard-Env, X 85s, ~50% Exit) mit PS3_CALLTRACE_TO=0x88B8E0 CALLTRACE_AFTER=60 -> Aufrufer des Wipes. Snapshots stoeren das Timing (kein Exit). Siehe STATE.md.
