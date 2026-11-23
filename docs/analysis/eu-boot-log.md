@@ -818,3 +818,8 @@ ERGEBNISSE 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, b
   2) Lift + Gen (relift-gt6/gen-functions-gt6, ~1 h Rechenzeit) und Neu-Build ~2 min; alle Adress-Patches/Guards (H113 A25C64, boot.adc-Gates) neu portieren: 0,5-1 Tag. Gesamt ~1-2 Tage.
 
 
+
+## STATE-Archiv 2026-11-23 (1.22-Port-Schritte)
+- 1.22-Recomp Schritt 1 FERTIG: work/bin122/EMAIN.elf (23787792 B) per tools/self_decrypt_np.py, Klic aus RPCS3-Log; 1.00-Selbsttest identisch. Naechster: Diff 1.00/1.22, Lift in generated122.
+- 1.22 Lift+Build: gt6-122/generated (74914 Funcs, code-end 0x10B8154), build-v122 linkt (GT6_V122-Guard stubs.cpp), ctor 0x1183C/lr 0x11880, setjmp C61F88/longjmp C620AC gepatcht. Probe v122b laeuft.
+- 1.22 build-v122: memset/switch-Entries + setjmp-Guards (scripts/post-lift-122.ps1) -> 0 unresolved, 0 setjmp-overflow, ~9480 Flips/150 s; Frame 4200 schwarz (Hooks fehlen).

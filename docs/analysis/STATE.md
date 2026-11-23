@@ -33,13 +33,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - VERSIONS-DIVERGENZ: RPCS3 fuehrt gepatchtes Spiel (EMAIN 9209104 B, EBOOT 165712 B, Daten GT6_1.N); wir recompilen Disc-Basis (work/bin EMAIN 8843160 B, EBOOT 72920 B, GT6.N).
 - Basis-EMAIN (work/bin, 8843160 B) statisch: Movie-Code (tv_*.pam, cellPamf/Dmux/Vdec/Sail), PDIPFSNetworkPatch*, MSystemPatch vorhanden. Kein UPDATENODEINFO/PATCHSEQUENCE.
 - Basis nutzt /APP_DATA/%s.%d (GT6.N), GT6_1.N nur im Update-EMAIN. Stack-Walk tid 32 (snap_rf1) nur Altlasten; lwcond-Signaler offen.
-- 1.22-Recomp Schritt 1 FERTIG: work/bin122/EMAIN.elf (23787792 B) per tools/self_decrypt_np.py, Klic aus RPCS3-Log; 1.00-Selbsttest identisch. Naechster: Diff 1.00/1.22, Lift in generated122.
-- 1.22 Lift+Build: gt6-122/generated (74914 Funcs, code-end 0x10B8154), build-v122 linkt (GT6_V122-Guard stubs.cpp), ctor 0x1183C/lr 0x11880, setjmp C61F88/longjmp C620AC gepatcht. Probe v122b laeuft.
-- 1.22 build-v122: memset/switch-Entries + setjmp-Guards (scripts/post-lift-122.ps1) -> 0 unresolved, 0 setjmp-overflow, ~9480 Flips/150 s; Frame 4200 schwarz (Hooks fehlen).
 - 1.22 SPU-Lift: 16 Job-Images (fp-Scan tools/find_spu_jobs_122.py), PM id5 (byteidentisch, 0x14DAA80), 1 Embedded-ELF -> gt6/src/gen122 + gt6-122/generated/spu_lifted. 0 dispatch MISS, ~11400 Flips/180 s.
 - Spinner-Frage 1.22 (VERBOSE-fs, orig+noadj 200-220 s): 30 PDIPFS-Opens, KEIN PDIPFS/59/FI, kein Pamf. Wie 1.00 -> Update-EMAIN allein loest Spinner nicht (Gast-Hooks noch nicht portiert).
+- Oracle-Diff (oracle_seq.py, PS3_HLE_TRACE_ARM): Sysmodule-Folge + frisches Savedata = KEINE Divergenz. PDIPFS/9-Opens = Oracle bis EE/3C, danach Oracle 59/FI, wir 85/H2... Divergenz NACH EE/3C.
 ## Naechster Schritt
-1.22 Sampler (GT6_GPROF): gleicher lwcond-Park wie 1.00 -> Update-EMAIN allein ist NICHT die Loesung. Stall-Ursache (Signaler 9qstY/PDI) weiter auf 1.00/1.22 gleich suchen. Optional: nur boot-kritische Hooks portieren (9F8E40->AB080C Host-Open, FileDevice-Guards) via Byte-/String-Anker, dann Frame-Capture AdjustScreen. Sonst: Stall-Ursache im PDI-Thread (lwcond-Signaler) auf 1.22 per GT6_GPROF.
+Port eingefroren (LEDGER §1 2. Kanon). Offline: Oracle-Aufrufer von PDIPFS/59/FI (PDI 0x100003b, LR) auf 1.00 mappen; was nach EE/3C die Movie-Entscheidung triggert. Kein Einzelfeld-Log.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

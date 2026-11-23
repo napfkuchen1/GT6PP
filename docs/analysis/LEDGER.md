@@ -5,6 +5,7 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 - Gueltiger Build: `gt6\build-v020\gt6.exe` = Runtime ps3recomp v0.20.0 (Klon `third_party/ps3recomp-v020`). PFLICHT: `$env:GT6_BUILD_DIR='gt6\build-v020'`.
 - ARCHIVIERT 2026-11-23 (nicht geloescht): alte Builds `gt6\build`, `build-clangcl` (v0.19), `build-v020-vk` -> `ARCHIV/old-builds/`; alte Snapshots -> `work/ARCHIV/snaps/` (2 neueste bleiben im Root). `third_party/ps3recomp` = v0.19, veraltet: Archivierung offen (CMake-Default + Skripte erst auf -v020 umstellen).
 - Fix 2026-11-23: probe.ps1 nimmt jetzt build-v020 als Default; alte Builds nur mit `-AllowOldBuild`. Lauf-Log `boot.txt` nennt EXE-Pfad.
+- 2. Kanon (Port eingefroren 2026-11-23): `gt6\build-v122\gt6.exe` (EMAIN v1.22, gt6-122/generated, GT6_V122=ON) baut+laeuft (0 unresolved, SPU lift ok), Gast-Hooks nicht portiert; Spinner identisch -> keine weitere Investition.
 - Gast-Basis: EMAIN.elf aus EU-Disc BCES01893 v1.00 (`work/bin`, 8843160 B SELF, 22371400 B ELF), Lift `gt6/generated` (75538 Fn), per-fp Post-Lift-Patches `tools/apply_gt6_post_lift.py`.
 - RPCS3-Orakel (user): Log `...\v1.2_beta4_GT6-Launcher-win64\data\rpcs3\log\RPCS3.log`, Daten `...\data\rpcs3\dev_hdd0\game\BCES01893\USRDIR` (nur LESEN). Game v1.22, gleiche EU-Disc.
 - Version-Divergenz: RPCS3 = v1.22 (EMAIN 9209104 B, EBOOT 165712 B, Daten GT6_1.N). Wir = v1.00 (GT6.N). Recomp v1.22 freigegeben (User 2026-11-23), additiv in neuen Pfaden.
@@ -25,10 +26,13 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 ## 4. Widerlegt/Symptom (NICHT wiederholen)
 - Pad/Dialog-Kette Hyp. 1-14; Exit-Race Hyp. 83-117 (Symptom); fresh vs persistente db; PRIO_START/LOCKSTEP/RESV_OFF; Fiber-Liste/Busyloop; Snap-Diff 140 vs 175 s.
 - PDIPFS-Daten fehlen: NEGATIV (Lauf mit 14-GB-RPCS3-Kopie, gleicher Spinner). RPCS3 `--no-gui` als Orakel: tot (Shader-Precompile).
+- Oracle-Diff 2026-11-23 (scripts/oracle_seq.py, HLE-Trace PS3_HLE_TRACE_ARM): Sysmodule-Ladeliste nach AutoSave2 = KEINE Divergenz (Oracle-Extra-IDs 0x24-0x2d = RPCS3-Dependency-Rekursion, gleicher LR); Savedata frisch (PS3_GAMEDATA_ROOT leer, AutoLoad2 -4 wie Oracle): kein 59/FI.
+- PDIPFS/9-Open-Folge 1.00+rp-hdd0 (probe_pdi) = Oracle bis EE/3C (14/16 Namen); danach Oracle: 59/FI, wir: 85/H2,8M/A9..4J/0E. Divergenz liegt NACH EE/3C (Auswahl Movie vs Folge-Assets), nicht in Savedata/Sysmodule.
 - Spinner = reiner Deadlock: 37 Threads geparkt, 29 in sys_lwcond_wait (pc A4305C), Loader 9qstY (tid 32) wartet; kein Busyloop (GT6_GPROF).
 
 ## 5. Offene Kernfrage
 - RPCS3 laeuft an derselben Stelle weiter (PDI-Thread -> PDIPFS/59/FI -> Pamf/Vdec/Dmux/Sail). Basis-EMAIN kennt Movie- und Patch-Code (PDIPFSNetworkPatch*, PatchInstall, MSystemPatch).
+- Naechster Offline-Diff: Oracle-Thread, der 59/FI oeffnet (PDI 0x100003b), und was NACH PDIPFS/9/EE/3C in 9qstY/PDI-Kette die Movie-Entscheidung triggert (Aufrufer-Baum 1.22 per oracle LR, auf 1.00 mappen).
 - Hypothese (offen): v1.00 wartet auf Patch/Update-/NP-Ereignis, das v1.22 nicht braucht. Test = v1.22-Recomp.
 
 ## 6. Arbeitsregeln (Ueberwacher)
