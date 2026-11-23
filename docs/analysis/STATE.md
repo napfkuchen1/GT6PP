@@ -43,8 +43,11 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 - Hyp. 82: Exit ist RACE (3 Laeufe noadj 150 s: 2x exit-chain, 1x ok black 99 %). Davor: null-reads in fn 820FD4/8190A4/8210D8/B97434, OPDs 14E4848/4858/4868 leer (code 0).
 
+- Hyp. 83: Ursache Exit: GT6_GUARD=14E4000:14E4848 zeigt A25C64 (vector<u64>.clear) aus 88B8E0 (Loop ueber Zeigervektor r30=71E4455C, Elem NULL -> obj+0x2C=0x2C).
+  Clear liest begin/end aus Lowmem (0x34/0x38)=14E4000/0 -> zeroed 14E4000..FFFFFFF0 (OPD-Tabelle weg, Absturz). Vektor enthaelt NULL-Element; Quelle unbekannt (Race?).
+
 ## Naechster Schritt (EINER)
-**Hyp. 83:** Wer fuellt OPD 14E4848/4858/4868 (xref --imm / snap_walk obj 0x14E4848 im Snapshot snap_245313093)? Leer = Funktionszeiger-Tabelle nicht initialisiert (Fiber-/Thread-Init der Tid-27-Gruppe, Entry 14E0898).
+**Hyp. 84:** Wer pusht NULL in Vektor (Container-Obj 71E44558, Fn 88B878 Loop 88B8B8)? Pusher per xref/gdis (Cls-vt) finden; GT6_GUARD auf Vektor-Puffer. GUARD-Muster: probe -Env GT6_GUARD=<page>:<arm>.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
