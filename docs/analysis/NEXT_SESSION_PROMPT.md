@@ -1,6 +1,6 @@
-Ziel: Hauptmenue (C6), GT6 EU, Game 1.22 + ps3recomp v0.20.0 (einzige Linie).
-Stand: lokaler HEAD (nach 01251cd). Savedata-fileBuf kein Overlap mit Flag 0x1796DC8. Snaps 6/8/9/10/15/21/26/40 s: Flag stets 0; Main (tid1) bei 6 s noch in Init-Wait (Task 0x7FFCEE90), ab 8 s Shutdown.
-Naechster Schritt: Produzent des Tasks 0x7FFCEE90 (Vtable 0x15C3888/Future 0x15C4360; xref Ctor, Stack A30028<-A7E6CC<-A521CC<-13D94) + warum der Wait bei ~7 s endet: Snap 7 s (PS3_SNAP_AT=7), snap_walk stack 1; tid30 (lr AD4344) null-call-Notify AD4294. Wenn Wait per Timeout/Fehler endet -> Fehlerpfad statt Quit-Flag jagen.
-Nicht wiederholen: LEDGER 4, mempool-HLE, AFDFC0/0x1798F00, Quit-Flag-Writer-Suche (Flag nie != 0 in Snaps), Savedata-fileBuf.
+Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
+Stand: Commit b7975e3+. Quit-Flag 0x1796DC8 nie gesetzt (LEDGER). Main (tid1) wartet bei 6 s in Init auf Job 0x7FFCEE70; Executor tid30 haengt in AD4294 (Listener-Notify, disp 0x7FFBE100) mit Listenknoten next=0 -> Endlos-NULL-read (HOTREAD cia=OPD 16377C0).
+Naechster Schritt: Snapshot 6 s (snap_292013437 vorhanden): Liste des Dispatchers 0x7FFBE100 per `snap_walk.py <snap> obj` ablaufen (AD3DFC kopiert nach sp+0x70 im Frame D00CEA90), Knoten mit next=0 finden. Wenn Knoten freigegeben/genullt: PPU_WWATCH (Hits in run.log.err) auf den Knoten, Schreiber/Freigeber suchen (HLE-Writer zuerst ausschliessen). Wenn Liste ok: Guard-Patch AD4294 (next==0 -> abbrechen) und schauen ob Init weiterkommt.
+Nicht wiederholen: Quit-Flag-Schreibersuche, savedata fileBuf (LEDGER 1.22).
 Laeuft noch: nichts.
-Lesen: STATE.md, NEXT_SESSION_PROMPT.md. Caveman ultra.
+Lesen: STATE.md, dieser Prompt.

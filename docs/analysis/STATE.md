@@ -39,8 +39,8 @@ Quit-Kette 1.22 (korrigiert): Hauptloop 0x146E8 endet wenn AD2998 !=0 = Byte 0x1
 AFDFC0/0x179ECF0-Struct = Titel-ID-Strcmp ("BCES01893"), NICHT der Quit-Weg (Alt-Annahme 0x1798F00 falsch).
 Hyp. fileBuf: Savedata-fileBuf = 0x901A0000/0x931C0000 (16 MB), kein Overlap mit 0x1796DC8 -> Savedata-HLE entlastet.
 Hyp. snap: SNAP_AT 6 s: Main (tid1) noch in INIT, wartet (lwcond) auf Task-Objekt 0x7FFCEE90; Stack A30028<-A7E6CC<-A521CC<-13D94(ctr)<-109C4. Ab 8 s schon Shutdown-Wait (while [0x1710E3C] usleep 5ms). Flag 0x1796DC8 in allen Snaps 0 -> Quit NICHT ueber Loop 146E8, Init-Wait bricht ab/Fehlerpfad.
-Hyp. nullist: tid30 AD4294 (Listener-Notify) kopiert Liste (AD3DFC), ruft je Knoten vcall, gibt Kopie frei; Knoten mit next=0 -> Endlosschleife NULL-read (HOTREAD, cia=OPD 16377C0=fn AF0B94). Liste kaputt/UAF.
-Naechster: Quelle der Liste (r4 an AD42CC) bestimmen, wer Knoten nullt/frei gibt; PPU_WWATCH auf Knoten. Dann warum Main-Init-Wait (7A0F40) endet. WWATCH-Hits stehen in run.log.err.
+Hyp. nullist: tid30 fuehrt Job 0x7FFCEE70 (Run 7B5208->6166A4(obj 7FEEC000,vt 15B5668)->AD4294(disp 7FFBE100,vt 15DC800)). AD4294 kopiert Listener-Liste (AD3DFC), Knoten next=0 -> Endlos-NULL-read.
+Naechster: Snap 6 s: Listener-Liste von disp 7FFBE100 (Kopie sp+0x70 in AD4294 Frame D00CEA90) per snap_walk obj laufen; welcher Knoten next=0, wer hat ihn genullt (WWATCH, Log run.log.err). Dann warum Main-Wait endet.
 Infra: probe.ps1 killt gt6 jetzt zusaetzlich per taskkill /T (hing in ppu_thread_join).
 
 ## Roadmap-Bezug
