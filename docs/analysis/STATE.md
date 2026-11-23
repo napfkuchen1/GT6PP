@@ -15,43 +15,23 @@ Standard: `scripts\probe.ps1 -Name x -Boot notut -Seconds 320`. Frame-Capture: `
 Binary: `gt6\build-clangcl\gt6.exe`. Rebuild ~2 min.
 
 ## Aktive Kette
-Hauptloop 0x568800 = Game-Loop (kein Warten auf Fertig, Hyp. 43). Script-VM (Poll 0x9EEA88) ruft MGOM.start("gtmode"), gtmode laedt, BGM-Playlist laeuft.
-Capture Frame 4200: orig = AdjustScreen-Dialog mit Render-Bug (grosses blaues Rechteck oben rechts, Ecken fehlen). noadj = nur dunkles GT-Logo + Spinner (black 99,5 %).
-Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
+Hauptloop 0x568800 = Game-Loop. Script-VM startet gtmode, BGM laeuft. Flips ~9500/190s.
+Capture: orig = AdjustScreen wartet auf X (Render korrekt, REALFLAG). Nach X: GT-Logo+Spinner = wie noadj.
+Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigervektor, Hyp. 83-89).
 
 ## Erledigt / widerlegt (Einzeiler)
 - Pad/Dialog-Kette (Hyp. 1-14): alles ohne Wirkung, durch Umgehung (15) hinfaellig. RPCS3 `--no-gui` als Orakel tot (Shader-Precompile).
 - Plan B Pad-Replay: PAD_LOG=<pfad> (patches/gt6-v020-padlog.patch, build-v020 neu gebaut, getestet) + scripts/live-padlog.ps1: user spielt live, Log -> PAD_SCRIPT-Replay.
-- SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
-- Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
+- SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init).
 
-- probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate hdd0-Kopie/Lauf (GT6_HDD0, main.cpp, build-v020 neu): -Parallel ohne Lock, getestet 2x.
-
-
-
-
-
-- Hyp. 78-80: Tick-Fn 6D51xx ruft pro Frame A2FAD0 (60 Hz ok). REALFLAG (WaitFlagEx statt Spin) = DEFAULT in stubs.cpp (GT6_REALFLAG=0 = alt). orig/Frame4200: Dialog rendert KORREKT (4 Ecken, Bug weg).
-- Hyp. 80: noadj + REALFLAG: Prozess endet nach ~52 s (exit-chain code=0x1, Threads 2/31 exit) - mit REALFLAG=0 kein Exit (black 99,5 %). Das Spiel quittet nun selbst.
-
-- Hyp. 81: noadj+REALFLAG Exit: vorher tid 18 'bctr to NULL' in func_00819250+0x97B (r12=0x48000044/0x28000084 = Code-Bytes als OPD gelesen), LWM ESRCH, dann alle Threads exit code=1.
-
-- Hyp. 82: Exit ist RACE (3 Laeufe noadj 150 s: 2x exit-chain, 1x ok black 99 %). Davor: null-reads in fn 820FD4/8190A4/8210D8/B97434, OPDs 14E4848/4858/4868 leer (code 0).
-
-- Hyp. 83: Ursache Exit: GT6_GUARD=14E4000:14E4848 zeigt A25C64 (vector<u64>.clear) aus 88B8E0 (Loop ueber Zeigervektor r30=71E4455C, Elem NULL -> obj+0x2C=0x2C).
-  Clear liest begin/end aus Lowmem (0x34/0x38)=14E4000/0 -> zeroed 14E4000..FFFFFFF0 (OPD-Tabelle weg, Absturz). Vektor enthaelt NULL-Element; Quelle unbekannt (Race?).
-
-- Hyp. 84/85: Vektor-Puffer/Header per GUARD nicht fassbar (Heap-Adressen wandern, Header nie neu geschrieben). 88B878 = Frame-Update-Kette (802004>1AE7CC>..>7D083C>7CD628), kein Teardown.
-- Hyp. 86: Prozess-Affinitaet 1 Kern (work/_aff.ps1, 3 Laeufe noadj): Exit IMMER bei 52 s (3/3) = deterministisch reproduzierbar, Logik-/Zeitfehler, kein reines Data-Race.
-
-- Hyp. 87: pinned+GUARD auf Elementpuffer: Push via 88B9D4 (new 0x48 + vector push EE82C0, global Lock 159C830). Guard perturbt Timing, kein Exit. NULL-Element = Push mit NULL?
-
-- Hyp. 88: new(0x48) in 88B9D4 liefert NIE NULL (pinned 3/3 Exit, 0 Treffer). NULL-Element kommt nicht vom Push -> Puffer/Vektor nach Push ueberschrieben oder Lock 159C830 defekt.
-
-- Hyp. 89: PS3_LWMUTEX_TRACE pinned: 2/3 kein Exit (Heisenbug, Trace stoert), Exit-Lauf ohne Log-Zeile zu LWM 159C830 -> Lock nie contended, nicht Ursache.
+- probe.ps1: -FreezeSec, -Seconds 0, END-Zeile, hdd0-Kopie/Lauf (-Parallel ok). PadScript nur Press-Tokens (0x0 verboten).
+- Hyp. 78-80: REALFLAG (WaitFlagEx) = DEFAULT, Dialog rendert korrekt. noadj+REALFLAG: Exit ~52s (Race, Hyp. 81/82/86 pinned=deterministisch).
+- Hyp. 83: Exit = A25C64 (vector.clear) aus 88B8E0, NULL-Element im Zeigervektor 71E4455C -> zeroed 14E4000..FFFFFFF0. Hyp. 84-89: Puffer/new/Lock nicht Ursache (Heisenbug).
+- Hyp. 90/91: orig wartet im AdjustScreen auf X; Snap-Diff 140s vs 175s: kein Freeze (scripts/snap_diff.py).
+- Hyp. 92: orig + PAD X (80-140s) -> Frame 9000 = GT-Logo+Spinner. AdjustScreen passiert.
 
 ## Naechster Schritt (EINER)
-**Hyp. 90:** Zeitabhaengigkeit: pinned Exit bei 52 s fix. Was passiert bei ~52 s (Timer/Ladefortschritt)? Zeitstempel-Log [WAIT]/threads um 45-52 s im pinned Lauf (loganalyze) und PS3_SNAP_AT=51 pinned.
+**Hyp. 93:** Was blockiert Ladephase nach AdjustScreen? orig+Pad, PS3_SNAP_AT 200 vs 280, snap_diff + Flip-Rate vgl.
 
 ## Roadmap-Bezug
-M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
+M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
