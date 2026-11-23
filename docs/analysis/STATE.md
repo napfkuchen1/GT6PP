@@ -30,7 +30,7 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Test pdi: RPCS3-USRDIR-Kopie (work/gt6_hdd0_rp, 14 GB) als hdd0, -KeepDb 300 s: NEGATIV: 18,8k Flips, GT-Logo+Spinner, NPN-IsLoaded-Schleife wie sonst; kein Open auf PDIPFS/59. Daten fehlen NICHT als Ursache.
 
 ## Naechster Schritt
-Hot-Guest-Funktion-Sampling im Spinner (PS3_GUEST_PROF); Audit #1/#2. PDIPFS-Hypothese erledigt.
+Hot-Guest-Funktion-Sampling im Spinner: PS3_GUEST_PROF/Debug-Konsole nur in runtime/ppu/tests/boot_main.cpp (gt6 nutzt es nicht) -> Sampler nach gt6 portieren ODER Audit #1/#2. PDIPFS-Hypothese erledigt.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
