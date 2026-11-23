@@ -31,7 +31,7 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 62: Frame 9000 ~159 s reproduzierbar, 9600 in 260 s NICHT. Spiellogik tickt weiter (padcnt GetData #15000 @300 s ~50/s) = RSX-Render-Frames stagnieren, kein Gesamt-Stall.
 - Hyp. 63: WD 120/200 s (probe_h63b): Haupt-tid 1 steht in lwcond_wait (func_00A21CBC<-A21D50<-568C94+0x38, cond 0x7FEAC030/obj 0x7FEAC018), gleiche Stelle bei 120+200 s = Hauptthread blockt auf Worker/Job. Wer signalt?
 - Hyp. 64: Wait=A21D50 (Event obj 0x7FEAC018: +0x28 wait=1, +0x29 signaled=0, auch im Snapshot h55), Signal=A21D8C (7 Aufrufer: 6BFDE0,7D8124,7FD0AC/D4,A350D0). Owner 0x7FEAC000 vt 145FC88. Aufrufer 6C5478<-6C54DC<-9C6184 (Script-VM). Signal kommt nie.
-- probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate userdb/Lauf offen (hdd0 fest in main.cpp:722).
+- probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate hdd0-Kopie/Lauf (GT6_HDD0, main.cpp, build-v020 neu): -Parallel ohne Lock, getestet 2x.
 
 ## Naechster Schritt (EINER)
 **Hyp. 65:** Wer haette 0x7FEAC018 signalen muessen? Signal-Aufrufer (6BFDE0 etc.) per xref/gdis einordnen, Worker-tids (WD: tid 27/32) pruefen; Flag +0x48 Setter 6C0A14.

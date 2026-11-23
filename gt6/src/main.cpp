@@ -719,9 +719,14 @@ int main(int argc, char* argv[])
         }
         gt6_add_mapping("/dev_bdvd/PS3_GAME/",       GT6_GAME_DIR);
         gt6_add_mapping("/dev_bdvd/",                GT6_GAME_ROOT);
-        gt6_add_mapping("/dev_hdd0/game/BCUS98296/", "work/gt6_hdd0/game/BCUS98296");
+        /* GT6_HDD0 (optional): override the hdd0 root so parallel runs do not share one userdb. */
+        static char hdd0_game_override[600];
+        const char* hdd0_env = getenv("GT6_HDD0");
+        const char* hdd0_root = (hdd0_env && *hdd0_env) ? hdd0_env : "work/gt6_hdd0";
+        snprintf(hdd0_game_override, sizeof hdd0_game_override, "%s/game/BCUS98296", hdd0_root);
+        gt6_add_mapping("/dev_hdd0/game/BCUS98296/", hdd0_game_override);
         gt6_add_mapping("/app_home/",                "work/gt6_app_home");
-        gt6_add_mapping("/dev_hdd0/",                "work/gt6_hdd0");
+        gt6_add_mapping("/dev_hdd0/",                hdd0_root);
         gt6_add_mapping("/dev_hdd1/",                "work/gt6_hdd1");
         gt6_add_mapping("/dev_usb000/",              "work/gt6_usb");
         /* Update overlays, once a PDIPFS dump is present. */
@@ -733,7 +738,7 @@ int main(int argc, char* argv[])
          * is visible to rename/stat through the other. */
         {
             static char hdd0_abs[512], hdd1_abs[512];
-            gt6_abs_path(hdd0_abs, sizeof hdd0_abs, "work/gt6_hdd0");
+            gt6_abs_path(hdd0_abs, sizeof hdd0_abs, hdd0_root);
             gt6_abs_path(hdd1_abs, sizeof hdd1_abs, "work/gt6_hdd1");
             _putenv_s("PS3_HDD0_ROOT", hdd0_abs);
             _putenv_s("PS3_HDD1_ROOT", hdd1_abs);

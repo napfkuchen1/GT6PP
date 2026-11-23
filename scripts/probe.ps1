@@ -106,7 +106,7 @@ $mingw = Get-ChildItem -Path (Join-Path $Root "tools\llvm-mingw") -Directory -Er
 if ($mingw) { $env:PATH = "$(Split-Path -Parent $mingw);$env:PATH" }
 
 # --- userdb archive (never delete) -----------------------------------------
-if (-not $KeepDb) {
+if (-not $KeepDb -and $false) {  # replaced by per-run hdd0 copy (GT6_HDD0): no shared userdb, no lock
     # wait up to ~30 s for a still running gt6.exe (holds the userdb lock); never kill it
     $waited = 0
     while ((Get-Process gt6 -ErrorAction SilentlyContinue) -and $waited -lt 30) { Start-Sleep -Seconds 1; $waited++ }
@@ -129,6 +129,11 @@ try {
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
         if ($Frame -gt 0) { $env:RSX_CAP = "${Frame}:1"; $env:RSX_CAP_DIR = $dir }
         $log = Join-Path $dir "run.log"
+        # per-run hdd0 copy without userdb (fresh db); shared work\gt6_hdd0 stays untouched
+        $hd = Join-Path $dir "hdd0"
+        Copy-Item (Join-Path $Root "work\gt6_hdd0") $hd -Recurse -Force
+        Get-ChildItem (Join-Path $hd "game\BCES01893\USRDIR\db") -Filter "userdb*.dat" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        $env:GT6_HDD0 = $hd
         Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.Name, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
         $proc = Start-Process -FilePath $Exe.FullName -ArgumentList @($Elf) -WorkingDirectory $Root `
             -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
@@ -137,7 +142,7 @@ try {
     }
 } finally {
     foreach ($k in $pairs.Keys) { Remove-Item "Env:$k" -ErrorAction SilentlyContinue }
-    Remove-Item Env:RSX_CAP, Env:RSX_CAP_DIR, Env:PS3_HEADLESS -ErrorAction SilentlyContinue
+    Remove-Item Env:RSX_CAP, Env:RSX_CAP_DIR, Env:PS3_HEADLESS, Env:GT6_HDD0 -ErrorAction SilentlyContinue
 }
 Write-Host "Started $Parallel run(s), waiting up to ${Seconds}s ..."
 $t0 = Get-Date; $deadline = $t0.AddSeconds($Seconds)
