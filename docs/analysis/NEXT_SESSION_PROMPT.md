@@ -6,3 +6,5 @@ Update: Blaurechteck in v0.20 (build-v020) behoben; Arbeits-Build ist build-v020
 Update 2: Hyp. 50/51 siehe STATE.md. Pad-Script feuert, AdjustScreen reagiert nicht; einziger Pad-Reader A39F00. Naechstes: Hyp. 52 (Snapshot des Pad-Managers, Antwort der Peer-Session zu users Dialog-Weg beachten).
 
 Update 3: Hyp. 52 statisch fertig, siehe STATE.md. Naechstes: Hyp. 55 Snapshot-Check (PS3_SNAP_DIR explizit setzen).
+
+Update 4 (Hyp. 56-59): A395F0 (padobj vt+8) wird jeden Frame nur vom Combo-Checker func_00811370 gerufen; padobj vt+0/+4/+C, Listener-Objekt 0x165F340 (vt 148A250) nie. Poll A39CD8 laeuft (Aufrufer A1C1F8, tid 27). Pad-Datenpfad bis Padobj OK, UI-Konsument im AdjustScreen unbekannt. PS3_CALLTRACE_AFTER ist in Sekunden (<Lauf-Dauer!). Naechster Schritt: STATE.md Hyp. 60.
