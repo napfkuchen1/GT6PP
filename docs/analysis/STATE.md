@@ -37,10 +37,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 106: Exit-Laeufe (h104, h105b) haben je 3x "SPU program with no lifted image" (soc-job, size 34704/53280/64912, fp weicht von registrierten ab); Survivor-Laeufe (h104b/h105/h106b) 0 MISS -> Image-Inhalt race-abhaengig?
 - Hyp. 107: MISS-Image (fp 68FDB056..) ist komplett 0x00; registriertes F523F26F liegt statisch im ELF-Seg1 @0x139D280 (eaBinary). Survivor: Bytes ok. Exit-Lauf: Speicher schon genullt = Folge des Wipes (Hyp. 83), kein SPU-Lift-Problem.
 - Hyp. 108: 3 Parallel-Laeufe mit SNAP_AT=84 + X 85s: alle Survivor (kein Exit; Snapshot stoert Timing). Snaps: snap_255980843/983031/985234 (je 1.8G, vor X). Exit-Referenz fehlt noch.
+- Hyp. 109-111: statische Kette Wipe: 7D083C (Wrapper, Singleton 0x159FD890) > 7CD628 > 88B878 > bl A25C64 (je 1 Aufrufer, 7D083C ohne direkten). CALLTRACE_TO auf 7D083C/7CD628/88B878/88B8E0: 0 Treffer (Exit-Laeufe h110 4/4 mit CALLTRACE=200, 88B8E0 ist ein bl-Site).
 - user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 109:** Statt Exit zu jagen: Survivor-Snaps (snap_2559*) = Zustand nach X. Snapshot NACH X (SNAP_AT=140, Survivor) mit Hyp.-100-Snap vergleichen ist erledigt (Churn). Neu: Exit-Lauf mit PS3_CALLTRACE_TO=0x88B8E0 (CALLTRACE_AFTER=60) + X 85s, Aufrufer-lr des Wipes erfassen (Exit ~50% bei Standard-Env ohne SNAP).
+**Hyp. 112:** Exit-Lauf reproduzierbar: PS3_CALLTRACE=200;CALLTRACE_AFTER=60 + X 85s (4/4 Exit, ohne TO-Filter). Wer ruft 7D083C? Ohne TO-Filter CALLTRACE_AFTER=84 N=300 loggen, nach `[CALL] -> 0x007D083C` bzw. 7CD628 greppen; sonst PS3_CALLTRACE_FROM=0x6C54DC (Script-Op-Pfad).
 (Hyp. 101-103: Main-WaitFlag = Timed-Sleep, KEIN Haenger. Main-Stack 6C54DC>9C6184>... Script-VM.)
 
 ## Roadmap-Bezug
