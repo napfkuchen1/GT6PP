@@ -34,8 +34,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 71/72: gt6_cellFiberPpuWaitFlag (stubs.cpp) yieldet READY, gibt nach 2 ms auf -> RunFibers (A2FAD0) kehrt nie zurueck. GT6_REALFLAG=1 (SDK WaitFlagEx) -> A2FAD0 wiederholt, tid 1 haengt trotzdem.
 - Hyp. 73/74/75: Servicer ruft 7FEAC000 wiederholt; Snapshot(REALFLAG,100s): obj+0x48=3 = Pollschleife 3>4>3: Kinder obj+0x1D8/1DC +0x91==0 -> 5C406C, State bleibt 3. Weck-Schleife OK (Node in Liste).
 
+- Hyp. 77: PS3_FIBERRATE=1 (fiberlog.patch): Original = Fiber-Resume-Busyspin (~6 Mio/s, CPU-Burn); REALFLAG = nur ~60 Resumes/s gesamt (Wake A2FAD0 ~60 Hz). Frames/Flips beide stagnierend.
+
 ## Naechster Schritt (EINER)
-**Hyp. 77:** Hyp. 76: Kinder enden nur bei Quit-Flag 0x164AB90 (A13644, nie !=0) -> Servicer = normaler Main-Loop-Fiber, tid 1 wartet darauf (NORMAL, kein Hang). Echtes Symptom = Frames stagnieren ab ~9000. Fiber-Takt messen: Wake-Rate A2FAD0 (tid 32) und Fiber-Iterationen/s mit REALFLAG vs. Original; Frame-/Flip-Zaehler vs. Fiber-Zaehler.
+**Hyp. 78:** Wer ruft A2FAD0 (tid 32, 567D74+0x2A4, r4=0x880)? Ist die Wake-Rate 60 Hz korrekt, oder soll pro Wake mehrfach gelaufen werden? Pro Fiber-Resume genau 1 Servicer-Schritt = 1 Main-Loop-Tick?
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
