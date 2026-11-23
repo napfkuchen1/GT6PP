@@ -34,13 +34,10 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Basis-EMAIN (work/bin, 8843160 B) statisch: Movie-Code (tv_*.pam, cellPamf/Dmux/Vdec/Sail), PDIPFSNetworkPatch*, MSystemPatch vorhanden. Kein UPDATENODEINFO/PATCHSEQUENCE.
 - Basis nutzt /APP_DATA/%s.%d (GT6.N), GT6_1.N nur im Update-EMAIN. Stack-Walk tid 32 (snap_rf1) nur Altlasten; lwcond-Signaler offen.
 ## Naechster Schritt
-Hyp. guard (2026-11-23): 3 Laeufe orig 70-90 s (guard / NO_NOTIFYGUARD / +NO_CTXFIBER) identisch: ~100 Flips, Gast-Quit nach ~30 s. Null-Call-Sturm 0-1x -> Guard/ctxfiber nicht ursaechlich.
-Quit-Kette 1.22 (korrigiert): Hauptloop 0x146E8 endet wenn AD2998 !=0 = Byte 0x1796DC8 (Objekt 0x1796DB8+0x10). PPU_WWATCH=1796DB0 LEN 32: KEIN Store setzt es !=0 -> Writer ist ungehookt (HLE-memcpy/Host-Pointer, z.B. cellSaveData-Load GT6.0-5 direkt vor Term) oder Flag via anderen Pfad.
-AFDFC0/0x179ECF0-Struct = Titel-ID-Strcmp ("BCES01893"), NICHT der Quit-Weg (Alt-Annahme 0x1798F00 falsch).
-Hyp. fileBuf: Savedata-fileBuf = 0x901A0000/0x931C0000 (16 MB), kein Overlap mit 0x1796DC8 -> Savedata-HLE entlastet.
-Hyp. snap: SNAP_AT 6 s: Main (tid1) noch in INIT, wartet (lwcond) auf Task-Objekt 0x7FFCEE90; Stack A30028<-A7E6CC<-A521CC<-13D94(ctr)<-109C4. Ab 8 s schon Shutdown-Wait (while [0x1710E3C] usleep 5ms). Flag 0x1796DC8 in allen Snaps 0 -> Quit NICHT ueber Loop 146E8, Init-Wait bricht ab/Fehlerpfad.
-Hyp. nullist: tid30 fuehrt Job 0x7FFCEE70 (Run 7B5208->6166A4(obj 7FEEC000,vt 15B5668)->AD4294(disp 7FFBE100,vt 15DC800)). AD4294 kopiert Listener-Liste (AD3DFC), Knoten next=0 -> Endlos-NULL-read.
-Naechster: Snap 6 s: Listener-Liste von disp 7FFBE100 (Kopie sp+0x70 in AD4294 Frame D00CEA90) per snap_walk obj laufen; welcher Knoten next=0, wer hat ihn genullt (WWATCH, Log run.log.err). Dann warum Main-Wait endet.
+Hyp. guard/freeloop: tid30-Spin = Free-Loop AD4334 (Kopie-Liste next=0); Guards (tools/guard_notify.py, guard_free.py) beheben Spin, Gast-Quit ~30 s bleibt -> Spin ist SYMPTOM. Quit-Flag 0x1796DC8 nie gesetzt (LEDGER).
+Hyp. rv: A7E044/A7E6BC/A52140 liefern 1; Run-Methode 13D90 kehrt normal zurueck (kein Fehlerpfad) -> 13FFC Term -> Shutdown-Wait 90DC1C. Details eu-boot-log.md.
+Main (tid1) wartet in A52140->A7E6BC auf Task 0x7FFCEE90; Job 0x7FFCEE70 (tid30): 6166A4 = AD4294 + vt-Slot 0x154 (6C6BC8 -> obj+0x9d8 vslot 0xC). Job endet -> Main faehrt runter.
+Naechster Schritt: Job-Inhalt klaeren: Objekt 7FEEC000+0x9d8 (snap_292013437, `snap_walk obj 0x7FEEC9D8`) -> vslot 0xC Ziel per `snap_walk vt`/`gdis.py --fn`. Erwartung: Lade-/Boot-Task, der laenger laufen muss. Wenn Task sofort ret: Warum (Bedingungs-Flag Setter/Leser via xref.py). Kette ist 7 Hyp. lang: nach 3 weiteren Strategiewechsel (Vergleich Schwesterport GT5P docs/progress.md).
 Infra: probe.ps1 killt gt6 jetzt zusaetzlich per taskkill /T (hing in ppu_thread_join).
 
 ## Roadmap-Bezug
