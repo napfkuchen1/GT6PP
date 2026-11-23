@@ -46,8 +46,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 - Hyp. 87: pinned+GUARD auf Elementpuffer: Push via 88B9D4 (new 0x48 + vector push EE82C0, global Lock 159C830). Guard perturbt Timing, kein Exit. NULL-Element = Push mit NULL?
 
+- Hyp. 88: new(0x48) in 88B9D4 liefert NIE NULL (pinned 3/3 Exit, 0 Treffer). NULL-Element kommt nicht vom Push -> Puffer/Vektor nach Push ueberschrieben oder Lock 159C830 defekt.
+
 ## Naechster Schritt (EINER)
-**Hyp. 88 (Strategiewechsel):** Statt Zeiger-Jagd: in 88B9D4 nach new (B880A8) r3==0 loggen (malloc NULL?). Pinned-Lauf mit work/_aff.ps1 (AFF_NAME/AFF_ENV).
+**Hyp. 89:** Lock pruefen: LWM 0x0159C830 (7CD3D8/7CD400) in Update-Thread tid 32 vs Push-Thread: [LWM-BLOCK]-Log + owner/recur im pinned Lauf (PS3_LWMUTEX_TRACE=1).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
