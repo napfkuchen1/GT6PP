@@ -21,8 +21,6 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 ## Erledigt / widerlegt (Einzeiler)
 - Pad/Dialog-Kette (Hyp. 1-14): alles ohne Wirkung, durch Umgehung (15) hinfaellig. RPCS3 `--no-gui` als Orakel tot (Shader-Precompile).
-- Hyp. 48a: Captures: noadj 4200+9000 = dunkles Logo+Spinner, orig 4200+6000(+CROSS-Pad) = AdjustScreen, Pad bleibt wirkungslos. orig erreicht Frame 9000 nicht in 600 s.
-- Hyp. 48c: AdjustScreen-Blaurechteck = obere rechte Quadrant 480-912x27-270 (960er Bild), Farbe wie Ecken-Marker. SCREEN_AS_TEX=0 (probe_h49nosct) aendert nichts -> Screen-Copy-Hijack widerlegt.
 - Hyp. 49: v0.20-SDK (build-v020, orig 4200, probe_h49v020orig) rendert AdjustScreen FEHLERFREI (4 Eck-Marker, Pfeile, kein Blaurechteck) = Render-Bug war SDK-Backend, in v0.20 behoben.
 - Hyp. 50 (wiederholt h52pad, gueltig): Presses 75-115 s UP/DOWN/CROSS, Capture Frame 9000 bei ~162 s = weiter AdjustScreen, Marker unbewegt. Pad feuert, Screen reagiert nicht. userdb irrelevant.
 - Hyp. 51: einziger Guest-Aufrufer cellPadGetData = A39F00 (Pad-Manager, Poll-Funktion ab ~A39EE0, Puffer r21+0xa0+port*0x84). Validitaetscheck button[1]>>4==7 passt (Runtime setzt 0x70|len/2).
@@ -37,9 +35,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 56: A395F0 WIRD jeden Frame gerufen (probe_h56ct2), aber nur von func_00811370 (lr 8113B0, Combo-Checker, r3=Stack-Buf, padobj+0x540). UI-Leser = andere Aufrufer von A1A6E8 (004EE*,00951*,A3AF24).
 - Hyp. 57: Pad-Poll A39CD8 laeuft jeden Frame (Aufrufer A1C1F8), GetState nur vom Combo-Checker. Listener-Objekt 0x165F340 (vt 148A250): A3CCC0/CC80/CE18/CBCC/CC40 NIE gerufen = Pad-Events erreichen UI nicht.
 - Hyp. 58: Listener-Liste (head mgr+0x43c) hat 2 Padobj-Knoten, A39CD8 verteilt Rohdaten per A390E4. Padobj-vt +0/+4/+C NIE gerufen; nur vt+8 (Combo). UI liest Pad nicht ueber Padobj-Methoden.
+- Hyp. 59: Pressure-Bytes OK (cellPad.c setzt 255 bei Digital-Bit, PRESS_ON, len 0x18). Pad-Datenpfad bis Padobj verifiziert; Konsument im AdjustScreen unbekannt.
 
 ## Naechster Schritt (EINER)
-**Hyp. 59:** UI liest Padobj-Felder direkt? Leser von +0x58/+0x5A (61 Treffer xref) nach Code im AdjustScreen filtern: Snapshot-Frame-Funktionen oder CALLTRACE_FROM auf Treffer-Funktionen; oder user-Log.
+**Hyp. 60:** user-Live-Log (work/padlog_*.txt via live-padlog.ps1) auswerten; ohne Log: UI-Thread vs Poll-Thread tid 27 klaeren (CALLTRACE_FROM).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
