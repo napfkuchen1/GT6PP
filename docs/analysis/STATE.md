@@ -35,9 +35,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
 
 - Hyp. 56: A395F0 WIRD jeden Frame gerufen (probe_h56ct2), aber nur von func_00811370 (lr 8113B0, Combo-Checker, r3=Stack-Buf, padobj+0x540). UI-Leser = andere Aufrufer von A1A6E8 (004EE*,00951*,A3AF24).
+- Hyp. 57: Pad-Poll A39CD8 laeuft jeden Frame (Aufrufer A1C1F8), GetState nur vom Combo-Checker. Listener-Objekt 0x165F340 (vt 148A250): A3CCC0/CC80/CE18/CBCC/CC40 NIE gerufen = Pad-Events erreichen UI nicht.
 
 ## Naechster Schritt (EINER)
-**Hyp. 57:** Wer nutzt Pad-Maske im AdjustScreen? Aufrufer A1A6E8 (004ED160,004EE*,00951794/DE0,A3AF24/30) per CALLTRACE/xref gaten; user-Log optional.
+**Hyp. 58:** Wo verteilt A39CD8 an Listener (*(mgr+0x43c)+4)? Ist Liste leer (Snapshot h55 snap_walk) -> wer registriert (xref Add-Listener)? Strategiewechsel: Snapshot statt Calltrace.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
