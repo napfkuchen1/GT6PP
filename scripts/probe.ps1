@@ -13,7 +13,7 @@
 # -Frame    : >0 enables RSX capture at that frame (windowed run, PS3_HEADLESS removed) + pixel stats
 # -FreezeSec: abort own run when log silent this long (after PAD_SCRIPT/SNAP/CALLTRACE_AFTER times); writes FROZEN@<s> to boot.txt. -1 = off
 # -Seconds  : 0 (default) = derive from -PadScript (last key + 60) else 220
-# -KeepDb   : do not archive userdb before the batch
+# -KeepDb   : keep the persistent userdb in the per-run hdd0 copy (default: fresh db). Shared work\gt6_hdd0 is never modified.
 # -Boot     : orig|noadj|notut - which boot.adc variant is installed (from work\ARCHIV\boot.adc.*); omitted = keep current.
 #             The active variant is always detected by hash, printed and written to <rundir>\boot.txt.
 param(
@@ -127,12 +127,12 @@ try {
     for ($i = 1; $i -le $Parallel; $i++) {
         $dir = Join-Path $Root ("work\probe_{0}_{1}_{2}" -f $Name, $Ts, $i)
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
-        if ($Frame -gt 0) { $env:RSX_CAP = "${Frame}:1"; $env:RSX_CAP_DIR = $dir }
+        if ($Frame -gt 0) { if (-not $pairs.Contains("RSX_CAP")) { $env:RSX_CAP = "${Frame}:1" }; $env:RSX_CAP_DIR = $dir }
         $log = Join-Path $dir "run.log"
         # per-run hdd0 copy without userdb (fresh db); shared work\gt6_hdd0 stays untouched
         $hd = Join-Path $dir "hdd0"
         Copy-Item (Join-Path $Root "work\gt6_hdd0") $hd -Recurse -Force
-        Get-ChildItem (Join-Path $hd "game\BCES01893\USRDIR\db") -Filter "userdb*.dat" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        if (-not $KeepDb) { Get-ChildItem (Join-Path $hd "game\BCES01893\USRDIR\db") -Filter "userdb*.dat" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue }
         $env:GT6_HDD0 = $hd
         Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.Name, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
         $proc = Start-Process -FilePath $Exe.FullName -ArgumentList @($Elf) -WorkingDirectory $Root `
