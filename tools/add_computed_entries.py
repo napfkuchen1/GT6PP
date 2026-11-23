@@ -30,11 +30,23 @@ GROUPS = [
 ]
 
 
+# 1.22 layout (EMAIN 1.22, memset rebuilt: found by scanning bctr + stb/std runs)
+GROUPS_122 = [
+    (0xB118E0, 0xB1191C, 4, 0xB11920),
+    (0xB11968, 0xB119A0, 4, 0xB119B4),
+    (0xB119E8, 0xB11A20, 4, 0xB11AE4),
+    (0xB11A64, 0xB11A9C, 4, 0xB11AE4),
+]
+
+
 def main():
-    if len(sys.argv) != 2:
+    global GROUPS
+    if len(sys.argv) not in (2, 3):
         print(__doc__)
         return 1
     path = sys.argv[1]
+    if len(sys.argv) == 3 and sys.argv[2] == "122":
+        GROUPS = GROUPS_122
     with open(path, "r", encoding="utf-8") as fh:
         funcs = json.load(fh)
     have = {int(f["start"], 16) for f in funcs}

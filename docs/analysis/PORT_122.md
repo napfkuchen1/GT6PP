@@ -10,3 +10,8 @@ Neu lokalisieren per Signatur/xref (scripts/xref.py, gdis.py); Beleg = Befehl/La
 | MGOM.start Pump (Hyp. 39/42) | offen | offen | - |
 | per-fp a3 Titelfarbe | offen | offen | - |
 | boot.adc-Gates | Datei (scripts/patch-boot-adc.py) | Datei in 1.22-Daten pruefen | - |
+| ctor-Walker (ctor_walk_patch) | func 0x118C8, lr 0x1190C | func 0x1183C, lr 0x11880 | CRT -0x8C; `ctor_walk_patch.py <gen> 0x1183C 0x11880` |
+| setjmp / longjmp | 0xB98168 / 0xB9828C | 0xC61F88 / 0xC620AC | env GT6_SETJMP/GT6_LONGJMP; 28 Callsites |
+| code-end (Lift) | 0xF908C4 | 0x10B8154 | letzter OPD-Funktionsstart |
+| memset Duff-Einsprung (computed entries) | A4FDE0.. A4FE68.. A4FEEC.. | B118E0..B1191C, B11968..B119A0, B119E8..B11A20, B11A64..B11A9C | Probe v122b: `unresolved indirect call -> 0xB11A04` (bctr B118DC/B11964/B119E4); `add_computed_entries.py <json> 122` |
+| Mapper 1.00->1.22 | tools/map_funcs_122.py | 20 eindeutig (u.a. 9F8E40->AB080C, A12170->AD1670, A26510->AE6C34, B5A944->C1F604) | Rest "none": Code geaendert, anderes Matching noetig |
