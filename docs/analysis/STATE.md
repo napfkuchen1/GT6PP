@@ -35,10 +35,11 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 - Hyp. 65: WD dicht 100-170 s (probe_h65, patches/gt6-v020-wd-multi.patch): tid 1 steht in ALLEN 8 Samples gleich = Dauer-Haenger ab <=100 s. Wait 568C94 setzt obj+0x48=1, wartet Event obj+0x18 (6C5478 Script-VM).
 - Hyp. 66: 56865C (CAS +0x48 1->2->3, signalt) umschliesst Hauptloop 568800; kein Thread-Entry (alle 15 Entry-OPDs aus arg+0x18 geprueft), kein Aufrufer/OPD-Treffer. Alt-Build v0.19 hat identischen tid-1-Haenger (kein Regress).
-- Theorie: tid 1 wartet im Boot-Script-Poll (9EEA88) auf Service durch 56865C, die erst NACH diesem Poll laeuft = Zirkelwarte; auf PS3 muss anderer Thread/Callback (Fiber/SPU/Timer) 56865C-Zustand bedienen. HLE-Label 'cellFiberPpuWaitFlag' bei tid 1 evtl. stale.
+- Hyp. 67/68: Servicer 56865C = Thread-Entry-OPD 14BF800->568A0C (arg obj 0x7FEAC000), gestartet in 56B950 via A14824 (vcall-Thread-Factory), Jobobjekt-Name 'Esse..Loop'. KEIN Thread mit Entry 14BF800 unter 53 creates; CALLTRACE_TO=56865C 0 Treffer.
+- => Event-Loop-Thread der Loader-Objekte wird nie gestartet (oder A14824-vcall scheitert). tid 1 wartet im Boot-Poll auf ihn. Obj +0x48=3 im Snapshot (Writer nur 5687B0).
 
 ## Naechster Schritt (EINER)
-**Hyp. 67:** Aufrufer-Kontext von 568C94-Request: obj r27 (0x7FEB6000, vt?) per Snapshot/Runtime lesen, +0x48-State beobachten; Fiber-Pfad pruefen (gt6_cellFiberPpuWaitFlag/Yield stubs.cpp:1382 – tid 1 evtl. dort statt lwcond).
+**Hyp. 69:** 56B950-Funktion (Start per gdis rueckwaerts) laeuft sie? Ziel von A14824 vcall (vt+8/+0xC der Factory-Objekt A2FC10): ruft es sys_ppu_thread_create? Per CALLTRACE_TO=A14824 + Args.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
