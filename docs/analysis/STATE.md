@@ -22,21 +22,20 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 ## Erledigt / widerlegt (Einzeiler)
 - Pad/Dialog-Kette (Hyp. 1-14): alles ohne Wirkung, durch Umgehung (15) hinfaellig. RPCS3 `--no-gui` als Orakel tot (Shader-Precompile).
 - Plan B Pad-Replay: PAD_LOG=<pfad> (patches/gt6-v020-padlog.patch, build-v020 neu gebaut, getestet) + scripts/live-padlog.ps1: user spielt live, Log -> PAD_SCRIPT-Replay.
-- Hyp. 55 (Snapshot orig 100 s): alle Pad-Gates OK (mgr+0 =7, +4 =1, +8 sysinfo 0, port_status 1, raw len 0x18 b1 0x7C). Padobj 0x165B1A8 (vt 148A128) +0x54=7C,+0x58 digital,Sticks 80 -> Kopie ok. GetState=A395F0 (vt+8), Aufrufer offen.
 - SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
 - Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
 
-- Hyp. 56: A395F0 WIRD jeden Frame gerufen (probe_h56ct2), aber nur von func_00811370 (lr 8113B0, Combo-Checker, r3=Stack-Buf, padobj+0x540). UI-Leser = andere Aufrufer von A1A6E8 (004EE*,00951*,A3AF24).
 - Hyp. 57: Pad-Poll A39CD8 laeuft jeden Frame (Aufrufer A1C1F8), GetState nur vom Combo-Checker. Listener-Objekt 0x165F340 (vt 148A250): A3CCC0/CC80/CE18/CBCC/CC40 NIE gerufen = Pad-Events erreichen UI nicht.
 - Hyp. 58: Listener-Liste (head mgr+0x43c) hat 2 Padobj-Knoten, A39CD8 verteilt Rohdaten per A390E4. Padobj-vt +0/+4/+C NIE gerufen; nur vt+8 (Combo). UI liest Pad nicht ueber Padobj-Methoden.
 - Hyp. 59: Pressure-Bytes OK (cellPad.c setzt 255 bei Digital-Bit, PRESS_ON, len 0x18). Pad-Datenpfad bis Padobj verifiziert; Konsument im AdjustScreen unbekannt.
 - Hyp. 60: Per-Frame-Walker A1C1F8 ruft je Frame 8B2C28 (2x, leere Listener-Liste), A3B384, A39CD8 (Pad), A2CD98, A2ADA8, 1138C, 1136C. Kein UI-Pad-Leser unter den Callbacks.
 - Hyp. 61: orig ohne Pad: Frame 10500/13000/18000 in 300/330/420 s NICHT erreicht (9000 war ~162 s) = Flip-Rate bricht nach ~9000 ein oder Stall. Zeitpunkt unklar.
 - Hyp. 62: Frame 9000 ~159 s reproduzierbar, 9600 in 260 s NICHT. Spiellogik tickt weiter (padcnt GetData #15000 @300 s ~50/s) = RSX-Render-Frames stagnieren, kein Gesamt-Stall.
+- Hyp. 63: WD 120/200 s (probe_h63b): Haupt-tid 1 steht in lwcond_wait (func_00A21CBC<-A21D50<-568C94+0x38, cond 0x7FEAC030/obj 0x7FEAC018), gleiche Stelle bei 120+200 s = Hauptthread blockt auf Worker/Job. Wer signalt?
 - probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate userdb/Lauf offen (hdd0 fest in main.cpp:722).
 
 ## Naechster Schritt (EINER)
-**Hyp. 63:** Warum stagnieren RSX-Frames nach ~9000? WD/EVQSTAT bei 200/280 s + SetPrepareFlip/Draw-Zaehler vergleichen; -Frame ueberschreibt RSX_CAP-Env.
+**Hyp. 64:** Hauptthread-Wait 568C94 (lwcond 0x7FEAC030): Signal-Quelle finden (sys_lwcond_signal-Aufrufer/Worker-tid, 568C94 statisch lesen, 97A6E0/BE141C).
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
