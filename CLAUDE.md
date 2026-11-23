@@ -29,6 +29,12 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 - **Laeufe bündeln:** `-Parallel 3-4` (hdd0 getrennt) mit mehreren Varianten/Flags pro Batch (z.B. Exit-Race: 4 Laeufe mit `PS3_CALLTRACE_TO`+`CALLTRACE_AFTER=60`), nicht sequentiell. `-Boot` nicht innerhalb eines Batches mischen (boot.adc geteilt).
 - **Uebergabe nur bei Kontext ~120k oder Blocker**, nicht wegen Hypothesen-Zaehler. NEXT_SESSION_PROMPT.md bleibt 1 Absatz.
 
+## Ueberwacher-Regeln (2026-11-23, siehe STATE.md "UEBERWACHER-FINDINGS")
+- **Symptom-Ketten max. 10 Hyp.** (Hyp. 83-117 = 35 in einer Kette). Vor jeder neuen Hyp.: fuehrt ihre Antwort zum Ziel (Menue), oder nur tiefer ins Symptom? Guard/Umgehung zeigt, dass Symptom nicht blockiert -> Kette beenden.
+- **Vor Deep-Dive Runtime-Knobs pruefen:** `third_party/ps3recomp-v020/docs/DIAGNOSTICS.md` + `SYSCALLS.md` (z.B. `PS3_PRIO_START`, `PPU_RESV_OFF`, `SPU_LOCKSTEP_QUANTUM`) und Schwesterport `third_party/GT5P/docs/progress.md` (gleiche PDI-Engine) zuerst abgleichen.
+- **Probe-Ergebnis != Live-Ergebnis:** probe.ps1 nutzt frische userdb/boot.adc-Patches; Live-Lauf mit persistenter db gegenpruefen, bevor "haengt" als Befund gilt.
+- **Race-Verdacht -> erst HLE-Writer ausschliessen** (Stub mit falscher Argzahl / Runtime schreibt in Gast-Heap), bevor Gast-Code-Races gejagt werden.
+
 ## Laeufe (Pflicht: `scripts/probe.ps1`)
 - Alle Probe-/Capture-Laeufe ueber `scripts/probe.ps1`. Es waehlt den neuesten Build, validiert Env/PAD_SCRIPT, archiviert userdb, schreibt in `work/probe_<name>_<ts>_<i>/`, prueft Erwartungszeilen. Parallel starten (`-Parallel 4`) statt sequentiell.
 - Lauf = ~320 s (`-Seconds 320`), Frame 4200 fuer Baseline. Baseline-Variante immer explizit mit `-Boot orig|noadj|notut` setzen (aendert `work/gt6_vol/.../boot.adc`, steht im Lauf-Log `boot.txt`). Steady-State-Fragen: `-Seconds 220` reicht (ab ~150 s). Lange Laeufe im Hintergrund + `Monitor`, nie `sleep`.
