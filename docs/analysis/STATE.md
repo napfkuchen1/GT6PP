@@ -37,7 +37,8 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 Hyp. guard/freeloop: tid30-Spin = Free-Loop AD4334 (Kopie-Liste next=0); Guards (tools/guard_notify.py, guard_free.py) beheben Spin, Gast-Quit ~30 s bleibt -> Spin ist SYMPTOM. Quit-Flag 0x1796DC8 nie gesetzt (LEDGER).
 Hyp. rv: A7E044/A7E6BC/A52140 liefern 1; Run-Methode 13D90 kehrt normal zurueck (kein Fehlerpfad) -> 13FFC Term -> Shutdown-Wait 90DC1C. Details eu-boot-log.md.
 Main (tid1) wartet in A52140->A7E6BC auf Task 0x7FFCEE90; Job 0x7FFCEE70 (tid30): 6166A4 = AD4294 + vt-Slot 0x154 (6C6BC8 -> obj+0x9d8 vslot 0xC). Job endet -> Main faehrt runter.
-Naechster Schritt: Job-Inhalt klaeren: Objekt 7FEEC000+0x9d8 (snap_292013437, `snap_walk obj 0x7FEEC9D8`) -> vslot 0xC Ziel per `snap_walk vt`/`gdis.py --fn`. Erwartung: Lade-/Boot-Task, der laenger laufen muss. Wenn Task sofort ret: Warum (Bedingungs-Flag Setter/Leser via xref.py). Kette ist 7 Hyp. lang: nach 3 weiteren Strategiewechsel (Vergleich Schwesterport GT5P docs/progress.md).
+Hyp. job9d8: obj+0x9d8=0 (nur Ctor) -> Slot 0x154 No-op; Job = Notify, endet normal. Listener 'processEventLoop' (Thread-Obj 0x701F80F0). Wait A30028 pollt A2F290 (0/1/3=fertig).
+Naechster Schritt: Submit von Job 0x7FFCEE70/Task 0x7FFCEE90 finden (xref.py --call der Submit-Fkt um 7B5208) + fehlt ein Game-Main-Thread? ppu_thread_create-Namen loggen. Alternativ GT5P vergleichen.
 Infra: probe.ps1 killt gt6 jetzt zusaetzlich per taskkill /T (hing in ppu_thread_join).
 
 ## Roadmap-Bezug

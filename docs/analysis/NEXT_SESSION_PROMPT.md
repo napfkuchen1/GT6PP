@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: lokaler Commit nach 688d1d6 (guard_free.py, log_ret.py, Doku). tid30-Spin = Free-Loop AD4334 (Guard in gt6/generated/ppu_recomp_023.cpp, Backup work/_bk_g23); Symptom. Run-Methode 13D90 kehrt normal zurueck (A52140 ret 1), Main wartet in A7E6BC auf Task/Job 0x7FFCEE70, der endet -> Shutdown.
-Naechster Schritt: snap_292013437: `snap_walk.py obj 0x7FEEC9D8` (= obj+0x9d8), vslot 0xC (`vt`), Ziel per gdis.py --fn lesen. Wenn Job sofort ret: Bedingungs-Flag per xref.py (Setter+Leser). Wenn nichts: Schwesterport third_party/GT5P/docs/progress.md vergleichen.
-Nicht wiederholen: Quit-Flag-Schreibersuche, savedata fileBuf, AD4294-Spin (LEDGER 1.22; Spin = Symptom).
-Laeuft noch: nichts. ppu_recomp_023 hat Guards (GT6_NO_NOTIFYGUARD / GT6_NO_FREEGUARD abschaltbar); 022 ist Original.
+Stand: lokaler Commit nach 181402a. tid30-Spin = Symptom (Free-Loop AD4334, Guards in ppu_recomp_023). Run-Methode A52140 kehrt normal (ret 1); Job 0x7FFCEE70 = AD4294-Notify + No-op (obj+0x9d8=0), endet normal -> Main wartet fertig -> Shutdown. Listener = Thread-Obj "processEventLoop" 0x701F80F0.
+Naechster Schritt: Wer submitted Job 0x7FFCEE70/Task 0x7FFCEE90 (xref.py --call um 7B5208) und sollte statt dessen ein langlaufender Game-Main-Thread entstehen? ppu_thread_create-Namen loggen (HLE-Log, Env), erwarteten Thread (z.B. Game-Main/processEventLoop) suchen. Wenn fehlend: Erzeuger-Pfad per gdis.py. Alternativ GT5P-Port vergleichen.
+Nicht wiederholen: Quit-Flag-Schreibersuche, savedata fileBuf, AD4294-Spin, obj+0x9d8 (LEDGER 1.22).
+Laeuft noch: nichts. 023 hat Guards (GT6_NO_NOTIFYGUARD/GT6_NO_FREEGUARD), 022 Original.
 Lesen: STATE.md, dieser Prompt.
