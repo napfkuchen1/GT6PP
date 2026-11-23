@@ -1812,6 +1812,7 @@ extern "C" void gt6_menu_project_sync_pump(ppu_context* ctx)
             (unsigned)vm_read8((uint64_t)mgr + 0x18u + 0x28u), (unsigned)vm_read8((uint64_t)mgr + 0x18u + 0x29u));
 }
 
+extern "C" void gt6_ctxfiber_register(void);
 extern "C" void gt6_hle_overrides(void)
 {
     ps3_hle_register_ctx(0xC765B995u, "cellSpursGetWorkloadFlag",
@@ -1847,6 +1848,7 @@ extern "C" void gt6_hle_overrides(void)
                          gt6_cellFiberPpuWaitFlag);
     ps3_hle_register_ctx(0xF6C6900Cu, "cellFiberPpuCheckFlags",
                          gt6_cellFiberPpuCheckFlags);
+    if (!(getenv("GT6_NO_CTXFIBER"))) gt6_ctxfiber_register();   /* cellFiberPpuContext* (Hyp. ctxfiber) */
 }
 
 

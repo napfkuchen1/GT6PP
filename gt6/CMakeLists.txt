@@ -93,6 +93,7 @@ add_executable(gt6
     src/gt6_bbcount.cpp
     src/gt6_gprof.cpp
     src/gt6_longjmp.cpp
+    src/gt6_ctxfiber.cpp
     ${GT6_SPU_SOURCES}
     src/gen/ppu_hle_nids.cpp    # generated: NID -> ps3recomp lib handler
     ${PS3RECOMP_PPU_SOURCES}
