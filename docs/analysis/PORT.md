@@ -20,7 +20,7 @@ Neu lokalisieren per Signatur/xref (scripts/xref.py, gdis.py); Beleg = Befehl/La
 | SPU | 16 Job-Images per fp-Scan, PM id5 byteidentisch @0x14DAA80, 1 Embedded-ELF @0x1346280; Ausgabe gen122 + gt6-122/generated/spu_lifted; CMake GT6_V122 schaltet GT6_SPU_GEN/LIFT | fertig, 0 MISS |
 
 ## Minimalmenge fuer C2 (AdjustScreen), Stand 2026-11-23
-Aus ref-1.00-adjust-ok (tools/apply_gt6_post_lift.py): setjmp-Guards, Script-Hooks (main.adc-Override), PFS-Stream/FileDevice/Host-Open, Menue-Pump, Sync-Pump, boot.adc-Gates.
+Aus Commit 44085a5 (Port-Quelle, nur Historie) (tools/apply_gt6_post_lift.py): setjmp-Guards, Script-Hooks (main.adc-Override), PFS-Stream/FileDevice/Host-Open, Menue-Pump, Sync-Pump, boot.adc-Gates.
 | Hook | 1.00 | 1.22 (Fuzzy) | Status |
 |---|---|---|---|
 | Script read/path/seek | 9BB020/9BB11C/9BAFE0 | A67E1C(.71)/A67F60(.82)/A67DC4(.42) | tools/port_hooks.py part2 |

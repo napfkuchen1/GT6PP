@@ -44,7 +44,7 @@ def main():
         if not ok: flag += " -"; continue
         flag += " ok" if c[k] else " FAIL"; ok = bool(c[k]) if k not in ("C2", "C3") or boot == "orig" else True
     lang = (re.search(r"PS3_LANG=([\w-]+)", txt) or [0, ""])[1]
-    row = "%s | %s | 1.22 | %s | %s | %s | non-black=%s%s" % (
+    row = "%s | %s | %s | %s | %s | non-black=%s%s" % (
         datetime.date.today(), com, boot, flag.strip(), os.path.basename(pd),
         "nocapture" if frac is None else "%.0f%%" % (frac * 100), (" lang=" + lang) if lang else "")
     pr = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "analysis", "PROGRESS.md")
