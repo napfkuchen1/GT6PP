@@ -1,5 +1,5 @@
-# Naechste Session GT6PP (Stand Hyp. 88 (REALFLAG default, Dialog ok, noadj quittet))
-Lies `docs/analysis/STATE.md`, dann CLAUDE.md-Regeln. Weiter mit Hyp. 89: LWM 0x159C830 Lock-Trace im pinned Lauf (work/_aff.ps1, AFF_NAME/AFF_ENV), siehe STATE.md
+# Naechste Session GT6PP (Stand Hyp. 89 (REALFLAG default, Dialog ok, noadj quittet))
+Lies `docs/analysis/STATE.md`, dann CLAUDE.md-Regeln. Weiter mit Hyp. 90: Was passiert bei ~52 s im pinned Lauf (work/_aff.ps1), PS3_SNAP_AT=51, siehe STATE.md
 Kontext: tid 1 haengt im Event-Wait 568C94->A21D50 (obj 0x7FEAC018). Servicer 568A0C laeuft als Fiber (Entry A2F464),
 Zustand obj+0x48 (1..6). Probe-Setup: `$env:GT6_BUILD_DIR='gt6\build-v020'`, `-Env 'GT6_REALFLAG=1;PS3_FIBERLOG=1'`.
 Uncommitted-Reste: SDK-Klon `third_party/ps3recomp-v020` cellFiber.c (Patch in patches/gt6-v020-fiberlog.patch).

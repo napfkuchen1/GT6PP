@@ -48,8 +48,10 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 
 - Hyp. 88: new(0x48) in 88B9D4 liefert NIE NULL (pinned 3/3 Exit, 0 Treffer). NULL-Element kommt nicht vom Push -> Puffer/Vektor nach Push ueberschrieben oder Lock 159C830 defekt.
 
+- Hyp. 89: PS3_LWMUTEX_TRACE pinned: 2/3 kein Exit (Heisenbug, Trace stoert), Exit-Lauf ohne Log-Zeile zu LWM 159C830 -> Lock nie contended, nicht Ursache.
+
 ## Naechster Schritt (EINER)
-**Hyp. 89:** Lock pruefen: LWM 0x0159C830 (7CD3D8/7CD400) in Update-Thread tid 32 vs Push-Thread: [LWM-BLOCK]-Log + owner/recur im pinned Lauf (PS3_LWMUTEX_TRACE=1).
+**Hyp. 90:** Zeitabhaengigkeit: pinned Exit bei 52 s fix. Was passiert bei ~52 s (Timer/Ladefortschritt)? Zeitstempel-Log [WAIT]/threads um 45-52 s im pinned Lauf (loganalyze) und PS3_SNAP_AT=51 pinned.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
