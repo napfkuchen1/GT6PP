@@ -8,7 +8,11 @@
 # Usage: powershell -ExecutionPolicy Bypass -File scripts/lift-spu-gt6.ps1
 param(
     [string]$Elf = "",
-    [switch]$Force
+    [switch]$Force,
+    [int]$FileOff = 0x13EFE00,
+    [string]$LiftedDir = "",
+    [string]$RegistryOut = "",
+    [string]$OutDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,10 +24,13 @@ $Lifted = Join-Path $Root "gt6\generated\spu_lifted\pm_wwsjob"
 $Registry = Join-Path $Root "gt6\src\gen\spu_workloads_pm.c"
 
 $PmVa = 0x013FFE00
-$PmFileOff = 0x13EFE00
+$PmFileOff = $FileOff
 $PmSize = 0x2F80
 $PmFp = 0x5510DCB89C1E98C2
 
+if ($OutDir) { $Out = $OutDir }
+if ($LiftedDir) { $Lifted = $LiftedDir }
+if ($RegistryOut) { $Registry = $RegistryOut }
 if (-not (Test-Path $Elf)) { throw "Missing $Elf" }
 New-Item -ItemType Directory -Force -Path $Out, $Lifted | Out-Null
 

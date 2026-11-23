@@ -22,7 +22,10 @@
 #       -DumpDir work/spu_jobs/dump
 param(
     [string]$DumpDir = "",
-    [int]$FirstImageId = 6
+    [int]$FirstImageId = 6,
+    [string]$JobsDir = "",
+    [string]$Registry = "",
+    [string]$Work = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,9 +34,9 @@ if (-not $DumpDir) { $DumpDir = Join-Path $Root "work\spu_jobs\dump" }
 if (-not (Test-Path $DumpDir)) { throw "Missing dump dir $DumpDir" }
 
 $Sdk = Join-Path $Root "third_party\ps3recomp-v020"
-$Work = Join-Path $Root "work\spu_jobs\analysis"
-$JobsDir = Join-Path $Root "gt6\generated\spu_lifted\jobs"
-$Registry = Join-Path $Root "gt6\src\gen\spu_workloads_jobs.c"
+if (-not $Work) { $Work = Join-Path $Root "work\spu_jobs\analysis" }
+if (-not $JobsDir) { $JobsDir = Join-Path $Root "gt6\generated\spu_lifted\jobs" }
+if (-not $Registry) { $Registry = Join-Path $Root "gt6\src\gen\spu_workloads_jobs.c" }
 $FindTool = Join-Path $Sdk "tools\find_spu_functions.py"
 $LiftTool = Join-Path $Sdk "tools\spu_lifter.py"
 

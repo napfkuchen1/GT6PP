@@ -64,17 +64,23 @@ set(PS3RECOMP_PPU_SOURCES
 # workloads themselves all pass one raw 0x2F80-byte job-manager policy module
 # at guest EA 0x013FFE00 (`spu_workloads_pm.c`, image id 5). See
 # docs/analysis/spu-spurs.md.
+set(GT6_SPU_GEN "${CMAKE_SOURCE_DIR}/src/gen")
+set(GT6_SPU_LIFT "${CMAKE_SOURCE_DIR}/generated/spu_lifted")
+if(GT6_V122)
+    set(GT6_SPU_GEN "${CMAKE_SOURCE_DIR}/src/gen122")
+    set(GT6_SPU_LIFT "${RECOMP_DIR}/spu_lifted")
+endif()
 option(GT6_ENABLE_SPU "Compile and register the lifted SPU images" ON)
 set(GT6_SPU_SOURCES)
 if(GT6_ENABLE_SPU)
     list(APPEND GT6_SPU_SOURCES
-        "${CMAKE_SOURCE_DIR}/src/gen/spu_workloads.c"
-        "${CMAKE_SOURCE_DIR}/src/gen/spu_workloads_pm.c"
-        "${CMAKE_SOURCE_DIR}/src/gen/spu_workloads_jobs.c")
+        "${GT6_SPU_GEN}/spu_workloads.c"
+        "${GT6_SPU_GEN}/spu_workloads_pm.c"
+        "${GT6_SPU_GEN}/spu_workloads_jobs.c")
     file(GLOB GT6_SPU_LIFTED CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/generated/spu_lifted/*/spu_recomp.c")
+        "${GT6_SPU_LIFT}/*/spu_recomp.c")
     file(GLOB GT6_SPU_JOB_LIFTED CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/generated/spu_lifted/jobs/*/spu_recomp.c")
+        "${GT6_SPU_LIFT}/jobs/*/spu_recomp.c")
     list(LENGTH GT6_SPU_LIFTED N_SPU)
     list(LENGTH GT6_SPU_JOB_LIFTED N_SPU_JOBS)
     message(STATUS "lifted SPU images: ${N_SPU} + ${N_SPU_JOBS} runtime jobs")
