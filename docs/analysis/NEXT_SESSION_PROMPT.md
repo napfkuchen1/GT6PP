@@ -1,1 +1,1 @@
-Stand Hyp. 113: A25C64-Wipe = leerer Vektor (begin=end=0, end-8 wrap). Guard in generated/ppu_recomp_023.cpp (gitignored, Backup work/_bk_h113). Weiter mit Hyp. 114: Guard-Serie 8x orig+X85s, Exit-Rate + Menue pruefen; dann erste Null-Write-Quellen (CAC2D4/A14FCC). Details in STATE.md.
+Stand Hyp. 115: Guard A25C64 (generated 023, Backup work/_bk_h113) verhindert Exit; Spinner bleibt. Teardown-Tasks in 1AE074 racen. Weiter mit Hyp. 116: 1AE074 +0x4E0/+0x508, Wartebedingung im Teardown. Details STATE.md.
