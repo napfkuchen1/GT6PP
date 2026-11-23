@@ -35,7 +35,7 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 101:** Hyp. 100 (Snap 200s, work/snap_h100/threads.txt): Main tid1 haengt in cellFiberPpuWaitFlag (lr A4309C), Worker idle (lwcond), tid19 lwcond_destroy. Welches Flag (r-Args in threads.txt), wer setzt es (xref --field --rw w), warum nie? Mit REALFLAG=0 vergleichen.
+**Hyp. 104:** Hyp. 101-103: Main-WaitFlag = Timed-Sleep (7DBF48), wird pro Frame von A2FAD0 (wake-all) geweckt -> KEIN Haenger. Waker A2F8B8 (vtable 1489DE0+0x14, Obj 7FFBE280) nie aufgerufen. Ladephase: Main-Stack-Kette (WD h98: A21CBC>568C94>6C5478>6C54DC>9C6184>...) auf Wartebedingung lesen; Script-VM-Zustand per snap_walk.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
