@@ -6,7 +6,6 @@ Regeln/Fallen: `CLAUDE.md`. Gesicherte Fakten/Kanon: `LEDGER.md` (zuerst lesen).
 
 ## Ziel / Problem
 Hauptmenue (gtmode) erreichen. Erststart-Dialoge sind per `boot.adc`-Gates umgehbar (Hyp. 15, `scripts/patch-boot-adc.py`).
-KORREKTUR 2026-11-23: Live-Lauf user (Pad-Log work/padlog_20261123_104620.txt): nach Screen-Size-Menue Hang in GT-Logo+Spinner = wie Probes. Probe-Setup ok, Hang echt.
 
 ## Baseline-Varianten (probe.ps1 `-Boot`)
 `orig` = Original | `noadj` = Dialog+Adjust uebersprungen, Tutorial-Rennen laeuft | `notut` = alles uebersprungen, 27-Track-Schleife.
@@ -41,6 +40,8 @@ Reihenfolge err-Log: BootProject -> PresentsRootSCEE -> dialog.mproject -> Confi
 Offen: Was beendet den App-Run nach ProgressDialog? Naechster Schritt: Dialog-Script-Pfad (ProgressDialog/ConfirmDialog -> Rueckgabewert -> Quit?) statisch; RPCS3-Vergleich: laedt es dort dialog.mproject?
 Hyp. nodata (GT6_SAVE_NODATA=1 in cellSaveData.c, +fresh gamedata): AutoLoad2 GAME6/BKUP6 beide -4 -> echtes NODATA zurueck: KEIN AutoSave2, Quit identisch. Savedata-Rueckgabe NICHT Trigger.
 Hyp. loop135 (PPU_WWATCH 0x16CC8D0): tid30 Engine-Loop (8A7C6C, 135 Ticks) endet weil MAIN tid1 es loescht (8A6EDC <- 88F1BC Finalize-Kette 0x1496C), DANN Join tid30. Main entscheidet Quit.
+Hyp. loop135b: A1EAD0/A1EA64 = shared_ptr-Release (nicht VM). tid1-Task endet mit Dtor-Kaskade; kein tty/Script-Error-Log; HDD-Space (cellGame 40GiB) + SysCacheMount ok.
+Naechster Schritt: ADC-Interpreter-Loop finden (main.adc 'ADCH012', Strings IsExitGame/execShutdown/abortDiskFull) -> letzte ausgefuehrte Script-Funktion vor Task-Ende loggen.
 Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe nicht ab; PS3_HLE_TRACE_ARM=BD28FDBF (sceNpInit) greift nicht.
 
 ## Roadmap-Bezug

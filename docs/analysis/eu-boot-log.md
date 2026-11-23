@@ -220,3 +220,4 @@ cellSaveData.c: env GT6_SAVE_NODATA=1 gibt NODATA statt compat-OK zurueck. Orig-
 - tid30 loop func_008A7C6C polls byte 0x016CC8D0 (vtable 0xD9A788); set 1 by 8A92C8, cleared 0 by func_008A6EDC called from func_0088F1BC (tid1, global finalize 0x1496C via 0x14884) before ppu_thread_join(30). Loop is not self-ending; main requests shutdown.
 - PPU_WWATCH is hex, tag [ww]; probe 'ww' worked (earlier grep 'watch' was wrong).
 - Open: why tid1 enters 0x14884 (main-return) ~135 ticks after gtauto load.
+- loop135b: tid1 after gtauto load ~5000 indirect calls = shared_ptr release (A1EAD0/A1EA64) + dtor 76B7B4; last call before teardown is a dtor. main.adc strings: IsExitGame, execShutdown, shutdown_module, abortDiskFull, MINIMUM_HDD_SPACE. No cellFsGetFreeSize call in run; cellGame free=40GiB-256KiB; no sys_tty output; no [quit] sysutil request from us.
