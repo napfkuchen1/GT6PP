@@ -33,15 +33,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Basis-EMAIN (work/bin, 8843160 B) statisch: Movie-Code (tv_*.pam, cellPamf/Dmux/Vdec/Sail), PDIPFSNetworkPatch*, MSystemPatch vorhanden. Kein UPDATENODEINFO/PATCHSEQUENCE.
 - Basis nutzt /APP_DATA/%s.%d (GT6.N), GT6_1.N nur im Update-EMAIN. Stack-Walk tid 32 (snap_rf1) nur Altlasten; lwcond-Signaler offen.
 ## Naechster Schritt
-Befund (Hyp. noguard/freshsave/npop, 2026-11-23): Quit (~10 Flips nach "LOAD complete" -> MapEa 0x72400000 -> sceNp Term -> Pad End) tritt AUCH ohne Notify/Free-Guards und AUCH mit leerem Savedata (PS3_GAMEDATA_ROOT) auf.
--> Job-Ende, Savedata-Inhalt, NP-Wrapper (AF9780, Ergebnis von 11A94 verworfen) sind NICHT der Trigger. 0x7FFCEE90 ist Stack-Slot (Lock-Muster B038FC/B039AC, von tid1/tid27 wiederverwendet), kein stabiles Task-Objekt.
-Reihenfolge err-Log: BootProject -> PresentsRootSCEE -> dialog.mproject -> ConfirmDialog.gpb -> ProgressDialog.gpb -> Thread-Joins/Shutdown -> mpackages arcade/option/gtmode/garage/gtauto. Frames 90-97 schwarz.
-Offen: Was beendet den App-Run nach ProgressDialog? Naechster Schritt: Dialog-Script-Pfad (ProgressDialog/ConfirmDialog -> Rueckgabewert -> Quit?) statisch; RPCS3-Vergleich: laedt es dort dialog.mproject?
-Hyp. nodata (GT6_SAVE_NODATA=1 in cellSaveData.c, +fresh gamedata): AutoLoad2 GAME6/BKUP6 beide -4 -> echtes NODATA zurueck: KEIN AutoSave2, Quit identisch. Savedata-Rueckgabe NICHT Trigger.
-Hyp. loop135 (PPU_WWATCH 0x16CC8D0): tid30 Engine-Loop (8A7C6C, 135 Ticks) endet weil MAIN tid1 es loescht (8A6EDC <- 88F1BC Finalize-Kette 0x1496C), DANN Join tid30. Main entscheidet Quit.
-Hyp. loop135b: A1EAD0/A1EA64 = shared_ptr-Release (nicht VM). tid1-Task endet mit Dtor-Kaskade; kein tty/Script-Error-Log; HDD-Space (cellGame 40GiB) + SysCacheMount ok.
-Naechster Schritt: ADC-Interpreter-Loop finden (main.adc 'ADCH012', Strings IsExitGame/execShutdown/abortDiskFull) -> letzte ausgefuehrte Script-Funktion vor Task-Ende loggen.
-Hyp. exitgame: Script-Native IsExitGame (OPD 8283F8 -> AD2998 -> Obj 0x1796DB8, Byte +0x10 = 0x1796DC8) nur Init-Store 0 (PPU_WWATCH 0x1796DB0 LEN 0x30). Nie gesetzt -> Quit != IsExitGame.
+Quit (~30 s, sceNp Term) unabhaengig von Guards/Savedata/NP/IsExitGame/HDD/Task-State. tid1-Script-Task endet normal, Main-Finalize (0x14884->0x1496C->0x88F1BC) loescht Engine-Loop tid30. Details: eu-boot-log.md.
+Hyp. loop135/exitgame: Quit-Ursache liegt im Script-Fluss. Online-Patch-Pfad (processPatch->ConfirmDialog->ExecGame) NICHT aktiv: NP OFFLINE, isUp false.
+Skript-Fluss (boot_adc.txt): boot_sequence_common (Init, resumeSuspendRace) || display_sequence_gt6 (Presents, LanguageSelect, AdjustScreen, applySaveData, BackupSave, MovieRoot) -> start_project_gt6 (gttop).
+Lauf-Befund: keine Opens game_parameter/tutorial.xml, kein 59/FI-Movie -> Script erreicht MovieRoot/start_project_gt6 nie. Verdacht: Script-Exception (nil-Attribut, z.B. GAME_STATUS.user_profile.option) beendet Task still.
+Naechster Schritt: pruefen ob Script-Exception: in EMAIN ADC-Interpreter Fehlerpfad finden (xref Strings/RuntimeError-Handler), dort loggen; alternativ boot.adc patchen: skipOpening=true / display_sequence kuerzen und Opens (tutorial.xml) als Tracer nutzen.
 Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe nicht ab; PS3_HLE_TRACE_ARM=BD28FDBF (sceNpInit) greift nicht.
 
 ## Roadmap-Bezug
