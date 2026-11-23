@@ -37,7 +37,7 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 77: PS3_FIBERRATE=1 (fiberlog.patch): Original = Fiber-Resume-Busyspin (~6 Mio/s, CPU-Burn); REALFLAG = nur ~60 Resumes/s gesamt (Wake A2FAD0 ~60 Hz). Frames/Flips beide stagnierend.
 
 ## Naechster Schritt (EINER)
-**Hyp. 78:** Wer ruft A2FAD0 (tid 32, 567D74+0x2A4, r4=0x880)? Ist die Wake-Rate 60 Hz korrekt, oder soll pro Wake mehrfach gelaufen werden? Pro Fiber-Resume genau 1 Servicer-Schritt = 1 Main-Loop-Tick?
+**Hyp. 78:** (Teil: 567FF8 = Warte-Schleife 'while !quit && t<limit { 7DC184 vcall }', Obj 1596C24; A2FAD0-Aufruf noch unklar) Wer ruft A2FAD0 (tid 32, 567D74+0x2A4, r4=0x880)? Ist die Wake-Rate 60 Hz korrekt, oder soll pro Wake mehrfach gelaufen werden? Pro Fiber-Resume genau 1 Servicer-Schritt = 1 Main-Loop-Tick?
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
