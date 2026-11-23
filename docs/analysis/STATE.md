@@ -39,6 +39,7 @@ Befund (Hyp. noguard/freshsave/npop, 2026-11-23): Quit (~10 Flips nach "LOAD com
 Hyp. setst (SETST/WAITST-Log in func_00A2EA5C/A2F290, work/_bk_022 = Backup): Task-Zustandsmaschine (0x28: 1 start, 2 run, 3 done) laeuft normal, keine Anomalie vor dem Quit.
 Reihenfolge err-Log: BootProject -> PresentsRootSCEE -> dialog.mproject -> ConfirmDialog.gpb -> ProgressDialog.gpb -> Thread-Joins/Shutdown -> mpackages arcade/option/gtmode/garage/gtauto. Frames 90-97 schwarz.
 Offen: Was beendet den App-Run nach ProgressDialog? Naechster Schritt: Dialog-Script-Pfad (ProgressDialog/ConfirmDialog -> Rueckgabewert -> Quit?) statisch; RPCS3-Vergleich: laedt es dort dialog.mproject?
+Hyp. nodata (GT6_SAVE_NODATA=1 in cellSaveData.c, +fresh gamedata): AutoLoad2 GAME6/BKUP6 beide -4 -> echtes NODATA zurueck: KEIN AutoSave2, Quit identisch. Savedata-Rueckgabe NICHT Trigger.
 Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe nicht ab; PS3_HLE_TRACE_ARM=BD28FDBF (sceNpInit) greift nicht.
 
 ## Roadmap-Bezug

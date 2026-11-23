@@ -212,3 +212,6 @@ ERGEBNISSE 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, b
 - run.log (probe_hletr_20261123_184856_1): AutoLoad2 #1 funcStat -4, #2 ok; GT6.0-5 = 305/23057/9005/1183/36/36 B; "LOAD complete" -> SOFORT "[sceNp] Term()" (Zeile 776/780) = Beginn Terminate. NpTerm-Aufrufer + Auswertung des AutoLoad2-Ergebnisses im Gast bisher NIE analysiert.
 - UNRESOLVED NIDs 0x0DFBADFA (nach cellKbGetConfiguration, Init) und 0x90460081 (Shutdown) -> CELL_OK gefaked; Zuordnung offen.
 - Hyp. npterm: Np Init(718)->Term(780) = Wrapper AF9780 (aufgerufen 11A94; sysmodule load, net init, sceNpInit, 10BC740 op, sceNpTerm, net fin). Harmlos, kein Exit-Trigger. Exit-Sequenz (Mouse/Kb End) folgt ~30 Flips spaeter.
+
+## Hyp. nodata (2026-11-23)
+cellSaveData.c: env GT6_SAVE_NODATA=1 gibt NODATA statt compat-OK zurueck. Orig-Save: GAME6 -4 (new=0), 2. Call 0 -> LOAD complete -> MapEa 0x72400000 -> sceNp Term. Fresh gamedata: GAME6/BKUP6 -4, kein AutoSave2, gleiche Term-Folge. work/cross_run.log (aelterer Build) lief nach BKUP6 weiter (LoadModule 0xF044, Trophy) - Divergenz ungeklaert.
