@@ -1,14 +1,4 @@
-# Start-Prompt naechste Session (kopieren)
-
-```
-Arbeite im Haupt-Checkout (kein Worktree), Branch eu-first-build, Repo GT6PP.
-Lies zuerst CLAUDE.md und docs/analysis/STATE.md (nur diese beiden). eu-boot-log.md (Hyp. 36-45) und STATE_full_2026-11-22.md nur gezielt nachschlagen.
-
-Ziel: erster Menue-Frame von GT6 EU (nach dem Ladebildschirm). Stand: Snapshot-Werkzeug (PS3_SNAP_AT, scripts/snap_walk.py) steht. Die Game-Loop 568800 laeuft und flippt (~2193 Flips/320 s), zeigt aber nur Legal+Logo+Spinner. Offen (Hyp. 45): pro Track laeuft ein SPURS-Chain "soc-job" (3754 RunJobChain/320 s), aber nur 8 JobGuardNotify geloggt, einmal job 3 rc=-1. Verdacht: Completion-Luecke in der SPURS-Emulation. Snapshot: work/snap_h45.
-
-Aufgabe: STATE.md "Naechster Schritt" abarbeiten:
-1. Pruefen, ob/wo das soc-job-Ergebnis gemeldet wird (JobGuardNotify im Runtime-Code third_party/ps3recomp, Spurs-Jobchain-Completion), wer auf das Ergebnis wartet, woher rc=-1 stammt.
-2. Wenn eine Completion fehlt: Fix im Runtime-Code (Patch unter patches/), Lauf scripts\probe.ps1 -Name x -Boot notut -Seconds 220, Auswertung scripts\loganalyze.py.
-
-Arbeitsweise: Laeufe nur ueber probe.ps1; Snapshots/Offline-Analyse statt Einzelfeld-Logs; mehrere Hypothesen pro Turn, Turn erst bei Durchbruch, Zeitbox 2 h oder noetiger Entscheidung beenden; STATE.md <5 KB, Zeilen <=200 Zeichen, nach jeder Erkenntnis eine Zeile; max. 2 Fehlversuche pro Ansatz; lokal committen, nicht pushen.
-```
+Arbeite im Haupt-Checkout (Branch eu-first-build). Lies CLAUDE.md und docs/analysis/STATE.md.
+Stand: user sieht im laufenden gt6.exe nach dem ersten Testrace das Menue (unvollstaendig/fehlerhaft). Probe-Captures zeigen nur: noadj 4200/9000 = dunkles Logo+Spinner; orig 4200/6000 = AdjustScreen mit Blaurechteck (Render-Bug), Pad-Presses (CROSS) wirkungslos.
+Offen: (1) Hyp. 49 Blaurechteck: Ops fp 0F8FFD41 vs=4 (probe_h48origpad_20261123_011048_1/frame_00/manifest.txt) -> Vertex/VS-Konstanten pruefen; SCREEN_AS_TEX ist NICHT die Ursache. (2) user fragen/ableiten, wie er Dialoge+Testrace passiert (run-gt6.ps1 mit echtem Pad?), dann diesen Weg per probe.ps1 nachbilden und Frame-Capture des Menues machen. (3) Definieren "Menue sichtbar/fehlerfrei".
+Hinweis: probe.ps1 scheitert mit Move-Item-Lock, wenn ein fremdes gt6.exe laeuft (user/andere Session) - nicht killen, warten.
