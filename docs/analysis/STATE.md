@@ -39,8 +39,10 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 
 - 1.22-Recomp Schritt 1 FERTIG: work/bin122/EMAIN.elf (23787792 B) per tools/self_decrypt_np.py, Klic aus RPCS3-Log; 1.00-Selbsttest identisch. Naechster: Diff 1.00/1.22, Lift in generated122.
 - 1.22 Lift+Build: gt6-122/generated (74914 Funcs, code-end 0x10B8154), build-v122 linkt (GT6_V122-Guard stubs.cpp), ctor 0x1183C/lr 0x11880, setjmp C61F88/longjmp C620AC gepatcht. Probe v122b laeuft.
+- 1.22 build-v122: memset/switch-Entries + setjmp-Guards (scripts/post-lift-122.ps1) -> 0 unresolved, 0 setjmp-overflow, ~9480 Flips/150 s; Frame 4200 schwarz (Hooks fehlen).
 ## Naechster Schritt
-lwcond von 9qstY (tid 32) + Signaler per Snapshot/xref finden (war Signal verloren oder Bedingung nie erzeugt?). Parallel pruefen: ob Basis-EMAIN den 59/FI-Pfad ueberhaupt kennt (Update-Differenz).
+1.22: Gast-Hooks portieren (PORT_122.md): Mapper-Treffer 9F8E40->AB080C, A12170->AD1670, A11F20->AD1588, A26510->AE6C34; Rest per Byte-/String-Anker. Dann AdjustScreen-Capture, dann Spinner-Frage.
+SPU: 1.22-fps ohne lifted image (5x) -> SPU-Lift 1.22 noetig.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
