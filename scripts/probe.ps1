@@ -11,12 +11,15 @@
 # -Env      : "K=V;K2=V2" (separator ';', values must not contain ';')
 # -Expect   : regexes that MUST appear in stdout/stderr, else the run is INVALID (not "hypothesis refuted")
 # -Frame    : >0 enables RSX capture at that frame (windowed run, PS3_HEADLESS removed) + pixel stats
+# -FreezeSec: abort own run when log silent this long (after PAD_SCRIPT/SNAP/CALLTRACE_AFTER times); writes FROZEN@<s> to boot.txt. -1 = off
+# -Seconds  : 0 (default) = derive from -PadScript (last key + 60) else 220
 # -KeepDb   : do not archive userdb before the batch
 # -Boot     : orig|noadj|notut - which boot.adc variant is installed (from work\ARCHIV\boot.adc.*); omitted = keep current.
 #             The active variant is always detected by hash, printed and written to <rundir>\boot.txt.
 param(
     [Parameter(Mandatory)][string]$Name,
-    [int]$Seconds = 320,
+    [int]$Seconds = 0,          # 0 = derive: PadScript -> last key + 60 s, else 220 (steady-state)
+    [int]$FreezeSec = 45,       # kill own run if logs show no growth for this long after all timed events; -1 = off
     [int]$Parallel = 1,
     [string]$Env = "",
     [string[]]$Expect = @(),
@@ -62,6 +65,15 @@ if ($PadScript) {
     $pairs["PAD_SCRIPT"] = $PadScript
     $Expect += "press 0x[0-9A-Fa-f]*[1-9A-Fa-f]"
 }
+if ($Seconds -le 0) {
+    $Seconds = 220
+    if ($PadScript) { $last = ($PadScript -split "\s+" | Where-Object { $_ } | ForEach-Object { [double](($_ -split ":")[0]) } | Measure-Object -Maximum).Maximum; $Seconds = [int]([math]::Ceiling($last) + 60) }
+    Write-Host "Seconds (derived): $Seconds"
+}
+# earliest time after which a silent log means FROZEN (timed events must be through)
+$armAt = 20
+if ($PadScript) { $armAt = [math]::Max($armAt, $last + 5) }
+foreach ($k in "PS3_SNAP_AT", "PS3_CALLTRACE_AFTER") { if ($pairs.Contains($k)) { $armAt = [math]::Max($armAt, [double](($pairs[$k] -split "[;,]")[-1]) + 5) } }
 $pairs["GT6_UNBUF"] = "1"
 if (-not $pairs.Contains("PS3_VERBOSE")) { $pairs["PS3_VERBOSE"] = "0" }
 if ($pairs.Contains("PS3_CALLTRACE") -and -not $pairs.Contains("PS3_CALLTRACE_AFTER")) {
@@ -128,9 +140,31 @@ try {
     Remove-Item Env:RSX_CAP, Env:RSX_CAP_DIR, Env:PS3_HEADLESS -ErrorAction SilentlyContinue
 }
 Write-Host "Started $Parallel run(s), waiting up to ${Seconds}s ..."
-$deadline = (Get-Date).AddSeconds($Seconds)
-while ((Get-Date) -lt $deadline -and ($runs | Where-Object { -not $_.Proc.HasExited })) { Start-Sleep -Seconds 2 }
-foreach ($r in $runs) { if (-not $r.Proc.HasExited) { try { $r.Proc.Kill() } catch {} } }
+$t0 = Get-Date; $deadline = $t0.AddSeconds($Seconds)
+foreach ($r in $runs) { $r | Add-Member -NotePropertyMembers @{ Size = -1; LastGrow = $t0; End = ""; EndT = 0; LastFlips = 0 } }
+while ((Get-Date) -lt $deadline -and ($runs | Where-Object { -not $_.Proc.HasExited -and -not $_.End })) {
+    Start-Sleep -Seconds 2
+    $now = Get-Date; $el = ($now - $t0).TotalSeconds
+    foreach ($r in $runs) {
+        if ($r.Proc.HasExited -or $r.End) { continue }
+        $sz = 0; foreach ($f in @($r.Log, "$($r.Log).err")) { if (Test-Path $f) { $sz += (Get-Item $f).Length } }
+        if ($sz -ne $r.Size) { $r.Size = $sz; $r.LastGrow = $now }
+        elseif ($FreezeSec -gt 0 -and $el -gt $armAt -and ($now - $r.LastGrow).TotalSeconds -ge $FreezeSec) {
+            # frame counter decides: count flips in log tail (log size static => no new flips either)
+            $tail = ""; foreach ($f in @($r.Log, "$($r.Log).err")) { if (Test-Path $f) { $tail += ((Get-Content $f -Tail 400 -ErrorAction SilentlyContinue) -join "`n") } }
+            $r.LastFlips = ([regex]::Matches($tail, "SetPrepareFlip|SetFlip")).Count
+            $r.End = "FROZEN"; $r.EndT = [int]$el
+            try { $r.Proc.Kill() } catch {}
+        }
+    }
+}
+foreach ($r in $runs) {
+    $el = [int]((Get-Date) - $t0).TotalSeconds
+    if (-not $r.End) { if ($r.Proc.HasExited) { $r.End = "RUN DONE"; $r.EndT = $el } else { $r.End = "TIMEOUT"; $r.EndT = $Seconds; try { $r.Proc.Kill() } catch {} } }
+    $line = if ($r.End -eq "FROZEN") { "FROZEN@$($r.EndT)s lastflips_in_tail=$($r.LastFlips)" } else { "$($r.End) $($r.EndT)s" }
+    Add-Content (Join-Path $r.Dir "boot.txt") $line
+    Write-Host ("run {0}: END {1}" -f $r.I, $line)
+}
 Start-Sleep -Milliseconds 500
 
 # --- verify ----------------------------------------------------------------

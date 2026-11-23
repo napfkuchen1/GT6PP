@@ -36,6 +36,7 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 57: Pad-Poll A39CD8 laeuft jeden Frame (Aufrufer A1C1F8), GetState nur vom Combo-Checker. Listener-Objekt 0x165F340 (vt 148A250): A3CCC0/CC80/CE18/CBCC/CC40 NIE gerufen = Pad-Events erreichen UI nicht.
 - Hyp. 58: Listener-Liste (head mgr+0x43c) hat 2 Padobj-Knoten, A39CD8 verteilt Rohdaten per A390E4. Padobj-vt +0/+4/+C NIE gerufen; nur vt+8 (Combo). UI liest Pad nicht ueber Padobj-Methoden.
 - Hyp. 59: Pressure-Bytes OK (cellPad.c setzt 255 bei Digital-Bit, PRESS_ON, len 0x18). Pad-Datenpfad bis Padobj verifiziert; Konsument im AdjustScreen unbekannt.
+- probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate userdb/Lauf offen (hdd0 fest in main.cpp:722).
 
 ## Naechster Schritt (EINER)
 **Hyp. 60:** user-Live-Log (work/padlog_*.txt via live-padlog.ps1) auswerten; ohne Log: UI-Thread vs Poll-Thread tid 27 klaeren (CALLTRACE_FROM).
