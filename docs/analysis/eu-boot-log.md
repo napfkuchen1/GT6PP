@@ -757,3 +757,8 @@ Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot
 - Hyp. 115: Guard-Survivor Frame 9000 (4x) = GT-Logo+Spinner. fs-Zugriffe enden frueh (kein IO-Wait). 2/4: A2FAD0 Ringlisten-Walk mit NULL-Knoten = Busyloop (3.7M null-writes).
 - Befund: Teardown-Tasks (1AE074: +0x178 1AAC8C, +0x508 7CFDD0>88B928) laufen auf Singleton/Listen, die parallel genutzt/genullt sind = Use-after-free-Race. Ursache offen.
 - Hyp. 116: TLS-TID-Cache (A3046C) liefert pro r13 eindeutige ids (1,2,5,9..34) -> TID-Duplikat widerlegt. 1AAC8C/1AAD14 laufen JEDEN Frame (kein Wait/Teardown-Trigger) = normal.
+
+## Spinner-Zustand Watchdog + Calltrace (2026-11-23, probe wd2/ct, orig+X@100, build-v020)
+- WD bei 200/320 s identisch: ~20 Worker in sys_lwcond_wait (lr A4309C), tid1/2/3/5 nur lr. EVQSTAT: q4 pushed=205k, q5 64k (pending=3), q7 64k, q1 17k, q9 21k; kein Waiter-Stau.
+- NEU: `[null-write] wrote32 0 to NULL+0x40 by guest-fn A2FAD0` 4,55 Mio x in 340 s (~13k/s), dazu 2x NULL+0x18 by 88B450 beim Boot. A2FAD0 = "wake all" (vtable-Slot 7 Fiber-Thread-Klasse): Schleife ueber Listenknoten, stw 0,0x40(node->+8). Element-Pointer NULL -> Fiber-Liste hat NULL-Eintraege (verwandt mit Hyp. 83 NULL-Element).
+- CALLTRACE_TO=A2FAD0: Aufrufer lr=567DA4 = func_00567D74+0x2A4, tid=32 (Fiber-Run-Thread), r3=0x7FFBE280 r31=0x7FFD8E88. 567D74 hat einen direkten Aufrufer (6D5230); Rest ueber vtable.

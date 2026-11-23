@@ -28,7 +28,6 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 78-80: REALFLAG (WaitFlagEx) = DEFAULT, Dialog rendert korrekt. noadj+REALFLAG: Exit ~52s (Race, Hyp. 81/82/86 pinned=deterministisch).
 - Hyp. 83: Exit = A25C64 (vector.clear) aus 88B8E0, NULL-Element im Zeigervektor 71E4455C -> zeroed 14E4000..FFFFFFF0. Hyp. 84-89: Puffer/new/Lock nicht Ursache (Heisenbug).
 - Hyp. 92: orig + PAD X (80-140s) -> Frame 9000 = GT-Logo+Spinner. AdjustScreen passiert.
-- Hyp. 93-96: orig+Pad: Dauer-Churn, kein Freeze; Frame 15000 noch Logo+Spinner.
 - Hyp. 109-116 (Details in eu-boot-log.md "Archiv"): Wipe = A25C64 Fill end-8 wrap, Aufrufer Worker-Cleanup 1AAC8C; Guard (A25C64 end<8 return) stoppt Exit, Spinner bleibt -> Wipe ist NICHT Ursache der Ladephase.
 
 ## UEBERWACHER-FINDINGS (2026-11-23, Review Hyp. 1-116 gegen ps3recomp v0.20 + third_party/GT5P)
@@ -42,9 +41,10 @@ ERGEBNISSE 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, b
 - Befund 3 WIDERLEGT: persistente db (-KeepDb), orig+X@100s, 900 s/100k Flips: Frame 4200 AdjustScreen, 7200..19200 stabil GT-Logo+Spinner. Fresh-db ist nicht die Ursache.
 - Befund 2 NEGATIV: PRIO_START=1 / SPU_LOCKSTEP(Q1000) / Kontrolle: Frame 4200 identisch (AdjustScreen, 28,4% schwarz). PPU_RESV_OFF=1 schlechter: nur 6555 Flips/430 s, NP2-IsLoaded-Schleife.
 - Befund 4 Audit (statisch, offen): Verdacht M-H cellSysutilGetBgmPlaybackStatus (cellSysutil.c ~507, memset 0x28 vs SDK-Struct), M sys_process_get_paramsfo memset 256, cellSync Barrier/Rwm Host-Layout. cellFs/SaveData nicht auditiert.
+- Spinner-Zustand (wd2/ct): Waiter alle idle, keine Event-Staus. NEU: wake-all A2FAD0 ~13k/s von tid32 (func_00567D74+0x2A4), Fiber-Listenknoten mit NULL-Element (NULL+0x40-Writes, 4,5M). Details eu-boot-log.md.
 
 ## Naechster Schritt (EINER)
-Strategiewechsel (Kette beendet): (a) Snapshot-Diff `snap_diff` 140 s vs 175 s bzw. Walk Vektor vor/nach X; (b) Audit-Verdacht #1/#2 gegen SDK-Groessen pruefen; (c) Threads/Wartezustaende im Logo+Spinner-Zustand per Snapshot (worauf wartet Ladephase?).
+Fiber-Liste (Obj 0x7FFBE280, Knoten +8 = NULL): wer befuellt sie (Snapshot-Walk der Liste im Spinner-Zustand `snap_walk.py`, Setter via `xref.py --field 0x8`), HLE cellFiber-Create-Rueckgabe gegen SDK pruefen; danach Audit #1/#2.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
