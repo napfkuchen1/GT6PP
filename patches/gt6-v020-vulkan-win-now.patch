@@ -1,0 +1,20 @@
+diff --git a/libs/video/rsx_vulkan_backend.c b/libs/video/rsx_vulkan_backend.c
+index 6f325854..492f7000 100644
+--- a/libs/video/rsx_vulkan_backend.c
++++ b/libs/video/rsx_vulkan_backend.c
+@@ -61,6 +61,15 @@
+ #include "rsx_draw_engine.h"
+ #include "metal_frame_rate.h"   /* portable bounded present-rate statistics */
+ #include "rsx_present_thread.h"
++#ifdef _WIN32
++/* GT6PP local: present thread header is POSIX-only, Windows needs its own clock. */
++#include <windows.h>
++static inline uint64_t rsx_present_thread_now(void)
++{
++    LARGE_INTEGER f, c; QueryPerformanceFrequency(&f); QueryPerformanceCounter(&c);
++    return (uint64_t)((double)c.QuadPart * 1e9 / (double)f.QuadPart);
++}
++#endif
+ #include "vulkan/rsx_vk_fallback_vert.spv.h"
+ #include "vulkan/rsx_vk_fallback_frag.spv.h"
+ 

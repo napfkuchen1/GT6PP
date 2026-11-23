@@ -57,12 +57,25 @@ static void dump_threads(void)
 
 extern "C" {
 int  rsx_d3d12_backend_init(unsigned width, unsigned height, const char* title);
+#ifdef PS3RECOMP_RSX_VULKAN
+int  rsx_vulkan_backend_init(uint32_t w, uint32_t h, const char* title);
+void rsx_vulkan_backend_present(void);
+#endif
 void rsx_d3d12_backend_present(void);
 int  rsx_d3d12_backend_pump_messages(void);
 void cellGcmTickVBlank(void);
 void cellGcmTickFlip(void);
 void cellGcm_rsx_process_fifo(void);
 int  cellGcm_take_flip_pending(void);
+}
+
+static void gt6_backend_present(int use_vk)
+{
+#ifdef PS3RECOMP_RSX_VULKAN
+    if (use_vk) { rsx_vulkan_backend_present(); return; }
+#endif
+    (void)use_vk;
+    rsx_d3d12_backend_present();
 }
 
 static DWORD WINAPI present_thread(LPVOID)
@@ -74,7 +87,19 @@ static DWORD WINAPI present_thread(LPVOID)
      * flip clock and the FIFO drain still run, so the guest sees the same
      * timing it would with a display. */
     const int headless = getenv("PS3_HEADLESS") != NULL;
-    int rsx_ok = !headless && (rsx_d3d12_backend_init(1280, 720, title) == 0);
+    /* GT6_BACKEND=vulkan selects Vulkan (build with PS3RECOMP_RSX_VULKAN); default D3D12. */
+    int use_vk = 0;
+#ifdef PS3RECOMP_RSX_VULKAN
+    { const char* b = getenv("GT6_BACKEND"); use_vk = b && !_stricmp(b, "vulkan"); }
+#endif
+    int rsx_ok = 0;
+    if (!headless) {
+#ifdef PS3RECOMP_RSX_VULKAN
+        if (use_vk) rsx_ok = (rsx_vulkan_backend_init(1280, 720, title) == 0);
+        else
+#endif
+        rsx_ok = (rsx_d3d12_backend_init(1280, 720, title) == 0);
+    }
     fprintf(stderr, "[rsx] backend init %s\n",
             headless ? "skipped -- headless" : rsx_ok ? "OK -- window open" : "FAILED");
     const int drain = rsx_ok || headless;
@@ -89,7 +114,7 @@ static DWORD WINAPI present_thread(LPVOID)
             cellGcmTickVBlank();
             cellGcmTickFlip();
             if (rsx_ok && cellGcm_take_flip_pending())
-                rsx_d3d12_backend_present();
+                gt6_backend_present(use_vk);
             if (drain)
                 cellGcm_rsx_process_fifo();
             next_tick += 16;          /* ~60 Hz */
@@ -105,7 +130,7 @@ static DWORD WINAPI present_thread(LPVOID)
          * paces the guest to single-digit fps. */
         if (drain) {
             if (cellGcm_take_flip_pending() && rsx_ok)
-                rsx_d3d12_backend_present();
+                gt6_backend_present(use_vk);
             cellGcm_rsx_process_fifo();
         }
         if (rsx_ok) {
