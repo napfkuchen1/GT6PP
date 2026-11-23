@@ -21,7 +21,7 @@ Baseline-Probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; `-Boot orig
 
 - Ueberwacher-Frage (Arbeit6, nicht beantwortet): Flips ~5770 stammen wohl vom Runtime-Ticker (present thread 60 Hz), nicht vom Game. 146E8-Loop lief 0 Iterationen (AD2778 sofort 1). 1.00 Game-Loop 0x568800 -> 1.22-Gegenstueck per Signatur in work/bin/_t100.elf suchen (Aufrufer AF9350-Tick/cb 0x16CD0C0-0x2F40), dann EIN Lauf mit Capture.
 ## Naechster Schritt
-Warum ist Task AFDFC0 sofort 'fertig'? Beide strcmp-Strings in AFE190 (AF32FC-Ergebnis @0x179A1E8 vs obj+0x48) per fprintf loggen; AF32FC (Mode-Getter) lesen, wer setzt den String (xref). EIN Lauf mit fprintf in generated (func_00AFE190/AFE2A0, Backups work/_bk_fdwait). Entscheidung: wenn AF32FC/C6390C HLE-Wert falsch -> fixen; sonst Task-Flag-Setter per xref pruefen.
+Task AFDFC0 = legitimer Boot-Check, KEIN Fehler. Frage: was haelt main() auf HW nach 146E8 am Leben / wo ist 1.22-Gegenstueck zum 1.00-Game-Loop 0x568800? Statisch (xref/gdis, Signatur aus work/bin/_t100.elf), dann EIN Lauf mit Capture.
 Offene Hook-Anker: PackageNullGuard 5F81B0 (1.22-Anker per Signatur aus work/bin/_t100.elf), H113 A25C64 (kein 1.00-Code im git -> verwerfen). Danach SPURS-Walker, a3, AdjustScreen REALFLAG, ZWAP.
 
 ## Widerlegt / Symptom (nicht wiederholen)
