@@ -39,8 +39,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hooks 1.22 portiert (tools/port_hooks.py: Stream r/s/t, 3 FileDevice-Guards, Host-Open AB080C). Probe hk122 noadj 220 s: unresolved=0, Frame 4200 schwarz 100%, kein PDIPFS/59. Script-Hooks/Menue-Pump fehlen.
 - rp122 (RPCS3-hdd0, noadj 220 s): kein 59/FI. Open-Diff: Oracle oeffnet 9/PR/MF (Worker MkZA-) nach 8G/RB, wir 8Y/Y0 (Oracle nie); 26 Oracle-Opens vor EE/3C fehlen, EE/3C nie erreicht.
 ## Naechster Schritt
-Hyp. guard (2026-11-23): 3 Laeufe orig 70-90 s (guard / GT6_NO_NOTIFYGUARD / +GT6_NO_CTXFIBER): ALLE identisch ~100 Flips, Gast-Quit nach ~30 s (sceNp Term, cellKb End). Null-Call-Sturm 0-1 mal -> Guard/ctxfiber nicht ursaechlich. Blocker = Quit-Kette AFDFC0 (poll AFE38C, Quit-Test AD2998).
-Naechster: statisch AFE38C/AD2998 -> wer setzt Quit-Event (Event-Struct 0x1798F00 +0x30/+0x31). Befund: gt6 haengt nach Quit im Shutdown (ppu_thread_join) -> probe.ps1 Stall-Kill muss gt6 selbst killen.
+Hyp. guard (2026-11-23): 3 Laeufe orig 70-90 s (guard / NO_NOTIFYGUARD / +NO_CTXFIBER) identisch: ~100 Flips, Gast-Quit nach ~30 s. Null-Call-Sturm 0-1x -> Guard/ctxfiber nicht ursaechlich.
+Quit-Kette 1.22 (korrigiert): Hauptloop 0x146E8 endet wenn AD2998 !=0 = Byte 0x1796DC8 (Objekt 0x1796DB8+0x10). PPU_WWATCH=1796DB0 LEN 32: KEIN Store setzt es !=0 -> Writer ist ungehookt (HLE-memcpy/Host-Pointer, z.B. cellSaveData-Load GT6.0-5 direkt vor Term) oder Flag via anderen Pfad.
+AFDFC0/0x179ECF0-Struct = Titel-ID-Strcmp ("BCES01893"), NICHT der Quit-Weg (Alt-Annahme 0x1798F00 falsch).
+Naechster: (1) Savedata-Load-Ziel (fileBuf der 6 Reads) vs 0x1796DC8 pruefen; Quit pruefen mit leerem/anderem Save (-KeepDb aus); (2) sonst Snapshot kurz vor Term + snap_walk 0x1796DB8.
+Infra: probe.ps1 killt gt6 jetzt zusaetzlich per taskkill /T (hing in ppu_thread_join).
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

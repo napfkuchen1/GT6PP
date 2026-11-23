@@ -1,7 +1,6 @@
 Ziel: Hauptmenue (C6), GT6 EU, Game 1.22 + ps3recomp v0.20.0 (einzige Linie).
-Stand: Commit 37aac68+. cellFiberPpuContext-HLE (`gt6/src/gt6_ctxfiber.cpp`) + `tools/guard_notify.py` (Guard AD4294) im Baum; Guard-Build `gt6\build\gt6.exe` fertig (17:53, work/build_guard.txt). Noch KEINE Probe damit. C1 FAIL bisher.
-Naechster Schritt: `.\scripts\probe.ps1 -Name guard -Boot orig -Seconds 90 -StopOn <Zeile> -Frame 4200`. Wenn Spinner/Null-Call-Sturm weg -> naechsten Blocker analysieren; sonst Ursache Listenkopf=0 (Heap-Ueberlapp 0x7FFFEB70, Allocator-Vtable 0x1637F80 bei AE73BC) per `scripts/snap_walk.py`.
-Nicht wiederholen: LEDGER §4, mempool-HLE (kein Writer).
-Offen (Ueberwacher): (1) Doku-Reste README/ROADMAP/docs/STATUS/BOOT/HANDOFF/TOOLING auf EU BCES01893 + 1.22, STATE.md-Pfade pruefen; (2) probe.ps1 Stall-Kill: Fortschrittszaehler (neue FS-Opens/HLE-Typen) 30 s, Flip-Heartbeat reicht nicht, FreezeSec>=60, kurze -Seconds (60-90), nach Lauf Get-Process gt6 leer.
-Laeuft noch: nichts (Build fertig). Prozess-Check: Get-Process gt6.
-Lesen: NEXT_SESSION_PROMPT, STATE.md; LEDGER nur grep. Caveman ultra. Kontext: ctxwatch alle ~15 Calls, Handoff bei 180k.
+Stand: Commits bis "docs: fix line endings" (nach 7259b74). Guard-/ctxfiber-Probes: Gast-Quit nach ~30 s unveraendert, kein Spinner/Null-Call. Doku-Reste + probe.ps1 taskkill erledigt.
+Naechster Schritt: Quit-Flag 0x1796DC8 (AD2998, Loop 0x146E8) wird per PPU_WWATCH von keinem Store gesetzt -> ungehookter Writer. Pruefen: fileBuf der 6 cellSaveData-Reads (AutoLoad2 BCJS37016-GAME6, direkt vor sceNp Term) vs 0x1796DC8; wenn Ueberlapp -> Savedata-HLE fixen, sonst Snapshot vor Term + snap_walk.
+Nicht wiederholen: LEDGER §4, mempool-HLE, AFDFC0/0x1798F00 (ist Titel-ID-Strcmp, nicht Quit).
+Laeuft noch: nichts.
+Lesen: STATE.md, NEXT_SESSION_PROMPT.md. Caveman ultra.

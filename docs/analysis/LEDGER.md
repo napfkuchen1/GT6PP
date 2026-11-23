@@ -26,5 +26,5 @@ Einzige Linie: Game v1.22 + ps3recomp v0.20.0.
 ## 6. Arbeitsregeln
 - Vor jeder Hyp.: LEDGER lesen. Neue Erkenntnis -> 1 Zeile mit Beleg. Widerlegtes -> Abschnitt 4. Lauf-Log boot.txt muss `gt6\build\gt6.exe` nennen.
 
-- 1.22: Menue-Pump 616C80 portiert (86302b5); Packages arcade/option/gtmode/garage/gtauto laden, danach Gast-Quit (AFDFC0 Event 0x1798F00, Schreiber unbekannt) ODER Null-Call-Schleife (AD3DFC Kopie, NULL-Element). Beleg: side-session befund_1.22_nullcall.md
+- 1.22: Menue-Pump 616C80 portiert (86302b5); Packages arcade/option/gtmode/garage/gtauto laden, danach Gast-Quit (Loop 0x146E8 endet wenn Byte 0x1796DC8 !=0, kein gehookter Store setzt es; AFDFC0 = Titel-ID-Strcmp, nicht Quit) ODER Null-Call-Schleife (AD3DFC Kopie, NULL-Element). Beleg: side-session befund_1.22_nullcall.md
 - GT5P-Check (b): GT6 laedt Script main.adc ('[GT6] script override' im Log) + 30 PDIPFS-Opens -> Mount/Script-Load laufen; GT5P-Ursache P12 trifft nicht zu. (a) lwcond-Sender fuer Loader 9qstY weiter offen (ein Lauf mit lwcond_signal-Zaehler noetig).
