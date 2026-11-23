@@ -36,8 +36,8 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - ABSCHAETZUNG Recomp Patch-EMAIN 1.22 (RPCS3 EMAIN.SELF 9209104 B; FIXEDELF114 = 1.14, 9059040 B), NICHT gestartet, User entscheidet:
   1) SELF->ELF: gt6/scripts/decrypt_self.py braucht pycryptodome (fehlt) + Keys/RAP; ELF liegt dann als work/patchelf/. Aufwand ~1-2 h, Risiko Keys.
   2) Lift + Gen (relift-gt6/gen-functions-gt6, ~1 h Rechenzeit) und Neu-Build ~2 min; alle Adress-Patches/Guards (H113 A25C64, boot.adc-Gates) neu portieren: 0,5-1 Tag. Gesamt ~1-2 Tage.
-- 1.22-Recomp Schritt 1 BLOCKIERT: SELF->ELF. decrypt_self.py: gt6/data/keys fehlt (nirgends gefunden); rpcs3.exe --decrypt erzeugt nichts (stumm, kein .elf). Kopie work/bin122/EMAIN.SELF.
 
+- 1.22-Recomp Schritt 1 FERTIG: work/bin122/EMAIN.elf (23787792 B) per tools/self_decrypt_np.py, Klic aus RPCS3-Log; 1.00-Selbsttest identisch. Naechster: Diff 1.00/1.22, Lift in generated122.
 ## Naechster Schritt
 lwcond von 9qstY (tid 32) + Signaler per Snapshot/xref finden (war Signal verloren oder Bedingung nie erzeugt?). Parallel pruefen: ob Basis-EMAIN den 59/FI-Pfad ueberhaupt kennt (Update-Differenz).
 

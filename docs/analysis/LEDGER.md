@@ -40,3 +40,4 @@ Zweck: Session-Wechsel ohne Verlust. STATE.md = aktueller Schritt, LEDGER = was 
 - Gleiches Ergebnis mit tools/RPCS3 (v0.0.43-20641 master) und User-RPCS3 (v0.0.43-eee3f0f7 gt6-Build). Nicht an Pfad/Rechten/Build-Variante.
 - RPCS3 bootet dieselbe Datei trotzdem: EBOOT 1.22 ruft sceNpDrmIsAvailable(EMAIN.SELF) + sceNpDrmProcessExitSpawn2 (Orakel-Log Z.3479). Verdacht: EMAIN 1.22 ist NPDRM-SELF, Klic kommt vom EBOOT, nicht im --decrypt-Pfad.
 - Naechster Test: Klic (16 B) in EBOOT_122.elf an den sceNpDrm*-Aufrufen suchen; mit Klic per RPCS3-Decrypt (GUI Utilities) oder eigenem Skript entschluesseln. Kein Credential noetig.
+- GELOEST 2026-11-23: EMAIN 1.22 = NPDRM (self_type 8, license 3), Klic <klicensee redacted> (RPCS3-Log Z.3478). `tools/self_decrypt_np.py in.SELF out.elf [klic]` (keys gt6/data/keys, nicht im Repo) -> work/bin122/EMAIN.elf 23787792 B. Selbsttest: 1.00 byte-identisch mit work/bin/EMAIN.elf.
