@@ -20,6 +20,6 @@ foreach ($n in $names) {
     $h = (Get-FileHash -Algorithm SHA256 $p).Hash
     if ($h -eq $exp.$n) { Write-Host "OK       $n" -ForegroundColor Green }
     elseif ($must) { Write-Host "MISMATCH $n`n  got      $h`n  expected $($exp.$n)" -ForegroundColor Red; $bad++ }
-    else { Write-Host "WARN     $n differs (regenerate with scripts/gen-functions-gt6.ps1)" -ForegroundColor Yellow }
+    else { Write-Host "WARN     $n differs (regenerate with scripts/gen-functions.ps1)" -ForegroundColor Yellow }
 }
 if ($bad) { throw "Input verification failed ($bad). Wrong disc/region or stale decrypt." }

@@ -1,6 +1,0 @@
-{
-    "_comment":  "SHA-256 inputs for the 1.22 line (EMAIN 1.22, NPDRM-decrypted via tools/self_decrypt_np.py). Hashes only.",
-    "work/bin122/EMAIN.elf":  "D65B7E9C68B6EDA6CB838D9D36DE268D8CE248BDD4BC41E4C9F58B01B5EE19FD",
-    "work/analysis/emain122/functions_found.json":  "709C72358BCC754CD6E84B7A6AC60A59501E252BB9A00CA0CFCB0949176760BF",
-    "work/analysis/emain122/functions_corrected.json":  "E691AC8657B25B85FAC53345593431F9498C0591900BF9A4E77EDD66E493CD40"
-}

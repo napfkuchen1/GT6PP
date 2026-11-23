@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Locate SPURS job images (raw ranges of EMAIN) by runtime fingerprint (FNV-1a-64) + size.
-Usage: find_spu_jobs_122.py <EMAIN.elf> <fp:size> ...   (fp hex, size dec). Scans 128-aligned offsets with header prefilter."""
+Usage: find_spu_jobs.py <EMAIN.elf> <fp:size> ...   (fp hex, size dec). Scans 128-aligned offsets with header prefilter."""
 import sys
 d = open(sys.argv[1], 'rb').read()
 want = [(int(a.split(':')[0], 16), int(a.split(':')[1])) for a in sys.argv[2:]]

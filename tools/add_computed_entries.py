@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Add the computed-jump entry points of the memset family to a function list.
 
-The memset at 0xA4FDBC (and the 0xA4FEE8 tail) finishes small sizes with a
+The memset at 0xB118E0 (1.22; 0xA2F158 switch too) finishes small sizes with a
 Duff's-device jump: it loads a base address, subtracts `4 * n` (or `n / 2` for
 the 8-byte store run) and does `mtctr` / `bctr` into the middle of a run of
 `stb` / `std` instructions. The lifter's jump-table pass only knows table
@@ -19,19 +19,9 @@ entries are left alone; running the script twice does nothing the second time.
 import json
 import sys
 
+# 1.22 layout (EMAIN 1.22, memset rebuilt: found by scanning bctr + stb/std runs)
 # (first entry, last entry, step, end)
 GROUPS = [
-    # lis 0xA5 / addi -0x1e4 / subf n*4  ->  stb r4,0xe(r6) ... stb r4,0(r6); blr
-    (0xA4FDE0, 0xA4FE1C, 4, 0xA4FE20),
-    # lis 0xA5 / addi -0x15c / subf n/2  ->  std r4,0x70(r6) ... add; addi; stdx; blr
-    (0xA4FE68, 0xA4FEA4, 4, 0xA4FEB4),
-    # lis 0xA5 / addi -0xdc  / subf n/2  ->  second run inside func_00A4FEE8
-    (0xA4FEEC, 0xA4FF24, 4, 0xA4FFAC),
-]
-
-
-# 1.22 layout (EMAIN 1.22, memset rebuilt: found by scanning bctr + stb/std runs)
-GROUPS_122 = [
     (0xB118E0, 0xB1191C, 4, 0xB11920),
     (0xB11968, 0xB119A0, 4, 0xB119B4),
     (0xB119E8, 0xB11A20, 4, 0xB11AE4),
@@ -49,13 +39,10 @@ GROUPS_122 = [
 
 
 def main():
-    global GROUPS
-    if len(sys.argv) not in (2, 3):
+    if len(sys.argv) != 2:
         print(__doc__)
         return 1
     path = sys.argv[1]
-    if len(sys.argv) == 3 and sys.argv[2] == "122":
-        GROUPS = GROUPS_122
     with open(path, "r", encoding="utf-8") as fh:
         funcs = json.load(fh)
     have = {int(f["start"], 16) for f in funcs}

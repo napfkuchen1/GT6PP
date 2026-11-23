@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Map 1.00 guest functions to 1.22 by masked-instruction hash (relocations/immediates masked).
-Usage: map_funcs_122.py 0xADDR [0xADDR ...]   (or --from-src to scan tools/ + gt6/src for func_XXXXXXXX)
-Prints: addr100 -> addr122 | status (unique / ambiguous(N) / none) | len100 len122
+Usage: map_funcs.py 0xADDR [0xADDR ...]   (or --from-src to scan tools/ + gt6/src for func_XXXXXXXX)
+Prints: addr100 -> addr_new | status (unique / ambiguous(N) / none) | len100 len122
 Exact masked-hash + length match; ambiguous = same body >1x (take by call-order/xref manually)."""
 import json, re, struct, sys, hashlib
 from pathlib import Path
@@ -22,8 +22,8 @@ def key(d, s, e):
         out.append(w)
     return hashlib.sha1(struct.pack('>%dI' % n, *out)).hexdigest(), n
 def main(a):
-    d0, f0 = load('work/bin/EMAIN.elf', 'work/analysis/emain/functions_corrected.json')
-    d1, f1 = load('work/bin122/EMAIN.elf', 'work/analysis/emain122/functions_corrected.json')
+    d0, f0 = load('ARCHIV/v100/work/bin/EMAIN.elf', 'ARCHIV/v100/work/emain_analysis/functions_corrected.json')
+    d1, f1 = load('work/bin/EMAIN.elf', 'work/analysis/emain/functions_corrected.json')
     if a and a[0] == '--from-src':
         s = set()
         for p in list((R / 'tools').glob('*.py')) + list((R / 'gt6/src').glob('*.cpp')) + list((R / 'gt6/src').glob('*.h')):

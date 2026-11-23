@@ -36,10 +36,6 @@ add_subdirectory(${PS3RECOMP_DIR} ps3recomp EXCLUDE_FROM_ALL)
 set(RECOMP_DIR "${CMAKE_SOURCE_DIR}/generated" CACHE PATH "Directory holding the lifter output")
 get_filename_component(RECOMP_DIR "${RECOMP_DIR}" ABSOLUTE)
 set(GENERATED_DIR "${RECOMP_DIR}")
-option(GT6_V122 "Build the 1.22 EMAIN line (guards 1.00-only address patches)" OFF)
-if(GT6_V122)
-    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/stubs.cpp PROPERTIES COMPILE_DEFINITIONS GT6_V122=1)
-endif()
 
 file(GLOB GENERATED_SOURCES CONFIGURE_DEPENDS "${GENERATED_DIR}/ppu_recomp_*.cpp")
 if(NOT GENERATED_SOURCES)
@@ -65,14 +61,9 @@ set(PS3RECOMP_PPU_SOURCES
 # at guest EA 0x013FFE00 (`spu_workloads_pm.c`, image id 5). See
 # docs/analysis/spu-spurs.md.
 set(GT6_SPU_GEN "${CMAKE_SOURCE_DIR}/src/gen")
-set(GT6_SPU_LIFT "${CMAKE_SOURCE_DIR}/generated/spu_lifted")
-if(GT6_V122)
-    set(GT6_SPU_GEN "${CMAKE_SOURCE_DIR}/src/gen122")
-    set(GT6_SPU_LIFT "${RECOMP_DIR}/spu_lifted")
-endif()
-option(GT6_ENABLE_SPU "Compile and register the lifted SPU images" ON)
+set(GT6_SPU_LIFT "${RECOMP_DIR}/spu_lifted")
 set(GT6_SPU_SOURCES)
-if(GT6_ENABLE_SPU)
+if(TRUE) # SPU always on
     list(APPEND GT6_SPU_SOURCES
         "${GT6_SPU_GEN}/spu_workloads.c"
         "${GT6_SPU_GEN}/spu_workloads_pm.c"

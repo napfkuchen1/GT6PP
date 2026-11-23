@@ -12,7 +12,7 @@ KORREKTUR 2026-11-23: Live-Lauf user (Pad-Log work/padlog_20261123_104620.txt): 
 `orig` = Original | `noadj` = Dialog+Adjust uebersprungen, Tutorial-Rennen laeuft | `notut` = alles uebersprungen, 27-Track-Schleife.
 Varianten aendern `work/gt6_vol/.../boot.adc` -> NIE parallel starten. Originale in `work/ARCHIV/boot.adc.*`.
 Standard: `scripts\probe.ps1 -Name x -Boot notut -Seconds 320`. Frame-Capture: `-Frame N` (Frame 4200 ~320-420 s).
-Binary: `gt6\build-clangcl\gt6.exe`. Rebuild ~2 min.
+Binary: `gt6\build\gt6.exe` (Game 1.22 + ps3recomp v0.20, `scripts\build-all.ps1`). 1.00 archiviert: ARCHIV/HISTORIE.md.
 
 ## Aktive Kette
 Hauptloop 0x568800 = Game-Loop. Script-VM startet gtmode, BGM laeuft. Flips ~9500/190s.
@@ -37,7 +37,7 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Spinner-Frage 1.22 (VERBOSE-fs, orig+noadj 200-220 s): 30 PDIPFS-Opens, KEIN PDIPFS/59/FI, kein Pamf. Wie 1.00 -> Update-EMAIN allein loest Spinner nicht (Gast-Hooks noch nicht portiert).
 - Oracle-Diff (oracle_seq.py, PS3_HLE_TRACE_ARM): Sysmodule-Folge + frisches Savedata = KEINE Divergenz. PDIPFS/9-Opens = Oracle bis EE/3C, danach Oracle 59/FI, wir 85/H2... Divergenz NACH EE/3C.
 ## Naechster Schritt
-Port eingefroren (LEDGER §1 2. Kanon). Offline: Oracle-Aufrufer von PDIPFS/59/FI (PDI 0x100003b, LR) auf 1.00 mappen; was nach EE/3C die Movie-Entscheidung triggert. Kein Einzelfeld-Log.
+UMSTELLUNG 2026-11-23: nur 1.22/v0.20 (1.00 archiviert). Jetzt: boot-kritische Hooks portieren (PORT.md, Anker per Muster), dann Oracle-Diff PDIPFS/59/FI auf 1.22. Kein Einzelfeld-Log.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
