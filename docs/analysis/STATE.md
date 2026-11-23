@@ -28,12 +28,13 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 43: +0x91 setzt nur Finalizer 5C3EC4 (Quit-Pfad). Hyp. 44: Pump-Limit weg, ~2193 Flips/320 s, Bild Legal/Logo.
 - Hyp. 45/46 FIX (patches/gt6-h46-spurs-jc-gen.patch, cellSpurs.c): SPURS-Chain gen+alive, Shutdown stoppt Walker, Join wartet. q4 Pushes 226 -> 187k.
 - Hyp. 47: 27-Track-Schleife = BGM-Playlist (soc-job = Audio-Decode), Symptom. Frame 1500 notut = Legal+Logo+Spinner.
-- Hyp. 48a: Captures 4200 orig/noadj + 9000 noadj: kein Menue; noadj 9000 weiter nur dunkles Logo+Spinner (Frame 9000 ~7 min Laufzeit).
+- Hyp. 48a: Captures: noadj 4200+9000 = dunkles Logo+Spinner, orig 4200+6000(+CROSS-Pad) = AdjustScreen, Pad bleibt wirkungslos. orig erreicht Frame 9000 nicht in 600 s.
+- Hyp. 48c: AdjustScreen-Blau-Rechteck = obere rechte Quadrant des Backdrop (t3 0xCC0000 = Display-Buffer 2, 1216x684, fp 0F8FFD41/DC1). Render-Bug im D3D12-Backend.
 - SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
 - Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
 
 ## Naechster Schritt (EINER)
-**Hyp. 48b:** orig Frame 9000 (Lauf h48orig9k) auswerten; ggf. PAD_SCRIPT durch Dialoge. Danach "Menue sichtbar/fehlerfrei" definieren, dann Legal-Overlay-Exit.
+**Hyp. 49:** Warum ist Quadrant von Display-Buffer 2 (0xCC0000) blau beim Sampling? Backend-Code (Display-Buffer als Textur, Flip/Copy) pruefen. Dann erneut Capture.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
