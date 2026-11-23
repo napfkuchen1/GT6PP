@@ -38,10 +38,12 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 107: MISS-Image (fp 68FDB056..) ist komplett 0x00; registriertes F523F26F liegt statisch im ELF-Seg1 @0x139D280 (eaBinary). Survivor: Bytes ok. Exit-Lauf: Speicher schon genullt = Folge des Wipes (Hyp. 83), kein SPU-Lift-Problem.
 - Hyp. 108: 3 Parallel-Laeufe mit SNAP_AT=84 + X 85s: alle Survivor (kein Exit; Snapshot stoert Timing). Snaps: snap_255980843/983031/985234 (je 1.8G, vor X). Exit-Referenz fehlt noch.
 - Hyp. 109-111: statische Kette Wipe: 7D083C (Wrapper, Singleton 0x159FD890) > 7CD628 > 88B878 > bl A25C64 (je 1 Aufrufer, 7D083C ohne direkten). CALLTRACE_TO auf 7D083C/7CD628/88B878/88B8E0: 0 Treffer (Exit-Laeufe h110 4/4 mit CALLTRACE=200, 88B8E0 ist ein bl-Site).
+- Hyp. 112: GSTACK im Exit-Lauf (run.log.err, h110): Worker tid32 "9qstY" (A304D0>7FB1F0>7FB090>7DF57C>7DFF44>7DF7DC>802004>1AE7CC>1AE5E4>1AE074>1AAC8C>7D083C>7CD628>88B878>A25C64). Unfiltered Calltrace: kein Exit (Heisenbug).
+- 1AAC8C = Cleanup-Task (Obj+0x1F30: 7D0904,7D0DE8,7D0FC0,7D083C,7D08DC), einziger Aufrufer 1AE1E8 in 1AE074. Frage: warum laeuft Cleanup beim X-Press, Singleton-Vektor 71E4455C hat NULL-Element.
 - user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 112:** Exit-Lauf reproduzierbar: PS3_CALLTRACE=200;CALLTRACE_AFTER=60 + X 85s (4/4 Exit, ohne TO-Filter). Wer ruft 7D083C? Ohne TO-Filter CALLTRACE_AFTER=84 N=300 loggen, nach `[CALL] -> 0x007D083C` bzw. 7CD628 greppen; sonst PS3_CALLTRACE_FROM=0x6C54DC (Script-Op-Pfad).
+**Hyp. 113:** 1AE074 (+0x178 ruft Cleanup 1AAC8C bei 1AE1E8) disassemblieren (gdis): welche Bedingung loest Cleanup aus (Fehlerpfad? Job-Ende?) und was fuellt den Singleton-Vektor (7CD628+0x490/+0x534). Exit-Lauf: PS3_CALLTRACE=200;CALLTRACE_AFTER=60;CALLTRACE_TO=0x7D083C + X 85s (4/4 Exit).
 (Hyp. 101-103: Main-WaitFlag = Timed-Sleep, KEIN Haenger. Main-Stack 6C54DC>9C6184>... Script-VM.)
 
 ## Roadmap-Bezug
