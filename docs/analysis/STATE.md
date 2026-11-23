@@ -34,10 +34,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 97: IsLoaded(NP2)-Poll = NP-Manager-Tick (A79C5C), harmlos. Hyp. 98 (WD 200s): Main tid1 laeuft, ~20 Worker in lwcond_wait (idle), Fiber-Runner aktiv.
 - Hyp. 104: A21CBC/A21D50 = Thread-Run-Wrapper, keine Wartebedingung. Tasten START/CIRCLE/TRI/SQ 165-255s: Lauf ok, Frame 9000 in 300s nicht erreicht -> Wirkung unbekannt.
 - Hyp. 105: Frame 4200 = AdjustScreen (frueh, nutzlos). orig+X: Exit exakt bei 1. X-Press (80s h104, 86s h105b) in 2 von 4 Laeufen = gleicher Exit wie noadj (A25C64). Loading-"Haenger" evtl. nur Ueberlebende.
+- Hyp. 106: Exit-Laeufe (h104, h105b) haben je 3x "SPU program with no lifted image" (soc-job, size 34704/53280/64912, fp weicht von registrierten ab); Survivor-Laeufe (h104b/h105/h106b) 0 MISS -> Image-Inhalt race-abhaengig?
 - user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 106:** Exit nach AdjustScreen-Ende (X) ist die Hauptursache. Exit-Stack bei A25C64 per Watchdog/Calltrace im exit-Lauf (PAD X 85s, PS3_CALLTRACE_TO=0xA25C64) erfassen: wer ruft 88B8E0 und mit welchem Vektor.
+**Hyp. 107:** MISS-Image dumpen: `-Parallel 4`, Pad X 85/105/125, `SPU_DUMP_MISS=work/spu_dump_h107` (Pfad absolut!) bis ein Lauf MISS hat; Dump vs `work/ARCHIV/spu_dump.pre-extract/spujob_CB9BD024..._53280.bin` byteweise diffen -> var_off/var_len -> `spu_workload_register_img_masked` (spu_raw.c:365 nutzt find_img_masked).
 (Hyp. 101-103: Main-WaitFlag = Timed-Sleep, KEIN Haenger. Main-Stack 6C54DC>9C6184>... Script-VM.)
 
 ## Roadmap-Bezug
