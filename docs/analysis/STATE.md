@@ -31,9 +31,11 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Hyp. 92: orig + PAD X (80-140s) -> Frame 9000 = GT-Logo+Spinner. AdjustScreen passiert.
 - Hyp. 93-96: orig+Pad (X 80-140s): Snap-Diff 200 vs 280s = Dauer-Churn, kein Freeze; Frame 15000 (450s) noch Logo+Spinner; 25000 in 600s nicht erreicht.
 - Hyp. 96 (VERBOSE=1): nach 140s nur Flip-Zyklus + cellSysmodule IsLoaded(NP2) pro Frame (OK); soc-job-Chains laufen durch; keine neuen FS-/Map-Aktionen.
+- Hyp. 97: IsLoaded(NP2)-Poll = NP-Manager-Tick (A79C5C), harmlos. Hyp. 98 (WD 200s): Main tid1 laeuft, ~20 Worker in lwcond_wait (idle), Fiber-Runner aktiv.
+- user sieht Menue live nach Testrace -> Loading evtl. nur sehr lang.
 
 ## Naechster Schritt (EINER)
-**Hyp. 97:** Welcher Gast-Code pollt NP2-IsLoaded (LR)? Pro-Frame-Warteschleife im Loading: Aufrufer-LR loggen (stubs), dann xref/gdis auf Wartebedingung.
+**Hyp. 100:** Hyp. 99 (1500s, Frame 20000) = weiter Logo+Spinner, nicht nur langsam. Worker-lwcond-Waiter (20 Threads idle): welches Signal fehlt? Snapshot threads.txt + lwcond-Adressen, Signaler per xref.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
