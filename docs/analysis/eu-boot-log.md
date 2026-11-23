@@ -225,3 +225,8 @@ cellSaveData.c: env GT6_SAVE_NODATA=1 gibt NODATA statt compat-OK zurueck. Orig-
 
 ## Hyp. scriptflow (2026-11-23)
 boot_adc.txt: processPatch nur wenn MNetworkInterface.isUp && LoginUtil.isOnline (bei uns NP OFFLINE) -> Patch/ExecGame-Quit ausgeschlossen. display_sequence_gt6: Presents -> LanguageSelectRoot -> AdjustScreenRoot -> applySaveData -> showVoucherMessages -> doBackupSave -> MovieRoot (skipOpening = !user_profile.option.opening_after_autoload) -> start_project_gt6 (GameParameterUtil.executeEvent, tutorial.xml). Probe-Opens: nur boot/dialog gpb + mpackages, kein game_parameter/tutorial.xml, kein PDIPFS/59 -> Script erreicht Movie/start_project nie. Script-log() erzeugt keinen tty-Output (Retail). CALLTRACE (First-N, tid1) zeigt nur Dtor-Kaskaden.
+
+## Hyp. userdb/VMtrace (2026-11-23)
+- initUserDB nie erreicht (kein Open userdb0101.dat in run.log/.err). Quit direkt nach LOAD complete GAME6 (GT6.0-5 gelesen: 305/23057/9005/1183/36/36 B), dann NP2 IsLoaded + sysutil UnregisterCallback, Teardown.
+- Pfad statisch: SaveDataUtil.load(AUTO) -> openProgressDialog (ProgressDialog.open: DialogFrame.appear, func(args)) -> _load -> sutil.load native (bindCheck) -> _autoLoadGameCallback.
+- CALLTRACE_FROM=9EEA88/9F0748 (AFTER 3/22): 0 Calls; Adressen aus 1.00-Zeit. Probes vmA-vmE in work/.

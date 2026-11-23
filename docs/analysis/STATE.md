@@ -33,12 +33,12 @@ Offen: Ladephase nach AdjustScreen; noadj-Exit bei 52s (NULL-Element im Zeigerve
 - Basis-EMAIN (work/bin, 8843160 B) statisch: Movie-Code (tv_*.pam, cellPamf/Dmux/Vdec/Sail), PDIPFSNetworkPatch*, MSystemPatch vorhanden. Kein UPDATENODEINFO/PATCHSEQUENCE.
 - Basis nutzt /APP_DATA/%s.%d (GT6.N), GT6_1.N nur im Update-EMAIN. Stack-Walk tid 32 (snap_rf1) nur Altlasten; lwcond-Signaler offen.
 ## Naechster Schritt
-Quit (~30 s, sceNp Term) unabhaengig von Guards/Savedata/NP/IsExitGame/HDD/Task-State. tid1-Script-Task endet normal, Main-Finalize (0x14884->0x1496C->0x88F1BC) loescht Engine-Loop tid30. Details: eu-boot-log.md.
-Hyp. loop135/exitgame: Quit-Ursache liegt im Script-Fluss. Online-Patch-Pfad (processPatch->ConfirmDialog->ExecGame) NICHT aktiv: NP OFFLINE, isUp false.
-Skript-Fluss (boot_adc.txt): boot_sequence_common (Init, resumeSuspendRace) || display_sequence_gt6 (Presents, LanguageSelect, AdjustScreen, applySaveData, BackupSave, MovieRoot) -> start_project_gt6 (gttop).
-Lauf-Befund: keine Opens game_parameter/tutorial.xml, kein 59/FI-Movie -> Script erreicht MovieRoot/start_project_gt6 nie. Verdacht: Script-Exception (nil-Attribut, z.B. GAME_STATUS.user_profile.option) beendet Task still.
-Naechster Schritt: pruefen ob Script-Exception: in EMAIN ADC-Interpreter Fehlerpfad finden (xref Strings/RuntimeError-Handler), dort loggen; alternativ boot.adc patchen: skipOpening=true / display_sequence kuerzen und Opens (tutorial.xml) als Tracer nutzen.
-Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe nicht ab; PS3_HLE_TRACE_ARM=BD28FDBF (sceNpInit) greift nicht.
+Quit (~30 s) unabhaengig von Guards/Savedata/NP/IsExitGame/HDD/Task-State; Online-Patch-Pfad (processPatch) inaktiv (NP offline). Details: eu-boot-log.md "scriptflow".
+Hyp. userdb widerlegt: initUserDB (boot_sequence_common) nie erreicht/geloggt (kein Open userdb0101.dat, kein GetFreeSize). Quit folgt direkt auf "LOAD complete GAME6" (GT6.0-5 gelesen).
+Pfad: SaveDataUtil.load(AUTO) -> DialogUtil.openProgressDialog -> ProgressDialog.open -> func(_autoLoad) -> _load (sutil.load native, bindCheck) -> _autoLoadGameCallback -> context.wait. Danach Ende.
+Hyp. VMtrace: PS3_CALLTRACE_FROM=9EEA88/9F0748 liefert 0 Calls: Adressen Hyp. 31-35 stammen aus 1.00-Aera, nicht 1.22. Handler-Tabelle/Poll in 1.22 neu finden (gdis/xref, Opcode-Tabelle 24 B/Eintrag).
+Naechster Schritt: 1.22-Script-VM-Poll finden (Aufrufer von Handler per xref --call), dann CALLTRACE_FROM darauf, letzte Opcodes vor Quit lesen (ADC-Disasm: tools/adch_disasm.py, work/dialog_adc.txt).
+Infra: probe.ps1 killt gt6 per taskkill /T. PS3_HLE_TRACE deckt NP-Direktaufrufe nicht ab. CALLTRACE-Zeilen "[CALL] ->" in run.log.err.
 
 ## Roadmap-Bezug
 M2 weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.

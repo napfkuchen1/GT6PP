@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: Commit f0c33c6. Quit (~30 s, ~10 Flips nach LOAD complete -> MapEa 0x72400000 -> sceNp Term) unabhaengig von Guards, Savedata-Inhalt und Savedata-Rueckgabe (GT6_SAVE_NODATA=1 + fresh gamedata: GAME6/BKUP6 -4, kein AutoSave2, gleicher Quit). Job 0x7FFCEE70 = Script-VM-Task endet normal. Reihenfolge: BootProject -> PresentsRootSCEE -> dialog.mproject -> ConfirmDialog -> ProgressDialog -> Shutdown.
-Naechster Schritt: Strategiewechsel (Kette >12 Hyp.): Snapshot-Walk/Vergleich statt Einzel-Logs. Statisch: Script-Pfad dialog.mproject/ProgressDialog -> was liefert den Rueckgabewert, der den Top-Level-Job beendet (Native-Call-Resultate im Dialog-Script, z.B. cellMsgDialog/Sysutil-Callback). Entscheidung: Native-Call liefert Fehler -> HLE fixen; sonst RPCS3-Vergleich (laedt es dialog.mproject?).
-Nicht wiederholen: Quit-Flag 0x1796DC8, savedata fileBuf/Rueckgabe, sceNp Term, Task-State-Maschine 0x28 (LEDGER 1.22, STATE).
-Laeuft noch: nichts. Achtung: gt6/generated/ppu_recomp_022/023.cpp tragen [SETST]/[WAITST]/[QCHK]-Diagnose (Backups work/_bk_022, work/_bk_023); vor Baseline zurueckspielen + build-all.ps1. cellSaveData.c hat Env-Knob GT6_SAVE_NODATA.
+Stand: letzter Commit siehe git log. Quit (~30 s) direkt nach "LOAD complete GAME6" (SaveDataUtil.load AUTO -> ProgressDialog.open -> _autoLoad). userdb-Hyp. widerlegt (initUserDB nie erreicht). VM-Task endet dort still.
+Naechster Schritt: 1.22-Script-VM-Poll/Handler-Tabelle finden (Hyp.-31-Adressen 9EEA88/9F0748 sind 1.00, 0 Calls), CALLTRACE_FROM darauf mit AFTER=3, letzte Opcodes vor Quit lesen. Wenn letzter Opcode ein Native-Call: Ziel pruefen/HLE fixen; sonst ProgressDialog.open/DialogFrame.appear-Pfad.
+Nicht wiederholen: Quit-Flag 0x1796DC8, savedata Rueckgabe, sceNp Term, Task-State 0x28, userdb/abortDiskFull (LEDGER 1.22, STATE).
+Laeuft noch: nichts. gt6/generated/ppu_recomp_022/023.cpp tragen [SETST]/[WAITST]/[QCHK]-Diagnose (Backups work/_bk_022, _bk_023); vor Baseline zurueckspielen + build-all.ps1.
 Lesen: STATE.md, dieser Prompt.
