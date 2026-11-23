@@ -4,3 +4,5 @@ Offen: (1) Hyp. 49 Blaurechteck: Ops fp 0F8FFD41 vs=4 (probe_h48origpad_20261123
 Hinweis: probe.ps1 scheitert mit Move-Item-Lock, wenn ein fremdes gt6.exe laeuft (user/andere Session) - nicht killen, warten.
 Update: Blaurechteck in v0.20 (build-v020) behoben; Arbeits-Build ist build-v020 (GT6_BUILD_DIR setzen). Naechstes: Hyp. 50 siehe STATE.md.
 Update 2: Hyp. 50/51 siehe STATE.md. Pad-Script feuert, AdjustScreen reagiert nicht; einziger Pad-Reader A39F00. Naechstes: Hyp. 52 (Snapshot des Pad-Managers, Antwort der Peer-Session zu users Dialog-Weg beachten).
+
+Update 3: Hyp. 52 statisch fertig, siehe STATE.md. Naechstes: Hyp. 55 Snapshot-Check (PS3_SNAP_DIR explizit setzen).

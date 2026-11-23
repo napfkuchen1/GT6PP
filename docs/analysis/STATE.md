@@ -35,11 +35,12 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - Hyp. 51: einziger Guest-Aufrufer cellPadGetData = A39F00 (Pad-Manager, Poll-Funktion ab ~A39EE0, Puffer r21+0xa0+port*0x84). Validitaetscheck button[1]>>4==7 passt (Runtime setzt 0x70|len/2).
 - Hyp. 53: noadj + CROSS-Presses 60-140 s, Frame 9000: weiter black 99,5 % (Logo+Spinner) = Pad aendert nichts am noadj-Zustand.
 - Hyp. 54: noadj 580 s ohne Pad: Frame 18000 nicht erreicht (~14k Flips). IsLoaded(NP2) 19681x gepollt, NP2 geladen = nur Per-Frame-Check, kein Haenger-Indiz.
+- Hyp. 52 (statisch): Pad-Mgr 0x165AD40, Poll 0xA39CD8. Gates: getInfo2!=0, port_status&1, GetData rc/len/button[1]; A390E4 kopiert Digital nach padobj+0x58/5A nur wenn system_info&1==0. Consumer ungeklaert.
 - SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init). Alt-SDK third_party/ps3recomp bleibt unveraendert.
 - Vulkan-Probe (build-v020-vk, GT6_BACKEND=vulkan, patches/gt6-v020-vulkan-win-now.patch): Init OK (RTX 2080), aber nur vtable-Pfad, glslang fehlt -> keine Gast-Shader; Capture (Frame-Zaehler) D3D12-only. Kein Menue-Vergleich moeglich; ohne glslang-Build zurueckgestellt.
 
 ## Naechster Schritt (EINER)
-**Hyp. 52:** Wer verarbeitet Pad-Puffer r22+8/+0xa (DIGITAL1/2) nach A39F70 -> A3A004? Statisch (gdis/xref) Folge der Pad-Manager-Ausgabe bis AdjustScreen-Handler; Snapshot nur falls noetig.
+**Hyp. 55:** Snapshot orig (PS3_SNAP_AT=100, PS3_SNAP_DIR setzen; h52snap erzeugte keinen Ordner) -> Felder @0x165AD48 (bit0=0), 0x165AD4C (bit0=1), 0x165ADE0 len, 0x165ADE8/EA Digital, padobj+0x58/5A pruefen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
