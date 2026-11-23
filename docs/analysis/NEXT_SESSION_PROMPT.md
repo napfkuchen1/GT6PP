@@ -14,3 +14,5 @@ Update 4 (Hyp. 56-59): A395F0 (padobj vt+8) wird jeden Frame nur vom Combo-Check
 - Hyp. 61/62: RSX-Capture-Frame (RSX_CAP, -Frame) stagniert nach ~9000 (~159 s); Spiellogik tickt weiter (padcnt ~50/s). -Frame ueberschreibt RSX_CAP-Env.
 - Hyp. 63 (KERN): WD-Dump (PS3_WD_AT=120,200) zeigt Haupt-tid 1 in lwcond_wait: Event 0x7FEAC018 (Wait A21D50, Signal A21D8C), Aufrufkette 568C94<-6C5478<-6C54DC<-9C6184<-9C625C<-9B0918<-9F0748 (Script-VM). Snapshot h55: signaled-Byte +0x29 = 0, wait-Byte +0x28 = 1. Hauptthread blockt dauerhaft -> UI/Pad ohne Wirkung erklaert.
 - Hyp. 65 (naechster Schritt): Wer signalt 0x7FEAC018? Signal-Aufrufer 6BFDE0, 7D8124, 7FD0AC/D4, A350D0 (generisches Event-Send mit Wert +0x40/+0x44), A21DE4/E20. Worker-tid finden (WD tid-Liste), pruefen ob dessen Thread/Job nie laeuft (z.B. fehlendes SPU/Fiber/Callback-Ergebnis, Setter +0x48 bei 6C0A14).
+
+- Update 5b: GT6_HDD0 fertig (probe.ps1 -Parallel ohne Lock, je Lauf hdd0-Kopie). Hyp. 65 praezisiert: Dauer-Haenger vs per-Frame-Wait klaeren (WD-Samples dichter; lwcond-Signal-Lost-Wakeup im HLE pruefen). Peer: Fragen zum Render-Zustand -Seconds 180 reicht, Varianten parallel (-Parallel 3-4).

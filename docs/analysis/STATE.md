@@ -34,7 +34,7 @@ Offen: wann erscheint das Menue (Frame 6000/9000?), was fehlt darin.
 - probe.ps1: -FreezeSec (45) bricht stilles Log ab (FROZEN@s in boot.txt, getestet via Suspend), -Seconds 0 = Skript+60/220, END-Zeile RUN DONE|FROZEN|TIMEOUT. Separate hdd0-Kopie/Lauf (GT6_HDD0, main.cpp, build-v020 neu): -Parallel ohne Lock, getestet 2x.
 
 ## Naechster Schritt (EINER)
-**Hyp. 65:** Wer haette 0x7FEAC018 signalen muessen? Signal-Aufrufer (6BFDE0 etc.) per xref/gdis einordnen, Worker-tids (WD: tid 27/32) pruefen; Flag +0x48 Setter 6C0A14.
+**Hyp. 65:** Ist tid-1-Wait 0x7FEAC018 Dauer-Haenger oder per-Frame-Sync? Dichte WD-Samples (PS3_WD_AT erweitern auf >2) bzw. HLE-sys_lwcond_signal-Zaehler/Lost-Wakeup pruefen; 9 Pool-Worker idle in 9F83D4, tid mit 5A68C8-Kette (A4842C sleep) ansehen.
 
 ## Roadmap-Bezug
 M2 (Engine-Boot/Assets) weitgehend done. M3 (RSX/erster Menue-Frame) offen. Siehe `ROADMAP.md`.
