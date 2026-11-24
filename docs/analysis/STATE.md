@@ -35,10 +35,8 @@ Script-VM-Adressen 9EEA88/9F0748 sind 1.00 (0 Calls in 1.22).
 - Tools: probe.ps1 (-KeepDb, -Hdd0Src), gt6_gprof (GT6_GPROF=1), PAD_LOG, scripts/live-padlog.ps1, tools/adch_disasm.py. probe killt gt6 per taskkill /T.
 
 - (Arbeit14) a8[4] geklaert: ctrl+0xa8 = CellSaveDataStatGet (AF5260/80/A0 = funcStat-Wrapper, r4=GetStat), [4]=isNewData. =1 bei fehlendem Dir korrekt (RPCS3 gleich). Kein Bug im HLE.
-- (Arbeit14) Batch GT6_SAVE_ISNEW0 (neuer Knob cellSaveData.c): g6 -> 2x GAME6 cb=-3 dann Term; all -> 1x; base -> GAME6+BKUP6 dann Term. Term unabh. von isNewData. Oracle: 3x GAME6 (3 PDI-Threads) dann AutoSave2 BKUP6, kein Term.
-- (Arbeit14) Kette Save (Arb.11-14) >10 Hyp. beendet. Naechster: Term-Ausloeser ausserhalb Save (Aufrufer sceNpTerm-Thread/Script-Retry-Zaehler) oder Umgehung Term (Guard) -> naechster Blocker.
-- (Arbeit14) network_available (boot_sequence_common.ad) = (type in gt6/academy/demo), nur false wenn PDINetwork.isDummy -> bei uns true. Nicht Ursache. LoginUtil.checkSaveDataBind laedt NICHT (nur online_id-Vergleich).
-- (Arbeit14) Batch PS3_NET_ONLINE=1+PSNR_SERVER (NpStatus ONLINE): kein F044/Trophy, Term wie zuvor. Oracle ruft NetCtlGetInfo/NetStartDialog + Sockets nach GAME6; wir nie. Loads kommen aus scripts/gt6/SaveDataUtil.ad (_autoLoad/load, main.adc 0x69055; GAME6-Daten 6DED0 in boot.adc Z.254).
 - (Arbeit14) Naechster: SaveDataUtil.load Return-Array [?,success,?] + Aufrufer/Retry-Schleife (main.adc 69143 ff, adch_disasm) -> welcher Fehlerpfad fuehrt zu PDINetwork.finalize/Term.
 - (Arbeit14) Term-Guard (GT6_NP_NOTERM, sceNp.c): Term = Beginn Shutdown (danach IsLoaded NP2, SetInvalidateTile), kein Entscheider. Quit kommt nach 2 fehlgeschl. Loads. NP_TERM_BT liefert nichts.
 - (Arbeit14) ORACLE-FUND: GAME6-Load 1+2 -> funcStat -4 (je ~0,2 s), Load 3 ERFOLG: SECUREFILE GT6_1.0..N (16 MB) gelesen = Oracle hat ECHTEN Save. Wir: kein Save -> Erstboot-Pfad -> Quit. Next: Save-Fixture (PARAM.SFO+GT6_1.N in gamedata GAME6) oder Erstboot-Pfad (AutoSave2 BKUP6 statt Quit) pruefen.
+- (Arbeit14) Oracle-Save (RPCS3 savedata/BCJS37016-GAME6 -> work/_gd_oracle, PS3_GAMEDATA_ROOT) wird geladen: Load1 -4 wie Oracle, Load2 result 0 + alle GT6.0-5 gelesen. ABER sceNp Term laeuft PARALLEL waehrend der File-Ops (Z.609, vor GT6.4) -> Save-Kette = Rotheringe; Term kommt aus tid1 main()-Rueckkehr/Finalizer (Arbeit6/10).
+- (Arbeit14) Offen: Oracle liest GT6_1.N, wir GT6.N (Prefix). Naechster: warum kehrt main() 0x14010 nach ~12 s zurueck, Oracle-main_thread bleibt bis Quit (1:46)? Stufen-Rueckgaben/Wait in main vergleichen.
