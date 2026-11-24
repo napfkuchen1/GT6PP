@@ -44,299 +44,299 @@ patch only), which ran about 6 seconds; see below for the second build.
 | `unresolved indirect call` lines | 181 (same kind as in `CONTINUE-HERE.md`) |
 | Display | headless, no RSX backend; nothing was rendered |
 
-<!-- gekuerzt 2026-11-23: Mitte siehe ARCHIV/docs-analysis/eu-boot-log_full_2026-11-23.md -->
+<!-- shortened 2026-11-23: middle part see ARCHIV/docs-analysis/eu-boot-log_full_2026-11-23.md -->
 
-## 2026-11-22 - Hyp. 28 (Job-Liste am Cancel-Zweig)
-[C28] in func_00987A28 @loc_00987E54 (Patch patches/gt6-h28-cancelzweig.patch). Alle Cancels: obj=r23=r25=r28 (40007A10/40007C90), obj+0x28=1, obj+0x30=0, g(0x15DE27C)=0, r22=obj+0x6c, begin(obj+0x70)==end(obj+0x74) -> Vektor leer, Kapazitaet begin+0x28 (Heap mit Alt-Strings). Wait-Schleife (0x987E34..0x987E50) wartet nur bei nicht-leerem Vektor. Naechster Schritt: Befueller des Vektors finden.
+## 2026-11-22 - Hyp. 28 (job list at the cancel branch)
+[C28] in func_00987A28 @loc_00987E54 (patch patches/gt6-h28-cancelzweig.patch). All cancels: obj=r23=r25=r28 (40007A10/40007C90), obj+0x28=1, obj+0x30=0, g(0x15DE27C)=0, r22=obj+0x6c, begin(obj+0x70)==end(obj+0x74) -> vector empty, capacity begin+0x28 (heap with old strings). Wait loop (0x987E34..0x987E50) only waits on a non-empty vector. Next step: find the filler of the vector.
 
-## 2026-11-22 - Baseline-Wechsel + Hyp. 29/30
-boot.adc auf nodlg_noadjust (Kopie work/ARCHIV/boot.adc.nodlg_noadjust; vorheriger Vollpatch in work/ARCHIV/boot.adc.patched_full_*). 3 Laeufe 320 s: Tutorial-Rennen laedt (race.adc, race_tutorial, Template.gpb, nur sgb 0449), Frame 5000 GT-Logo-Ladebildschirm, keine Sound-Schleife; STACKSCAN-Hauptthread identisch zu Hyp. 24 -> gleiche Task-Wait-Ursache. Hyp. 29: 987A28 ruft vtable+0xdc des Executors (obj+0x34), der 1 Job in obj+0x70/74 pusht (v74=v70+4); Dispatch 98787C -> Poll 9EEA88 (Executor obj+0x68); Job-Ergebnis 0/1 nie 2, Vektor danach leer -> Cancel. Hyp. 30: Poll setzt o24=0 (Task-State 3) / 2 (State 2) / sonst fuehrt Job aus (ab 0x9EEB04). Patch: patches/gt6-h29-h30-joblog.patch.
+## 2026-11-22 - Baseline switch + Hyp. 29/30
+boot.adc set to nodlg_noadjust (copy work/ARCHIV/boot.adc.nodlg_noadjust; previous full patch in work/ARCHIV/boot.adc.patched_full_*). 3 runs 320 s: tutorial race loads (race.adc, race_tutorial, Template.gpb, only sgb 0449), frame 5000 GT logo loading screen, no sound loop; STACKSCAN main thread identical to Hyp. 24 -> same task-wait cause. Hyp. 29: 987A28 calls vtable+0xdc of the executor (obj+0x34), which pushes 1 job into obj+0x70/74 (v74=v70+4); dispatch 98787C -> poll 9EEA88 (executor obj+0x68); job result 0/1 never 2, vector empty afterwards -> cancel. Hyp. 30: poll sets o24=0 (task state 3) / 2 (state 2) / otherwise runs the job (from 0x9EEB04). Patch: patches/gt6-h29-h30-joblog.patch.
 
-## 2026-11-22 - Hyp. 31 (Job-Poll 9EEA88 pro Objekt)
-[P31] vor/nach Handler-bctrl 0x9EEC3C in func_009EEA88 (Skript: patches/gt6-h31-polllog.py.txt, Python-Insert-Skript, kein Diff wegen CRLF). 2 Laeufe valid. Poll ist Script-VM: ip=[exec+0x1c] steigt +4/Opcode, Handler-Tabelle 0x1487660. Tasks 40007A10/40007C90/40007990 fuehren Opcodes aus (u.a. 0B,26,25,1D,32,33,0C,03,39,05,24,1C), o24 bleibt 5 -> VM laeuft normal. Einzige o24-Aenderung: Opcode 0x37 (Handler 9ED204, = Script-Return/Ende) setzt task+0x24 = 1 (bei 40007C90, ip 40295538/40295590/40387BF0). Ergebnis 1 statt 2 -> Done-Event nie, Cancel. 40007A10/40007990 erreichen im 60er-Limit kein 0x37.
+## 2026-11-22 - Hyp. 31 (job poll 9EEA88 per object)
+[P31] before/after handler bctrl 0x9EEC3C in func_009EEA88 (script: patches/gt6-h31-polllog.py.txt, Python insert script, no diff because of CRLF). 2 runs valid. Poll is script VM: ip=[exec+0x1c] rises +4/opcode, handler table 0x1487660. Tasks 40007A10/40007C90/40007990 execute opcodes (incl. 0B,26,25,1D,32,33,0C,03,39,05,24,1C), o24 stays 5 -> VM runs normally. Only o24 change: opcode 0x37 (handler 9ED204, = script return/end) sets task+0x24 = 1 (at 40007C90, ip 40295538/40295590/40387BF0). Result 1 instead of 2 -> done event never, cancel. 40007A10/40007990 never reach 0x37 within the 60 limit.
 
-## 2026-11-22 - Hyp. 32 (Opcode 0x37 Status-Wert)
-Statisch: Handler 9ED204 (Script-Return): Skript-Instruktionen sind 8 Byte (w0=op<<24|operand, w1=Argument). Handler liest w1=[ip+4]; Werte 1..3 -> pop Ergebniswert vom VM-Stack in Promise task+0x20 (979290), dann task+0x24 = w1; sonst task+0x24 = w1 direkt. Dynamisch [P32] (patches/gt6-h32-op37log*.py.txt): op37 bei 40007990 hat immer w1=0 (80 Treffer, 2 Laeufe); bei 40007C90 war w1=1 (Hyp. 31). Jump-Tabelle 0x1419550 (Switch auf obj+0x24 in 98787C): 0->987914 (98604C Schritt, dann Schleife), 1->98792C (985FE0-Test + 98604C), 2,3->987A08 (RETURN Ergebnis = Done/Fail), 4,5->9878B8 (Poll wiederholen). Also: Return-Status 0/1 = "Schritt fertig, naechsten Job holen" (98604C), nur 2/3 beendet den Task. Der Task wartet auf weiteren Job/Schritt; Vektor (obj+0x70..0x74) wird nach dem einen Job leer -> Cancel.
+## 2026-11-22 - Hyp. 32 (opcode 0x37 status value)
+Static: handler 9ED204 (script return): script instructions are 8 bytes (w0=op<<24|operand, w1=argument). Handler reads w1=[ip+4]; values 1..3 -> pop result value from VM stack into promise task+0x20 (979290), then task+0x24 = w1; otherwise task+0x24 = w1 directly. Dynamic [P32] (patches/gt6-h32-op37log*.py.txt): op37 at 40007990 always has w1=0 (80 hits, 2 runs); at 40007C90 w1 was 1 (Hyp. 31). Jump table 0x1419550 (switch on obj+0x24 in 98787C): 0->987914 (98604C step, then loop), 1->98792C (985FE0 test + 98604C), 2,3->987A08 (RETURN result = done/fail), 4,5->9878B8 (repeat poll). So: return status 0/1 = "step done, fetch next job" (98604C), only 2/3 ends the task. The task waits for a further job/step; the vector (obj+0x70..0x74) becomes empty after the one job -> cancel.
 
-## 2026-11-22 - Hyp. 33 (98604C / 985FE0 / Job-Stack)
-Statisch: Vektor obj+0x70(begin)/0x74(end) ist ein **Stack von Job-Objekten** (4-Byte-Zeiger). 985FE0(obj) = peek: top=[end-4], ruft top.vtable+8 (Status). 98604C(obj) = pop: top.vtable+0xc und +4 aufrufen, end -= 4 (nur wenn >6 Bytes... Groessenpruefung). 9860D4-Wrapper: while status!=2 {pop; leer -> return 1}; status==2 -> pop + obj+0x68.vtable+0x18(arg) -> return 0 (Erfolg). Dynamisch [P33] (patches/gt6-h33-peeklog.py.txt, 2 Laeufe x 62 Treffer): top-Job hat immer vtable 0x14875B0 (enthaelt 0x9EEA88 = Poll an +0x14, d.h. Job-Objekt = VM/Executor-Klasse), vtable+8 -> 0x8A1BE8 = `li r3,0; blr` (Stub), Status immer 0, nie 2. Stack-Tiefen: 40007990 5 Eintraege, 40007A10/40007C90 1. Damit kann der Wrapper-Pfad nie Erfolg melden; Done muss ueber obj+0x24=2/3 (Script-Return-Opcode mit w1=2/3, oder anderer Handler) kommen.
+## 2026-11-22 - Hyp. 33 (98604C / 985FE0 / job stack)
+Static: vector obj+0x70(begin)/0x74(end) is a **stack of job objects** (4-byte pointers). 985FE0(obj) = peek: top=[end-4], calls top.vtable+8 (status). 98604C(obj) = pop: calls top.vtable+0xc and +4, end -= 4 (only if >6 bytes... size check). 9860D4 wrapper: while status!=2 {pop; empty -> return 1}; status==2 -> pop + obj+0x68.vtable+0x18(arg) -> return 0 (success). Dynamic [P33] (patches/gt6-h33-peeklog.py.txt, 2 runs x 62 hits): top job always has vtable 0x14875B0 (contains 0x9EEA88 = poll at +0x14, i.e. job object = VM/executor class), vtable+8 -> 0x8A1BE8 = `li r3,0; blr` (stub), status always 0, never 2. Stack depths: 40007990 5 entries, 40007A10/40007C90 1. Thus the wrapper path can never report success; done must come via obj+0x24=2/3 (script return opcode with w1=2/3, or another handler).
 
-## 2026-11-22 - Hyp. 34 (Handler die task+0x24 setzen)
-Statischer Scan der Handler-Tabelle 0x1487660 (patches/gt6-h34-scan.py.txt): direkte Setter nur 0x37 (Return, o24=w1), 0x1F/0x28 (o24=3, Abbruch), 0x1B (o24=w1), 0x06/0x0F/0x2C/0x3E (o24=5 via 9F095C). Dynamisch [P34]/(patches/gt6-h34*-*.py.txt, 2 Laeufe): o24=2 WIRD erreicht (Opcode 0x37 mit w1=2, 21x bei 40007C90, 1x 40007C10, ip 403B22F0..403B2858) -> 2 ist Return aus verschachteltem Aufruf, nicht Task-Ende. Der dominante Zustand ist o24=4 durch Opcode 0x06 (Handler 9F0748, 251x 40007C90, ip 403A6628 allein 120x): 0x06 = Sub-Aufruf/Child-Job: submittet Child via Executor-vtable+0xdc (Args vom VM-Stack), Child-Future bei [sp+0x78]; ist child+0x24==1 -> setzt o24=5 (weiterlaufen), sonst bleibt o24=4 (Dispatch-Fall 4: Poll wiederholen, ip bleibt am Opcode, Child wird bei jedem Poll neu geprueft/submittet). Script haengt also in 0x06 an Child, dessen +0x24 nie 1 wird. Hauptmenue-Blocker = Child-Job (Ziel unbekannt).
+## 2026-11-22 - Hyp. 34 (handlers that set task+0x24)
+Static scan of handler table 0x1487660 (patches/gt6-h34-scan.py.txt): direct setters only 0x37 (return, o24=w1), 0x1F/0x28 (o24=3, abort), 0x1B (o24=w1), 0x06/0x0F/0x2C/0x3E (o24=5 via 9F095C). Dynamic [P34]/(patches/gt6-h34*-*.py.txt, 2 runs): o24=2 IS reached (opcode 0x37 with w1=2, 21x at 40007C90, 1x 40007C10, ip 403B22F0..403B2858) -> 2 is return from a nested call, not task end. The dominant state is o24=4 via opcode 0x06 (handler 9F0748, 251x 40007C90, ip 403A6628 alone 120x): 0x06 = sub-call/child job: submits child via executor vtable+0xdc (args from VM stack), child future at [sp+0x78]; if child+0x24==1 -> sets o24=5 (continue), else o24 stays 4 (dispatch case 4: repeat poll, ip stays at opcode, child is re-checked/re-submitted on every poll). So the script hangs in 0x06 on a child whose +0x24 never becomes 1. Main-menu blocker = child job (target unknown).
 
-## 2026-11-22 - Hyp. 35 (Child-Job bei Opcode 0x06)
-[P35] in func_009F0748 (patches/gt6-h35*-submitlog.py.txt; Variante b filtert task 40007C90). Opcode 0x06 = **native Funktion aufrufen** ueber callee-Objekt (r3) mit callee.vtable+0xdc: Ziele 9B0918 (vt 01483EC8, Ergebnis sofort st=1 -> o24=5) und 9B89D8 (vt 01484968; Wrapper, delegiert an Objekt [callee+0x14] vtable+0x54, args r4=Result-Slot sp+0x78, r5=w1, r6=Argumente) sowie 9A0178 (vt 014851B0, st=1). Das Ergebnis-Objekt [sp+0x78] ist der Task selbst (child=40007C90); st=[task+0x24] nach dem Aufruf. **st=4 (pending, Poll wiederholen) tritt nur bei 9B89D8-Aufrufen auf** (callee 4037EC28, 4049AE20/AE80/AF28/AF10, 403AD8E0, ...), 9B0918-Aufrufe liefern st=1. Der in Hyp. 34 dominante Hang-ip 403A6628 lag ausserhalb des 120er-Logs (Cap zu fruh erschoepft). Ziel-Objekt [callee+0x14] und dessen vtable+0x54-Methode noch unbekannt.
+## 2026-11-22 - Hyp. 35 (child job at opcode 0x06)
+[P35] in func_009F0748 (patches/gt6-h35*-submitlog.py.txt; variant b filters task 40007C90). Opcode 0x06 = **call native function** via callee object (r3) with callee.vtable+0xdc: targets 9B0918 (vt 01483EC8, result immediately st=1 -> o24=5) and 9B89D8 (vt 01484968; wrapper, delegates to object [callee+0x14] vtable+0x54, args r4=result slot sp+0x78, r5=w1, r6=arguments) as well as 9A0178 (vt 014851B0, st=1). The result object [sp+0x78] is the task itself (child=40007C90); st=[task+0x24] after the call. **st=4 (pending, repeat poll) only occurs with 9B89D8 calls** (callee 4037EC28, 4049AE20/AE80/AF28/AF10, 403AD8E0, ...), 9B0918 calls return st=1. The hang ip 403A6628 from Hyp. 34 lay outside the 120-entry log (cap exhausted too early). Target object [callee+0x14] and its vtable+0x54 method still unknown.
 
-## 2026-11-22 - Hyp. 36 (Snapshot-Werkzeug PS3_SNAP_AT)
-Patch patches/gt6-snap-at.patch (ppu_loader.cpp Thread + runtime/diag/ps3_snapshot.c): nach N s alle committeten VM-Regionen (reg_<ea>.bin, regions.txt, ~1 GB), Thread-Regs/Stacks, Sync-Tabellen. Lauf snap2 (work/snap_run2, 200 s, notut) gueltig.
-Befund: Threads 2-40 in lwcond_wait/Syscalls (130/141/107), Hauptthread in cellFiberPpuWaitFlag. Mutex: 10 aktiv, alle owner 0. Sem: 8 mit value=0 (max 1024), keine Waiter. evq5 (key 0x23A0 = cellAudio-Notify) cap4 count4 ohne Receiver (vermutl. Symptom, vgl. Hyp. 19/20).
-Wrapper-Suche (find32 0x01484968): 111 Objekte, 110 mit vtable 0x1487348 -> Slot 0x54 = 0x9E5FC0: Bind-Trampolin, ruft 0x9880BC(*arg4, this+0x14, [this+0x14]+0x34 ...) -> [x+0xC].vtable+0x28. Zielfunktion noch offen.
+## 2026-11-22 - Hyp. 36 (snapshot tool PS3_SNAP_AT)
+Patch patches/gt6-snap-at.patch (ppu_loader.cpp thread + runtime/diag/ps3_snapshot.c): after N s all committed VM regions (reg_<ea>.bin, regions.txt, ~1 GB), thread regs/stacks, sync tables. Run snap2 (work/snap_run2, 200 s, notut) valid.
+Finding: threads 2-40 in lwcond_wait/syscalls (130/141/107), main thread in cellFiberPpuWaitFlag. Mutex: 10 active, all owner 0. Sem: 8 with value=0 (max 1024), no waiters. evq5 (key 0x23A0 = cellAudio notify) cap4 count4 without receiver (probably symptom, cf. Hyp. 19/20).
+Wrapper search (find32 0x01484968): 111 objects, 110 with vtable 0x1487348 -> slot 0x54 = 0x9E5FC0: bind trampoline, calls 0x9880BC(*arg4, this+0x14, [this+0x14]+0x34 ...) -> [x+0xC].vtable+0x28. Target function still open.
 
-## Hyp. 37 - Snapshot snap_run2 (200 s, notut): Script-Task und Ziel des Pending-Calls
-- Poll 0x9EEA88 gehoert zu 12 Task-Knoten (vt 0x14875B0, Poll +0x14); State-Objekt (vt 0x14811E8) +0x24 Status, +0x28 Zustand. Aktiver Task 400DB544 (Parent 400C7F88), State 40007990 Status 5.
-- Bytecode: task+0x1c = ip (Array von Record-Zeigern), Record byte0 = Opcode, Handlertabelle 0x1487660+24*opc+0x10. Letzter Record vor Yield: opc 0x06 (arg 0x9A), danach 0x36 (015DE7D8).
-- Opcode 0x06 (0x9F0748): Stack task+0x20 (base[0], Top +0x1c) pop 2 -> Callee 4037A844 (vt 0x1483EC8, +0xdc=0x9B0918), Arg-Objekt 400E97F0 = String "gtmode".
-- 0x9B0918 -> obj2 4009EFE8 (vt 0x1485B50) +0x54 = 0x9C625C -> +0x58 = 0x9C6184 -> Functor obj2+0x14 = OPD 014CD330 = 0x6C54DC = MGOM.start.
-- Manager 7FF01FC4: +0x48 = 1 (pending), +0x50 = "gtmode" -> Request wird nie konsumiert. Siehe boot-presents-fix.md 2.3.
+## Hyp. 37 - snapshot snap_run2 (200 s, notut): script task and target of the pending call
+- Poll 0x9EEA88 belongs to 12 task nodes (vt 0x14875B0, poll +0x14); state object (vt 0x14811E8) +0x24 status, +0x28 state. Active task 400DB544 (parent 400C7F88), state 40007990 status 5.
+- Bytecode: task+0x1c = ip (array of record pointers), record byte0 = opcode, handler table 0x1487660+24*opc+0x10. Last record before yield: opc 0x06 (arg 0x9A), then 0x36 (015DE7D8).
+- Opcode 0x06 (0x9F0748): stack task+0x20 (base[0], top +0x1c) pop 2 -> callee 4037A844 (vt 0x1483EC8, +0xdc=0x9B0918), argument object 400E97F0 = string "gtmode".
+- 0x9B0918 -> obj2 4009EFE8 (vt 0x1485B50) +0x54 = 0x9C625C -> +0x58 = 0x9C6184 -> functor obj2+0x14 = OPD 014CD330 = 0x6C54DC = MGOM.start.
+- Manager 7FF01FC4: +0x48 = 1 (pending), +0x50 = "gtmode" -> request is never consumed. See boot-presents-fix.md 2.3.
 
-## Hyp. 38 (offline, snap_run2): warum Consumer nicht laeuft
-- Hauptthread (tid 1) steht in menu_start_project: Stack 0x568CCC/6C54CC/6C558C, Wait-Kette A21D50 -> A21CBC -> A4305C (cond wait).
-- Workers tid 28/35/43: lr=00A121F0 -> Rueckkehr aus A187CC (lwcond wait in Worker-Schleife 0xA12170). Tick-Hook sitzt bei loc_00A121AC (Schleifenanfang) und feuert nur nach Wakeup.
-- Kein Thread mit 0x568658 auf dem Stack; Pump-Request-Hook (func_00568C94 Eintritt) ok, aber Tick wird nie getrieben.
-- A21E04 (signal) -> A21D8C: ist Waiter-Flag +0x28 gesetzt -> A42FFC (signal), sonst +0x29=1 (pending). Pre-Signal bleibt erhalten.
+## Hyp. 38 (offline, snap_run2): why the consumer does not run
+- Main thread (tid 1) stands in menu_start_project: stack 0x568CCC/6C54CC/6C558C, wait chain A21D50 -> A21CBC -> A4305C (cond wait).
+- Workers tid 28/35/43: lr=00A121F0 -> return from A187CC (lwcond wait in worker loop 0xA12170). Tick hook sits at loc_00A121AC (loop start) and fires only after a wakeup.
+- No thread with 0x568658 on the stack; pump request hook (func_00568C94 entry) ok, but the tick is never driven.
+- A21E04 (signal) -> A21D8C: if waiter flag +0x28 is set -> A42FFC (signal), otherwise +0x29=1 (pending). Pre-signal is kept.
 
 ## Hyp. 39 (probe_sync39_20261122_220806_1, notut, 220 s)
-- Sync-Pump vor 568CC8: "boot" (state 1->3->4->done, `sync pump done state=0` L7829), danach "gtmode": project load gtmode.mproject, states 1,3,4,3,4...
-- gtmode: `sync pump done state=4` (L29752) nach 4000 Iter; state_after=3 3729x, =4 3538x, flag4C=1 load4D=1 -> Sequenz wird getickt, wird nie fertig (+0x91).
+- Sync pump before 568CC8: "boot" (state 1->3->4->done, `sync pump done state=0` L7829), then "gtmode": project load gtmode.mproject, states 1,3,4,3,4...
+- gtmode: `sync pump done state=4` (L29752) after 4000 iterations; state_after=3 3729x, =4 3538x, flag4C=1 load4D=1 -> sequence is ticked, never finishes (+0x91).
 - Patches: gt6/src/stubs.cpp gt6_menu_project_sync_pump; tools/apply_gt6_post_lift.py add_menu_sync_pump (backup work/_bk_h39/ppu_recomp_012.cpp).
 
-## Hyp. 40 (snap_h40, PS3_SNAP_AT=100 im sync-pump-Build)
-- Consumer 0x568658: state 3->4 CAS, tickt manager+0x1d4[0..2] via 5C406C, setzt state zurueck auf 3, solange +0x91==0; alle fertig -> state 5.
-- 5C406C: pro Tick Handler[+0x88] aus Tabelle 145D0D4 (5C1B3C,5BD718,5A8218,5B80DC,5B97A0,5A5BB0), +0x88++; Ende wenn A13644()=1 (Byte 0x164AB90 unter Mutex 164AB50) -> +0x90=1 -> 5C3EC4.
-- Snapshot: Objekte 7FF0B000/7FF0B800/7FEAC000: +0x88=0, +0x8C=5/5/A, +0x90/91=0; 0x164AB90=0.
+## Hyp. 40 (snap_h40, PS3_SNAP_AT=100 in the sync-pump build)
+- Consumer 0x568658: state 3->4 CAS, ticks manager+0x1d4[0..2] via 5C406C, sets state back to 3 as long as +0x91==0; all done -> state 5.
+- 5C406C: per tick handler[+0x88] from table 145D0D4 (5C1B3C,5BD718,5A8218,5B80DC,5B97A0,5A5BB0), +0x88++; ends when A13644()=1 (byte 0x164AB90 under mutex 164AB50) -> +0x90=1 -> 5C3EC4.
+- Snapshot: objects 7FF0B000/7FF0B800/7FEAC000: +0x88=0, +0x8C=5/5/A, +0x90/91=0; 0x164AB90=0.
 
-## Hyp. 41 (2026-11-22): Fertig-Flag der Sequenz-Objekte
-- Offline (snap_h40): einziger Setter von +0x90 im Sequenzcode = 5A3AC0 (Func 5A3AAC), Aufrufer: 5680FC (Consumer-Exit 0x56886C/0x5E6D78) und 5A7A10 (generischer weak-ref-Wrapper, von 5AB428 mit >20 Aufrufern). Kein Handler setzt es selbst.
-- A13644 liest Byte 0x164AB90 = Objekt 164AB80 (vt 146FA48) +0x10 unter Mutex 0x164AB50. Getter vt+0x8 = 3C0E84 (lbz 0x10(r3)), Setter vt+0xC = C3FE14 (stb r4,0x10(r3)); keine direkten bl-Aufrufer -> nur indirekt.
-- Probe probe_flag41_20261122_222528_1 (GT6_FORCE_LOADFLAG=1, Sync-Pump i==20 schreibt 0x164AB90=1): Pump-State -> 0, Boot laeuft weiter (cellMusicInitialize2, open game024.db). Danach NULL-Deref in A21D50/A21CBC (Rueckweg 568CC8, Waiter manager+0x18) -> exit-chain code=0xFFFFFFFF.
-- Interferenz Worker-Hook vs Haupt-Pump: nicht separat gemessen (Hook feuert laut Hyp. 38 nie).
+## Hyp. 41 (2026-11-22): done flag of the sequence objects
+- Offline (snap_h40): only setter of +0x90 in the sequence code = 5A3AC0 (func 5A3AAC), callers: 5680FC (consumer exit 0x56886C/0x5E6D78) and 5A7A10 (generic weak-ref wrapper, called from 5AB428 with >20 callers). No handler sets it itself.
+- A13644 reads byte 0x164AB90 = object 164AB80 (vt 146FA48) +0x10 under mutex 0x164AB50. Getter vt+0x8 = 3C0E84 (lbz 0x10(r3)), setter vt+0xC = C3FE14 (stb r4,0x10(r3)); no direct bl callers -> only indirect.
+- Probe probe_flag41_20261122_222528_1 (GT6_FORCE_LOADFLAG=1, sync pump i==20 writes 0x164AB90=1): pump state -> 0, boot continues (cellMusicInitialize2, open game024.db). Then NULL deref in A21D50/A21CBC (return path 568CC8, waiter manager+0x18) -> exit chain code=0xFFFFFFFF.
+- Interference worker hook vs. main pump: not measured separately (hook never fires per Hyp. 38).
 
-## Hyp. 42 (2026-11-22): Rueckweg nach Sync-Pump, Natur des Flags 0x164AB90
-- A21D50 (bl bei 568CC8) nach Pump: r3=mgr+0x18 korrekt, aber nach A42DE8 (Lock) r29=0 -> A21CBC liest NULL+0x29. Lock/HLE (ppu_sysprx lwmutex, gcm_pump) klobbern r29 NICHT (Diagnose-Klammern probe_flag42d..i).
-- Ursache: DRAIN_TRAMPOLINE nach dem Lock-Call fuehrt ein vom Sync-Pump hinterlassenes g_trampoline_fn aus (Cross-Fragment-Fallthrough aus func_00568658), das r3/r29 nullt.
-- Fix: gt6_menu_project_tick drained g_trampoline_fn direkt nach func_00568658 (stubs.cpp). probe_flag42j: A21D50 after lock r29=7FEAC018, Boot laeuft weiter.
-- Danach exit-chain code=-1 lr 7F9588 = func_007F9520 (ppu_recomp_018): wenn Byte +0x95E==0 und A13644()!=0 -> +0x95E=1, Zeit (A2F308) nach +0x960; spaeter (now-stamp > 0x97FDF) -> func_00F9A080(-1) = exit.
-- Schluss: 0x164AB90 = Quit/Abbruch-Anforderung mit Grace-Timer, nicht "Projekt fertig". Die Sequenzobjekte beenden sich bei Quit; GT6_FORCE_LOADFLAG bleibt reines Diagnose-Werkzeug (erzeugt Shutdown).
-- Echter Fertig-Setter fuer +0x91 weiter unbekannt -> Hyp. 43.
+## Hyp. 42 (2026-11-22): return path after sync pump, nature of flag 0x164AB90
+- A21D50 (bl at 568CC8) after pump: r3=mgr+0x18 correct, but after A42DE8 (lock) r29=0 -> A21CBC reads NULL+0x29. Lock/HLE (ppu_sysprx lwmutex, gcm_pump) does NOT clobber r29 (diagnostic brackets probe_flag42d..i).
+- Cause: DRAIN_TRAMPOLINE after the lock call executes a g_trampoline_fn left by the sync pump (cross-fragment fallthrough from func_00568658), which zeroes r3/r29.
+- Fix: gt6_menu_project_tick drains g_trampoline_fn directly after func_00568658 (stubs.cpp). probe_flag42j: A21D50 after lock r29=7FEAC018, boot continues.
+- Afterwards exit chain code=-1 lr 7F9588 = func_007F9520 (ppu_recomp_018): if byte +0x95E==0 and A13644()!=0 -> +0x95E=1, time (A2F308) to +0x960; later (now-stamp > 0x97FDF) -> func_00F9A080(-1) = exit.
+- Conclusion: 0x164AB90 = quit/abort request with grace timer, NOT "project done". The sequence objects terminate on quit; GT6_FORCE_LOADFLAG remains a pure diagnostic tool (it causes shutdown).
+- Real done setter for +0x91 still unknown -> Hyp. 43.
 
 ## Hyp. 43
-5C3EC4 (Finalizer) setzt +0x91=1; Aufrufer: 5C406C (nur wenn +0x90 durch A13644/Quit) und Shutdown 5FBAF0. Schleife 568800 = Haupt-Game-Loop, endet nur bei Quit. Hang = kein Menue-Rendering im Tick, nicht fehlendes Done.
+5C3EC4 (finalizer) sets +0x91=1; callers: 5C406C (only when +0x90 set by A13644/quit) and shutdown 5FBAF0. Loop 568800 = main game loop, ends only on quit. Hang = no menu rendering in the tick, not a missing done.
 
-## Hyp. 44 (Game-Loop, Pump unbegrenzt)
-- GT6_PUMP_ITERS=2000000: >15600 Iter, State 3/4, ~2193 Flips/320 s, frame_00 = Legal+Logo+Spinner (probe_pump44b). Kein Menue-Frame.
-- Back-Trace Track-Opens (009F8E40, probe_bt44): 009F7204<-009F73D0<-009F7420<-009F79D8<-008C70C8/008C1540 (11/40); 009F418C<-009BB16C<-005F3FE8<-005FA4D0<-005FA730<-568784 (Consumer).
-- Ursache Dauerschleife offen.
+## Hyp. 44 (game loop, pump unbounded)
+- GT6_PUMP_ITERS=2000000: >15600 iterations, state 3/4, ~2193 flips/320 s, frame_00 = legal + logo + spinner (probe_pump44b). No menu frame.
+- Back trace track opens (009F8E40, probe_bt44): 009F7204<-009F73D0<-009F7420<-009F79D8<-008C70C8/008C1540 (11/40); 009F418C<-009BB16C<-005F3FE8<-005FA4D0<-005FA730<-568784 (consumer).
+- Cause of the endless loop still open.
 
-## Hyp. 45 (Teil)
-- probe_bt44: 3754 soc-job Chains, 4062 GT.VOL-Opens, 5213 IsLoaded(NPN); Snapshot: Main-Thread lr=568CB4 (im Sync-Pump), Objekte 7FEAC000/7FF0B000/7FF0B800 +0x88=0. Einmal job 3 rc=-1. Ursache offen.
+## Hyp. 45 (part)
+- probe_bt44: 3754 soc-job chains, 4062 GT.VOL opens, 5213 IsLoaded(NPN); snapshot: main thread lr=568CB4 (in sync pump), objects 7FEAC000/7FF0B000/7FF0B800 +0x88=0. Once job 3 rc=-1. Cause open.
 
-## Archiv aus STATE.md (Hyp. 109-116, verschoben 2026-11-23 Ueberwacher)
-- Hyp. 109-111: statische Kette Wipe: 7D083C (Wrapper, Singleton 0x159FD890) > 7CD628 > 88B878 > bl A25C64 (je 1 Aufrufer, 7D083C ohne direkten). CALLTRACE_TO auf 7D083C/7CD628/88B878/88B8E0: 0 Treffer (Exit-Laeufe h110 4/4 mit CALLTRACE=200, 88B8E0 ist ein bl-Site).
-- Hyp. 112: GSTACK im Exit-Lauf (run.log.err, h110): Worker tid32 "9qstY" (A304D0>7FB1F0>7FB090>7DF57C>7DFF44>7DF7DC>802004>1AE7CC>1AE5E4>1AE074>1AAC8C>7D083C>7CD628>88B878>A25C64). Unfiltered Calltrace: kein Exit (Heisenbug).
-- 1AAC8C = Cleanup-Task (Obj+0x1F30: 7D0904,7D0DE8,7D0FC0,7D083C,7D08DC), einziger Aufrufer 1AE1E8 in 1AE074. Frage: warum laeuft Cleanup beim X-Press, Singleton-Vektor 71E4455C hat NULL-Element.
-- Hyp. 113: A25C64 = Fill [begin,end-8] mit 0 (Vektor elem+0x2C: begin@+8, end@+0xC). Leer begin=end=0 -> end-8 wrap (unsigned) -> Fill 0..FFFFFFF8 = Wipe.
-  Elem-Objekt unkonstruiert/genullt (race). Loop-Log: normale Laeufe 2 Elemente ok (7FFEE090/E0D8); 2. Exit-Typ: erster NULL-Write aus CAC2D4 (1AE074+0x488), nicht A25C64 -> generelle Race.
-- Umgehung: Guard in func_00A25C64 (generated 023): end<8 -> return. Backups work/_bk_h113/. h114/h115 (10 Laeufe): 0 Exits, Guard feuert ~30% (Elem-Zeiger Muell/NULL).
-- Hyp. 115: Guard-Survivor Frame 9000 (4x) = GT-Logo+Spinner. fs-Zugriffe enden frueh (kein IO-Wait). 2/4: A2FAD0 Ringlisten-Walk mit NULL-Knoten = Busyloop (3.7M null-writes).
-- Befund: Teardown-Tasks (1AE074: +0x178 1AAC8C, +0x508 7CFDD0>88B928) laufen auf Singleton/Listen, die parallel genutzt/genullt sind = Use-after-free-Race. Ursache offen.
-- Hyp. 116: TLS-TID-Cache (A3046C) liefert pro r13 eindeutige ids (1,2,5,9..34) -> TID-Duplikat widerlegt. 1AAC8C/1AAD14 laufen JEDEN Frame (kein Wait/Teardown-Trigger) = normal.
+## Archive from STATE.md (Hyp. 109-116, moved 2026-11-23 by supervisor)
+- Hyp. 109-111: static chain wipe: 7D083C (wrapper, singleton 0x159FD890) > 7CD628 > 88B878 > bl A25C64 (1 caller each, 7D083C without direct one). CALLTRACE_TO on 7D083C/7CD628/88B878/88B8E0: 0 hits (exit runs h110 4/4 with CALLTRACE=200, 88B8E0 is a bl site).
+- Hyp. 112: GSTACK in exit run (run.log.err, h110): worker tid32 "9qstY" (A304D0>7FB1F0>7FB090>7DF57C>7DFF44>7DF7DC>802004>1AE7CC>1AE5E4>1AE074>1AAC8C>7D083C>7CD628>88B878>A25C64). Unfiltered calltrace: no exit (Heisenbug).
+- 1AAC8C = cleanup task (obj+0x1F30: 7D0904,7D0DE8,7D0FC0,7D083C,7D08DC), only caller 1AE1E8 in 1AE074. Question: why does cleanup run on X-press, singleton vector 71E4455C has NULL element.
+- Hyp. 113: A25C64 = fill [begin,end-8] with 0 (vector elem+0x2C: begin@+8, end@+0xC). Empty begin=end=0 -> end-8 wraps (unsigned) -> fill 0..FFFFFFF8 = wipe.
+  Elem object unconstructed/zeroed (race). Loop log: normal runs 2 elements ok (7FFEE090/E0D8); 2nd exit type: first NULL write from CAC2D4 (1AE074+0x488), not A25C64 -> general race.
+- Workaround: guard in func_00A25C64 (generated 023): end<8 -> return. Backups work/_bk_h113/. h114/h115 (10 runs): 0 exits, guard fires ~30% (elem pointer garbage/NULL).
+- Hyp. 115: guard survivor frame 9000 (4x) = GT logo + spinner. fs accesses end early (no IO wait). 2/4: A2FAD0 ring-list walk with NULL node = busy loop (3.7M null writes).
+- Finding: teardown tasks (1AE074: +0x178 1AAC8C, +0x508 7CFDD0>88B928) run on singleton/lists that are used and zeroed in parallel = use-after-free race. Cause open.
+- Hyp. 116: TLS TID cache (A3046C) yields unique ids per r13 (1,2,5,9..34) -> TID duplicate refuted. 1AAC8C/1AAD14 run EVERY frame (no wait/teardown trigger) = normal.
 
-## Spinner-Zustand Watchdog + Calltrace (2026-11-23, probe wd2/ct, orig+X@100, build-v020)
-- WD bei 200/320 s identisch: ~20 Worker in sys_lwcond_wait (lr A4309C), tid1/2/3/5 nur lr. EVQSTAT: q4 pushed=205k, q5 64k (pending=3), q7 64k, q1 17k, q9 21k; kein Waiter-Stau.
-- NEU: `[null-write] wrote32 0 to NULL+0x40 by guest-fn A2FAD0` 4,55 Mio x in 340 s (~13k/s), dazu 2x NULL+0x18 by 88B450 beim Boot. A2FAD0 = "wake all" (vtable-Slot 7 Fiber-Thread-Klasse): Schleife ueber Listenknoten, stw 0,0x40(node->+8). Element-Pointer NULL -> Fiber-Liste hat NULL-Eintraege (verwandt mit Hyp. 83 NULL-Element).
-- CALLTRACE_TO=A2FAD0: Aufrufer lr=567DA4 = func_00567D74+0x2A4, tid=32 (Fiber-Run-Thread), r3=0x7FFBE280 r31=0x7FFD8E88. 567D74 hat einen direkten Aufrufer (6D5230); Rest ueber vtable.
+## Spinner state watchdog + calltrace (2026-11-23, probe wd2/ct, orig+X@100, build-v020)
+- WD at 200/320 s identical: ~20 workers in sys_lwcond_wait (lr A4309C), tid1/2/3/5 lr only. EVQSTAT: q4 pushed=205k, q5 64k (pending=3), q7 64k, q1 17k, q9 21k; no waiter jam.
+- NEW: `[null-write] wrote32 0 to NULL+0x40 by guest-fn A2FAD0` 4.55 M x in 340 s (~13k/s), plus 2x NULL+0x18 by 88B450 at boot. A2FAD0 = "wake all" (vtable slot 7 fiber thread class): loop over list nodes, stw 0,0x40(node->+8). Element pointer NULL -> fiber list has NULL entries (related to Hyp. 83 NULL element).
+- CALLTRACE_TO=A2FAD0: caller lr=567DA4 = func_00567D74+0x2A4, tid=32 (fiber run thread), r3=0x7FFBE280 r31=0x7FFD8E88. 567D74 has one direct caller (6D5230); rest via vtable.
 
-### Fiber-Liste Busyloop (2026-11-23, probes nwt/wk/ww2, build-v020 + Diag)
-- null-write tick: ~78M NULL+0x40-Writes/s von tid32 in A2FAD0, konstant 180+ s (nwt) -> Schleife laeuft praktisch dauernd, nicht 13k Aufrufe/s mit kurzer Schleife.
-- [WK]-Diag in Schleife: obj=7FFBE280 cnt=1, hdr(obj+0xC)=7FFFEDC0, hdr.next=0 -> r9=0, Null-Page liest 0, cmpw nie gleich -> Endlosschleife (PS3 wuerde crashen).
-- Mit PPU_WWATCH (Inline-Stores aus, Timing anders): Sentinel EDC0 sauber init (A2F638, tid1), Knoten EDD0 via A2FC54, KEIN Busyloop. Snapshot-Laeufe: Sentinel EDB0 sane, tid32 in lwcond_wait.
-- Fazit: Busyloop = Alloc/Race-abhaengiger Zusatzfehler (Sentinel nullt in manchen Laeufen); Spinner haengt auch in sauberem Regime -> NICHT Ursache der Ladephase.
+### Fiber list busy loop (2026-11-23, probes nwt/wk/ww2, build-v020 + diag)
+- null-write tick: ~78M NULL+0x40 writes/s from tid32 in A2FAD0, constant 180+ s (nwt) -> loop runs practically all the time, not 13k calls/s with a short loop.
+- [WK] diag in loop: obj=7FFBE280 cnt=1, hdr(obj+0xC)=7FFFEDC0, hdr.next=0 -> r9=0, null page reads 0, cmpw never equal -> endless loop (PS3 would crash).
+- With PPU_WWATCH (inline stores off, timing differs): sentinel EDC0 initialized cleanly (A2F638, tid1), node EDD0 via A2FC54, NO busy loop. Snapshot runs: sentinel EDB0 sane, tid32 in lwcond_wait.
+- Conclusion: busy loop = alloc/race-dependent extra error (sentinel zeroed in some runs); spinner hangs in the clean regime too -> NOT the cause of the loading phase.
 
-## STATE-Archiv (2026-11-23, aus STATE.md verschoben)
-## Erledigt / widerlegt (Einzeiler)
-- Pad/Dialog-Kette (Hyp. 1-14): alles ohne Wirkung, durch Umgehung (15) hinfaellig. RPCS3 `--no-gui` als Orakel tot (Shader-Precompile).
-- Plan B Pad-Replay: PAD_LOG=<pfad> (patches/gt6-v020-padlog.patch, build-v020 neu gebaut, getestet) + scripts/live-padlog.ps1: user spielt live, Log -> PAD_SCRIPT-Replay.
-- SDK-Update ps3recomp v0.19 -> v0.20.0 (Klon third_party/ps3recomp-v020, lokale Patches gemergt, Build gt6\build-v020): Baseline noadj 220s/Frame 4200 identisch (GT-Logo+Spinner), Fortschritt gleich; Flips ~3x weniger (Pacing). Backend-Vergleich Vulkan vs D3D12 offen (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init).
+## STATE archive (2026-11-23, moved from STATE.md)
+## Done / refuted (one-liners)
+- Pad/dialog chain (Hyp. 1-14): all without effect, obsolete through workaround (15). RPCS3 `--no-gui` as oracle dead (shader precompile).
+- Plan B pad replay: PAD_LOG=<path> (patches/gt6-v020-padlog.patch, build-v020 rebuilt, tested) + scripts/live-padlog.ps1: user plays live, log -> PAD_SCRIPT replay.
+- SDK update ps3recomp v0.19 -> v0.20.0 (clone third_party/ps3recomp-v020, local patches merged, build gt6\build-v020): baseline noadj 220 s/frame 4200 identical (GT logo + spinner), progress same; flips ~3x fewer (pacing). Backend comparison Vulkan vs D3D12 open (PS3RECOMP_RSX_VULKAN + rsx_vulkan_backend_init).
 
-- probe.ps1: -FreezeSec, -Seconds 0, END-Zeile, hdd0-Kopie/Lauf (-Parallel ok). PadScript nur Press-Tokens (0x0 verboten).
-- Hyp. 78-80: REALFLAG (WaitFlagEx) = DEFAULT, Dialog rendert korrekt. noadj+REALFLAG: Exit ~52s (Race, Hyp. 81/82/86 pinned=deterministisch).
-- Hyp. 83: Exit = A25C64 (vector.clear) aus 88B8E0, NULL-Element im Zeigervektor 71E4455C -> zeroed 14E4000..FFFFFFF0. Hyp. 84-89: Puffer/new/Lock nicht Ursache (Heisenbug).
-- Hyp. 92: orig + PAD X (80-140s) -> Frame 9000 = GT-Logo+Spinner. AdjustScreen passiert.
-- Hyp. 109-116 (Details in eu-boot-log.md "Archiv"): Wipe = A25C64 Fill end-8 wrap, Aufrufer Worker-Cleanup 1AAC8C; Guard (A25C64 end<8 return) stoppt Exit, Spinner bleibt -> Wipe ist NICHT Ursache der Ladephase.
+- probe.ps1: -FreezeSec, -Seconds 0, END line, hdd0 copy/run (-Parallel ok). PadScript press tokens only (0x0 forbidden).
+- Hyp. 78-80: REALFLAG (WaitFlagEx) = DEFAULT, dialog renders correctly. noadj+REALFLAG: exit ~52 s (race, Hyp. 81/82/86 pinned = deterministic).
+- Hyp. 83: exit = A25C64 (vector.clear) from 88B8E0, NULL element in pointer vector 71E4455C -> zeroes 14E4000..FFFFFFF0. Hyp. 84-89: buffer/new/lock not the cause (Heisenbug).
+- Hyp. 92: orig + PAD X (80-140 s) -> frame 9000 = GT logo + spinner. AdjustScreen passes.
+- Hyp. 109-116 (details in eu-boot-log.md "Archive"): wipe = A25C64 fill end-8 wrap, caller worker cleanup 1AAC8C; guard (A25C64 end<8 return) stops exit, spinner stays -> wipe is NOT the cause of the loading phase.
 
-## UEBERWACHER-FINDINGS (2026-11-23, Review Hyp. 1-116 gegen ps3recomp v0.20 + third_party/GT5P)
-1. Kette Hyp. 83-117 (35 Hyp.) jagt Exit-Race = Symptom. Guard-Survivor zeigen: auch ohne Exit bleibt Logo+Spinner. Race-Jagd STOPPEN.
-2. UNGETESTET, billig, je 1 Batch (-Parallel 4): `PS3_PRIO_START=1` (lv2-Prioritaetsstart, SYSCALLS.md; Race-Klasse "Thread laeuft vor Init"), `PPU_RESV_OFF=1` A/B (stwcx-Reservation), `SPU_LOCKSTEP_QUANTUM`.
-3. Probe != Live: user sieht live Menue nach Testrace. Probe nutzt FRISCHE userdb pro Lauf (GT6_HDD0-Kopie ohne db), boot.adc-Patches, <=320 s. Spinner evtl. = Erststart-Setup (DB/Save-Aufbau), dauert real >10 min. Test: Live-Run mit users persistenter db + 15 min, Frame-Captures 4200/9000/20000/40000.
-4. GT5P-Schwesterport (gleiche PDI-Engine, third_party/GT5P/docs/progress.md): Wurzeln waren Runtime-Schreiber ins Spiel-Heap (VM_HLE_INJECT_BASE, GT6 ok = 0x03000000) und HLE-Stub mit falscher Argzahl (cellDiscGame schrieb in OPD-Tabelle). -> HLE-Stubs auditieren, die in Gast-Zeiger schreiben (PPU_WWATCH auf Opfer-Adresse, Writer-Attribution 'host' vs 'guest-fn').
-5. Messen mit `PS3_VERBOSE=0` (probe.ps1 setzt das): Logging serialisiert Threads = Heisenbug-Ursache (GT5P README).
+## SUPERVISOR FINDINGS (2026-11-23, review Hyp. 1-116 against ps3recomp v0.20 + third_party/GT5P)
+1. Chain Hyp. 83-117 (35 hyp.) hunts the exit race = symptom. Guard survivors show: even without exit, logo+spinner stays. STOP the race hunt.
+2. UNTESTED, cheap, one batch each (-Parallel 4): `PS3_PRIO_START=1` (lv2 priority start, SYSCALLS.md; race class "thread runs before init"), `PPU_RESV_OFF=1` A/B (stwcx reservation), `SPU_LOCKSTEP_QUANTUM`.
+3. Probe != live: user sees the menu live after a test race. Probe uses a FRESH userdb per run (GT6_HDD0 copy without db), boot.adc patches, <=320 s. Spinner may = first-start setup (DB/save build-up), really takes >10 min. Test: live run with user's persistent db + 15 min, frame captures 4200/9000/20000/40000.
+4. GT5P sister port (same PDI engine, third_party/GT5P/docs/progress.md): roots were runtime writers into game heap (VM_HLE_INJECT_BASE, GT6 ok = 0x03000000) and HLE stub with wrong arg count (cellDiscGame wrote into OPD table). -> audit HLE stubs that write into guest pointers (PPU_WWATCH on victim address, writer attribution 'host' vs 'guest-fn').
+5. Measure with `PS3_VERBOSE=0` (probe.ps1 sets it): logging serializes threads = Heisenbug cause (GT5P README).
 
-ERGEBNISSE 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, build-v020):
-- Befund 3 WIDERLEGT: persistente db (-KeepDb), orig+X@100s, 900 s/100k Flips: Frame 4200 AdjustScreen, 7200..19200 stabil GT-Logo+Spinner. Fresh-db ist nicht die Ursache.
-- Befund 2 NEGATIV: PRIO_START=1 / SPU_LOCKSTEP(Q1000) / Kontrolle: Frame 4200 identisch (AdjustScreen, 28,4% schwarz). PPU_RESV_OFF=1 schlechter: nur 6555 Flips/430 s, NP2-IsLoaded-Schleife.
-- Befund 4 Audit (statisch, offen): Verdacht M-H cellSysutilGetBgmPlaybackStatus (cellSysutil.c ~507, memset 0x28 vs SDK-Struct), M sys_process_get_paramsfo memset 256, cellSync Barrier/Rwm Host-Layout. cellFs/SaveData nicht auditiert.
-- Spinner-Zustand (wd2/ct): Waiter alle idle, keine Event-Staus. NEU: wake-all A2FAD0 ~13k/s von tid32 (func_00567D74+0x2A4), Fiber-Listenknoten mit NULL-Element (NULL+0x40-Writes, 4,5M). Details eu-boot-log.md.
+RESULTS 2026-11-23 (probe.ps1 -KeepDb, RSX_CAP=start:count:stride via -Env, build-v020):
+- Finding 3 REFUTED: persistent db (-KeepDb), orig+X@100 s, 900 s/100k flips: frame 4200 AdjustScreen, 7200..19200 stable GT logo + spinner. Fresh db is not the cause.
+- Finding 2 NEGATIVE: PRIO_START=1 / SPU_LOCKSTEP(Q1000) / control: frame 4200 identical (AdjustScreen, 28.4% black). PPU_RESV_OFF=1 worse: only 6555 flips/430 s, NP2 IsLoaded loop.
+- Finding 4 audit (static, open): suspicion M-H cellSysutilGetBgmPlaybackStatus (cellSysutil.c ~507, memset 0x28 vs SDK struct), M sys_process_get_paramsfo memset 256, cellSync barrier/rwm host layout. cellFs/SaveData not audited.
+- Spinner state (wd2/ct): waiters all idle, no event jams. NEW: wake-all A2FAD0 ~13k/s from tid32 (func_00567D74+0x2A4), fiber list nodes with NULL element (NULL+0x40 writes, 4.5 M). Details eu-boot-log.md.
 
-- Fiber-Liste A/B (snap 200s, REALFLAG 0 vs 1): Obj 7FFBE280 count=1, Knoten-Payload nicht NULL, Struktur identisch -> NULL+0x40 kommt NICHT aus dieser Liste; REALFLAG ohne Einfluss.
-- Fiber-Busyloop: A2FAD0 laeuft 78M NULL-Writes/s, Sentinel obj+0xC hat next=0 (nur in manchen Laeufen, Alloc/Race); Snapshot/WWATCH-Laeufe sauber, Spinner auch dort -> nicht Ursache.
+- Fiber list A/B (snap 200 s, REALFLAG 0 vs 1): object 7FFBE280 count=1, node payload not NULL, structure identical -> NULL+0x40 does NOT come from this list; REALFLAG without effect.
+- Fiber busy loop: A2FAD0 runs 78M NULL writes/s, sentinel obj+0xC has next=0 (only in some runs, alloc/race); snapshot/WWATCH runs clean, spinner there too -> not the cause.
 
-Audit #1/#2 (BgmPlaybackStatus/paramsfo gegen SDK), dann RPCS3-Vergleich: welche Syscalls/Files nach AdjustScreen fehlen in unserem Lauf.
+Audit #1/#2 (BgmPlaybackStatus/paramsfo against SDK), then RPCS3 comparison: which syscalls/files are missing in our run after AdjustScreen.
 
-## PDIPFS-Orakel-Test (2026-11-23, probe pdi)
-- fsv (PS3_VERBOSE=1, 140 s, normale hdd0): 118 PDIPFS-Opens ok, 0 fehlgeschlagen, kein Zugriff auf PDIPFS/59.
-- pdi: hdd0 = Kopie RPCS3-USRDIR (14 GB, 17,5k Dateien, work/gt6_hdd0_rp; Originale unberuehrt), -KeepDb, orig, 300 s, X@100s: 18,8k Flips, 3,1M null-writes, 9,7k NPN-IsLoaded, kein Open PDIPFS/59, kein Pamf/Dmux/Vdec-Treffer im Err-Log. Identisch zum Standard-Spinner.
-- Region: KORREKTUR: RPCS3 nutzt dieselbe EU-Disc BCES01893 (BCJS37016 = interner Savedata-Name); GT6_1.N vs GT6.N = Update-Staende der Daten. RPCS3-Log = 1:1-Orakel. Spinner-Zustand unabhaengig von PDIPFS-Inhalt -> Install/Daten-Hypothese verworfen.
+## PDIPFS oracle test (2026-11-23, probe pdi)
+- fsv (PS3_VERBOSE=1, 140 s, normal hdd0): 118 PDIPFS opens ok, 0 failed, no access to PDIPFS/59.
+- pdi: hdd0 = copy of RPCS3 USRDIR (14 GB, 17.5k files, work/gt6_hdd0_rp; originals untouched), -KeepDb, orig, 300 s, X@100 s: 18.8k flips, 3.1 M null writes, 9.7k NPN IsLoaded, no open PDIPFS/59, no Pamf/Dmux/Vdec hit in err log. Identical to standard spinner.
+- Region: CORRECTION: RPCS3 uses the same EU disc BCES01893 (BCJS37016 = internal savedata name); GT6_1.N vs GT6.N = update states of the data. RPCS3 log = 1:1 oracle. Spinner state independent of PDIPFS content -> install/data hypothesis discarded.
 
-## Gast-PC-Sampler + RPCS3-Abgleich (2026-11-23, probe gprof)
-- Sampler: gt6/src/gt6_gprof.cpp (GT6_GPROF=1, GT6_GPROF_SEC=n), tastet ctx.cia + prof_pc (letzter Syscall-Callsite) alle 5 ms. cia ist bei Threads immer Entry (0x14E0898), nur prof_pc taugt.
-- Run work/probe_gprof_20261123_121842_1 (build-v020, orig, 220 s): Steady-State 37 Threads je 2,7 %: 29 pc=0xA4305C (sys_lwcond_wait-Wrapper), MpAnk F543AC, pnZ 27465C, prsIy A4F6E4, lgFF A61B80, SpuEvH A564EC. Kein Spin.
-- Schluss: Deadlock-Wait, kein Busyloop. Loader 9qstY (tid 32) steht in lwcond_wait; im RPCS3-Log ab Zeile 157234 laeuft derselbe Thread weiter (LoadModule 0x2a/0x2d, PDI-Thread 0x100003a/b, Worker-Stat 59/FI).
-- RPCS3 ZBm9Y IsLoaded(0x38)-Poll (1857x) laeuft dort auch bis Session-Ende: kein Unterschied zu uns.
-- VERSION: RPCS3-USRDIR EMAIN.SELF 9209104 B / EBOOT.BIN 165712 B / Daten GT6_1.N (gepatcht, Update). Unsere Basis work/bin: EMAIN 8843160 B / EBOOT 72920 B / GT6.N. Oracle ist also Update-Stand, nicht Disc-Basis.
-- Offen: lwcond-Adresse + Signaler von tid 32 ermitteln; pruefen ob Basis-EMAIN den 59/FI-Request kennt.
+## Guest PC sampler + RPCS3 comparison (2026-11-23, probe gprof)
+- Sampler: gt6/src/gt6_gprof.cpp (GT6_GPROF=1, GT6_GPROF_SEC=n), samples ctx.cia + prof_pc (last syscall callsite) every 5 ms. cia is always entry (0x14E0898) for threads, only prof_pc is useful.
+- Run work/probe_gprof_20261123_121842_1 (build-v020, orig, 220 s): steady state 37 threads each 2.7%: 29 pc=0xA4305C (sys_lwcond_wait wrapper), MpAnk F543AC, pnZ 27465C, prsIy A4F6E4, lgFF A61B80, SpuEvH A564EC. No spin.
+- Conclusion: deadlock wait, not busy loop. Loader 9qstY (tid 32) stands in lwcond_wait; in the RPCS3 log from line 157234 the same thread continues (LoadModule 0x2a/0x2d, PDI thread 0x100003a/b, worker stat 59/FI).
+- RPCS3 ZBm9Y IsLoaded(0x38) poll (1857x) also runs there until session end: no difference to ours.
+- VERSION: RPCS3 USRDIR EMAIN.SELF 9209104 B / EBOOT.BIN 165712 B / data GT6_1.N (patched, update). Our base work/bin: EMAIN 8843160 B / EBOOT 72920 B / GT6.N. So the oracle is the update state, not the disc base.
+- Open: determine lwcond address + signaler of tid 32; check whether base EMAIN knows the 59/FI request.
 
-## STATE-Archiv 2026-11-23 (1.22-Abschaetzung)
-- ABSCHAETZUNG Recomp Patch-EMAIN 1.22 (RPCS3 EMAIN.SELF 9209104 B; FIXEDELF114 = 1.14, 9059040 B), NICHT gestartet, User entscheidet:
-  1) SELF->ELF: gt6/scripts/decrypt_self.py braucht pycryptodome (fehlt) + Keys/RAP; ELF liegt dann als work/patchelf/. Aufwand ~1-2 h, Risiko Keys.
-  2) Lift + Gen (relift-gt6/gen-functions-gt6, ~1 h Rechenzeit) und Neu-Build ~2 min; alle Adress-Patches/Guards (H113 A25C64, boot.adc-Gates) neu portieren: 0,5-1 Tag. Gesamt ~1-2 Tage.
+## STATE archive 2026-11-23 (1.22 estimate)
+- ESTIMATE recomp patch EMAIN 1.22 (RPCS3 EMAIN.SELF 9209104 B; FIXEDELF114 = 1.14, 9059040 B), NOT started, user decides:
+  1) SELF->ELF: gt6/scripts/decrypt_self.py needs pycryptodome (missing) + keys/RAP; ELF then in work/patchelf/. Effort ~1-2 h, risk keys.
+  2) Lift + gen (relift-gt6/gen-functions-gt6, ~1 h compute) and rebuild ~2 min; re-port all address patches/guards (H113 A25C64, boot.adc gates): 0.5-1 day. Total ~1-2 days.
 
 
 
-## STATE-Archiv 2026-11-23 (1.22-Port-Schritte)
-- 1.22-Recomp Schritt 1 FERTIG: work/bin122/EMAIN.elf (23787792 B) per tools/self_decrypt_np.py, Klic aus RPCS3-Log; 1.00-Selbsttest identisch. Naechster: Diff 1.00/1.22, Lift in generated122.
-- 1.22 Lift+Build: gt6-122/generated (74914 Funcs, code-end 0x10B8154), build-v122 linkt (GT6_V122-Guard stubs.cpp), ctor 0x1183C/lr 0x11880, setjmp C61F88/longjmp C620AC gepatcht. Probe v122b laeuft.
-- 1.22 build-v122: memset/switch-Entries + setjmp-Guards (scripts/post-lift-122.ps1) -> 0 unresolved, 0 setjmp-overflow, ~9480 Flips/150 s; Frame 4200 schwarz (Hooks fehlen).
+## STATE archive 2026-11-23 (1.22 port steps)
+- 1.22 recomp step 1 DONE: work/bin122/EMAIN.elf (23787792 B) via tools/self_decrypt_np.py, key from RPCS3 log; 1.00 self-test identical. Next: diff 1.00/1.22, lift in generated122.
+- 1.22 lift+build: gt6-122/generated (74914 funcs, code-end 0x10B8154), build-v122 links (GT6_V122 guard stubs.cpp), ctor 0x1183C/lr 0x11880, setjmp C61F88/longjmp C620AC patched. Probe v122b running.
+- 1.22 build-v122: memset/switch entries + setjmp guards (scripts/post-lift-122.ps1) -> 0 unresolved, 0 setjmp overflow, ~9480 flips/150 s; frame 4200 black (hooks missing).
 
-## STATE-Archiv 2026-11-23 (aus STATE.md Erledigt)
-- 1.22 SPU-Lift: 16 Job-Images (fp-Scan tools/find_spu_jobs_122.py), PM id5 (byteidentisch, 0x14DAA80), 1 Embedded-ELF -> gt6/src/gen122 + gt6-122/generated/spu_lifted. 0 dispatch MISS, ~11400 Flips/180 s.
-- Spinner-Frage 1.22 (VERBOSE-fs, orig+noadj 200-220 s): 30 PDIPFS-Opens, KEIN PDIPFS/59/FI, kein Pamf. Update-EMAIN allein loest Spinner nicht.
-- Oracle-Diff (oracle_seq.py, PS3_HLE_TRACE_ARM): Sysmodule-Folge + frisches Savedata = KEINE Divergenz. PDIPFS/9-Opens = Oracle bis EE/3C, danach Oracle 59/FI, wir 85/H2... Divergenz NACH EE/3C.
-- Hooks 1.22 portiert (tools/port_hooks.py: Stream r/s/t, 3 FileDevice-Guards, Host-Open AB080C). Probe hk122 noadj 220 s: unresolved=0, Frame 4200 schwarz 100%, kein PDIPFS/59. Script-Hooks/Menue-Pump fehlen.
-- rp122 (RPCS3-hdd0, noadj 220 s): kein 59/FI. Open-Diff: Oracle oeffnet 9/PR/MF (Worker MkZA-) nach 8G/RB, wir 8Y/Y0 (Oracle nie); 26 Oracle-Opens vor EE/3C fehlen, EE/3C nie erreicht.
-- Hyp. nullist/freeloop (2026-11-23): dispatcher-Liste 0x7FFBE100 (snap_292013437) ok (1 Knoten). Spin = FREE-Loop AD4334-AD4350 (Kopie-Liste next=0, lr=AD4344, 41131 HOTREAD). Guard Dispatch (tools/guard_notify.py) + Free-Loop (tools/guard_free.py) entfernt Spin, Gast-Quit ~30 s bleibt (flips=107). Spin = Symptom.
-- Hyp. rv (probe_rv_20261123_183926_1, tools/log_ret.py): A7E044 (Pfad-Join, A86A10=is-abs-path) ret 1, A7E6BC ret 1, A52140 ret r29&0xff=1; 13D94 verwirft r3. Run-Methode kehrt NORMAL zurueck (kein Fehlerpfad), danach 13FFC-Term -> 90DC1C Shutdown-Wait.
-- A52140 (Caller 6B7A9C) = App-Run: A7E6BC reicht Task 0x7FFCEE90/Job 0x7FFCEE70 an tid30 und wartet (A30028). Job = 7B5208->6166A4: AD4294(obj+0x2b0) dann vt-Slot 0x154 -> 6C6BC8 -> obj+0x9d8 vslot 0xC. Mit Guard endet Job frueh -> Main faehrt runter.
-- Hyp. job9d8 (2026-11-23): obj 7FEEC000+0x9d8 = 0 (Snap 6 s); in Klasse vt 15B5668 (Ctor 6C7E04) einziger Schreiber 6C7E7C = 0 -> vt-Slot 0x154 (6C6BC8) ist No-op. Job 0x7FFCEE70 = nur AD4294-Notify + No-op, endet normal.
-- Listener in disp 7FFBE100 = Thread-Objekt "processEventLoop" (0x701F80F0, vt 15DCF60, Slot 0x14 = AF03B4: State@+4==3?). Wait A30028 pollt A2F290 (Task-State 0/1/3 = fertig, 2 = yield). Task fertig = normaler Pfad.
-- Hyp. submit (2026-11-23): Job 0x7FFCEE70 (vt 15C3888) wird per Reflection-Factory erzeugt (Ctor 7A05D8, Klassen-Reg 7A0900 mit OPD 0x1624380, Methoden initialize/finalize) -> Script-VM-Task, kein direkter Submit-Aufrufer.
-- run.log (probe_hletr_20261123_184856_1): AutoLoad2 #1 funcStat -4, #2 ok; GT6.0-5 = 305/23057/9005/1183/36/36 B; "LOAD complete" -> SOFORT "[sceNp] Term()" (Zeile 776/780) = Beginn Terminate. NpTerm-Aufrufer + Auswertung des AutoLoad2-Ergebnisses im Gast bisher NIE analysiert.
-- UNRESOLVED NIDs 0x0DFBADFA (nach cellKbGetConfiguration, Init) und 0x90460081 (Shutdown) -> CELL_OK gefaked; Zuordnung offen.
-- Hyp. npterm: Np Init(718)->Term(780) = Wrapper AF9780 (aufgerufen 11A94; sysmodule load, net init, sceNpInit, 10BC740 op, sceNpTerm, net fin). Harmlos, kein Exit-Trigger. Exit-Sequenz (Mouse/Kb End) folgt ~30 Flips spaeter.
+## STATE archive 2026-11-23 (from STATE.md Done)
+- 1.22 SPU lift: 16 job images (fp scan tools/find_spu_jobs_122.py), PM id5 (byte-identical, 0x14DAA80), 1 embedded ELF -> gt6/src/gen122 + gt6-122/generated/spu_lifted. 0 dispatch MISS, ~11400 flips/180 s.
+- Spinner question 1.22 (VERBOSE fs, orig+noadj 200-220 s): 30 PDIPFS opens, NO PDIPFS/59/FI, no Pamf. Update EMAIN alone does not solve the spinner.
+- Oracle diff (oracle_seq.py, PS3_HLE_TRACE_ARM): sysmodule sequence + fresh savedata = NO divergence. PDIPFS/9 opens = oracle up to EE/3C, then oracle 59/FI, we 85/H2... divergence AFTER EE/3C.
+- Hooks 1.22 ported (tools/port_hooks.py: stream r/s/t, 3 FileDevice guards, host open AB080C). Probe hk122 noadj 220 s: unresolved=0, frame 4200 black 100%, no PDIPFS/59. Script hooks/menu pump missing.
+- rp122 (RPCS3 hdd0, noadj 220 s): no 59/FI. Open diff: oracle opens 9/PR/MF (worker MkZA-) after 8G/RB, we 8Y/Y0 (oracle never); 26 oracle opens before EE/3C missing, EE/3C never reached.
+- Hyp. nullist/freeloop (2026-11-23): dispatcher list 0x7FFBE100 (snap_292013437) ok (1 node). Spin = FREE loop AD4334-AD4350 (copy list next=0, lr=AD4344, 41131 HOTREAD). Guard dispatch (tools/guard_notify.py) + free loop (tools/guard_free.py) removed spin, guest quit ~30 s stays (flips=107). Spin = symptom.
+- Hyp. rv (probe_rv_20261123_183926_1, tools/log_ret.py): A7E044 (path join, A86A10=is-abs-path) ret 1, A7E6BC ret 1, A52140 ret r29&0xff=1; 13D94 discards r3. Run method returns NORMALLY (no error path), then 13FFC term -> 90DC1C shutdown wait.
+- A52140 (caller 6B7A9C) = app run: A7E6BC hands task 0x7FFCEE90/job 0x7FFCEE70 to tid30 and waits (A30028). Job = 7B5208->6166A4: AD4294(obj+0x2b0) then vt slot 0x154 -> 6C6BC8 -> obj+0x9d8 vslot 0xC. With guard the job ends early -> main goes down.
+- Hyp. job9d8 (2026-11-23): obj 7FEEC000+0x9d8 = 0 (snap 6 s); in class vt 15B5668 (ctor 6C7E04) single writer 6C7E7C = 0 -> vt slot 0x154 (6C6BC8) is a no-op. Job 0x7FFCEE70 = only AD4294 notify + no-op, ends normally.
+- Listener in disp 7FFBE100 = thread object "processEventLoop" (0x701F80F0, vt 15DCF60, slot 0x14 = AF03B4: State@+4==3?). Wait A30028 polls A2F290 (task state 0/1/3 = done, 2 = yield). Task done = normal path.
+- Hyp. submit (2026-11-23): job 0x7FFCEE70 (vt 15C3888) is created via reflection factory (ctor 7A05D8, class registration 7A0900 with OPD 0x1624380, methods initialize/finalize) -> script VM task, no direct submit caller.
+- run.log (probe_hletr_20261123_184856_1): AutoLoad2 #1 funcStat -4, #2 ok; GT6.0-5 = 305/23057/9005/1183/36/36 B; "LOAD complete" -> IMMEDIATELY "[sceNp] Term()" (line 776/780) = start of terminate. NpTerm caller + evaluation of the AutoLoad2 result in the guest never analyzed so far.
+- UNRESOLVED NIDs 0x0DFBADFA (after cellKbGetConfiguration, init) and 0x90460081 (shutdown) -> CELL_OK faked; assignment open.
+- Hyp. npterm: Np init (718) -> term (780) = wrapper AF9780 (called from 11A94; sysmodule load, net init, sceNpInit, 10BC740 op, sceNpTerm, net fin). Harmless, no exit trigger. Exit sequence (mouse/kb end) follows ~30 flips later.
 
 ## Hyp. nodata (2026-11-23)
-cellSaveData.c: env GT6_SAVE_NODATA=1 gibt NODATA statt compat-OK zurueck. Orig-Save: GAME6 -4 (new=0), 2. Call 0 -> LOAD complete -> MapEa 0x72400000 -> sceNp Term. Fresh gamedata: GAME6/BKUP6 -4, kein AutoSave2, gleiche Term-Folge. work/cross_run.log (aelterer Build) lief nach BKUP6 weiter (LoadModule 0xF044, Trophy) - Divergenz ungeklaert.
+cellSaveData.c: env GT6_SAVE_NODATA=1 returns NODATA instead of compat OK. Orig save: GAME6 -4 (new=0), 2nd call 0 -> LOAD complete -> MapEa 0x72400000 -> sceNp Term. Fresh gamedata: GAME6/BKUP6 -4, no AutoSave2, same term sequence. work/cross_run.log (older build) continued after BKUP6 (LoadModule 0xF044, trophy) - divergence unexplained.
 
 ## Hyp. loop135 (2026-11-23)
-- tid30 loop func_008A7C6C polls byte 0x016CC8D0 (vtable 0xD9A788); set 1 by 8A92C8, cleared 0 by func_008A6EDC called from func_0088F1BC (tid1, global finalize 0x1496C via 0x14884) before ppu_thread_join(30). Loop is not self-ending; main requests shutdown.
+- tid30 loop func_008A7C6C polls byte 0x016CC8D0 (vtable 0xD9A788); set to 1 by 8A92C8, cleared to 0 by func_008A6EDC called from func_0088F1BC (tid1, global finalize 0x1496C via 0x14884) before ppu_thread_join(30). Loop is not self-ending; main requests shutdown.
 - PPU_WWATCH is hex, tag [ww]; probe 'ww' worked (earlier grep 'watch' was wrong).
-- Open: why tid1 enters 0x14884 (main-return) ~135 ticks after gtauto load.
+- Open: why tid1 enters 0x14884 (main return) ~135 ticks after gtauto load.
 - loop135b: tid1 after gtauto load ~5000 indirect calls = shared_ptr release (A1EAD0/A1EA64) + dtor 76B7B4; last call before teardown is a dtor. main.adc strings: IsExitGame, execShutdown, shutdown_module, abortDiskFull, MINIMUM_HDD_SPACE. No cellFsGetFreeSize call in run; cellGame free=40GiB-256KiB; no sys_tty output; no [quit] sysutil request from us.
 - exitgame: IsExitGame native reg at 0x828514 (name str 0x11A1278), impl AD2998 (lock B03998, getter 449384 on obj 0x1796DB8). Only writes to 0x1796DC8: init 0 by F7B0D4. Other task state machine writes not seen (WWATCH MAX 80, 10 hits).
 
 ## Hyp. scriptflow (2026-11-23)
-boot_adc.txt: processPatch nur wenn MNetworkInterface.isUp && LoginUtil.isOnline (bei uns NP OFFLINE) -> Patch/ExecGame-Quit ausgeschlossen. display_sequence_gt6: Presents -> LanguageSelectRoot -> AdjustScreenRoot -> applySaveData -> showVoucherMessages -> doBackupSave -> MovieRoot (skipOpening = !user_profile.option.opening_after_autoload) -> start_project_gt6 (GameParameterUtil.executeEvent, tutorial.xml). Probe-Opens: nur boot/dialog gpb + mpackages, kein game_parameter/tutorial.xml, kein PDIPFS/59 -> Script erreicht Movie/start_project nie. Script-log() erzeugt keinen tty-Output (Retail). CALLTRACE (First-N, tid1) zeigt nur Dtor-Kaskaden.
+boot_adc.txt: processPatch only if MNetworkInterface.isUp && LoginUtil.isOnline (with us NP OFFLINE) -> patch/ExecGame quit excluded. display_sequence_gt6: presents -> LanguageSelectRoot -> AdjustScreenRoot -> applySaveData -> showVoucherMessages -> doBackupSave -> MovieRoot (skipOpening = !user_profile.option.opening_after_autoload) -> start_project_gt6 (GameParameterUtil.executeEvent, tutorial.xml). Probe opens: only boot/dialog gpb + mpackages, no game_parameter/tutorial.xml, no PDIPFS/59 -> script never reaches movie/start_project. Script log() produces no tty output (retail). CALLTRACE (first N, tid1) shows only dtor cascades.
 
 ## Hyp. userdb/VMtrace (2026-11-23)
-- initUserDB nie erreicht (kein Open userdb0101.dat in run.log/.err). Quit direkt nach LOAD complete GAME6 (GT6.0-5 gelesen: 305/23057/9005/1183/36/36 B), dann NP2 IsLoaded + sysutil UnregisterCallback, Teardown.
-- Pfad statisch: SaveDataUtil.load(AUTO) -> openProgressDialog (ProgressDialog.open: DialogFrame.appear, func(args)) -> _load -> sutil.load native (bindCheck) -> _autoLoadGameCallback.
-- CALLTRACE_FROM=9EEA88/9F0748 (AFTER 3/22): 0 Calls; Adressen aus 1.00-Zeit. Probes vmA-vmE in work/.
+- initUserDB never reached (no open userdb0101.dat in run.log/.err). Quit directly after LOAD complete GAME6 (GT6.0-5 read: 305/23057/9005/1183/36/36 B), then NP2 IsLoaded + sysutil UnregisterCallback, teardown.
+- Path static: SaveDataUtil.load(AUTO) -> openProgressDialog (ProgressDialog.open: DialogFrame.appear, func(args)) -> _load -> sutil.load native (bindCheck) -> _autoLoadGameCallback.
+- CALLTRACE_FROM=9EEA88/9F0748 (AFTER 3/22): 0 calls; addresses from 1.00 era. Probes vmA-vmE in work/.
 
-- 2026-11-23 Arbeit6: Quit nur maskiert. WD@60s tid1 in AC7418+0x54 (Event-Wait AE27AC, obj+0x1ad8) via 13FD0 Finalizer. GT6_SKIP_FDWAIT-Test (AC746C) -> Teardown 98 Flips. MAINSTAGE-Log: alle 9 Stufen von 0x14010 laufen, AD2998=0. BFF0A0 returnt sofort (malloc10 ok, C1F4C8=0). WD@12s tid1 bereits im Finalizer.
+- 2026-11-23 Arbeit6: quit only masked. WD@60 s tid1 in AC7418+0x54 (event wait AE27AC, obj+0x1ad8) via 13FD0 finalizer. GT6_SKIP_FDWAIT test (AC746C) -> teardown 98 flips. MAINSTAGE log: all 9 stages from 0x14010 run, AD2998=0. BFF0A0 returns immediately (malloc10 ok, C1F4C8=0). WD@12 s tid1 already in finalizer.
 
-## Arbeit6 MAIN-LOOP 146E8 / AFDFC0 (aus STATE.md verschoben)
-- MAIN-LOOP (Arbeit6): main-Stufe 146E8 loopt while(!AD2778()); AD2778 = alle Tasks in Liste 0x17F8F3C (Knoten per AD2750) vtbl[2]!=0. Task-Klasse vtbl 0x15DD3E0 (ctor AFE0A4, new in 124F4), [2]=AFDFC0: Loop {AFE38C-Snapshot von Struct 0x179ED20: byte0&&byte1 -> return 1 (=fertig, main verlaesst Loop)}. byte0=1 via AFE200 (von AFE2A0 wenn AF32FC==1), byte1 via AFE1C8 = (C6390C(x)==0) wenn [obj+0x34]==1, Reset AFE328/AF47A4. Hypothese: byte0/byte1 hier zu frueh 1 (falscher HLE-Rueckgabewert C6390C/AF32FC?) -> main-Loop endet. GEMESSEN: AF32FC liefert String-Ptr 0x179A1E8, AFE200 startet, TASKWAIT #0 st0=1 st1=1 sofort (2 Aufrufe). C6390C=strcmp: byte1=(strcmp(AF32FC(), obj+0x48)==0), byte2 analog. GEMESSEN STRCMP: a=b='BCES01893' (Titel-ID, AF32FC=cellGame-BootCheck-Struct 0x179A1E8, [0]==1=DG). Task = Boot-Check, legitim erfuellt. Einziger Knoten in Liste 0x17F8F3C (AD2750 nur 1 Aufrufer) -> Loop endet auch auf HW?! OFFEN: was haelt main auf HW nach 146E8 am Leben (Stufen 141E8/91E464/1414C danach; 10338->1096C: AD2998==0 -> 13FD0 Finalizer). Pruefen ob 1096C-Pfad bei AD2998!=0 (IsExitGame) anders; ggf. 13FD0/14884 Aufrufbaum + wer die Loop in 146E8 (cb @0x16CD0C0-0x2F40 / -0x2f3c) fuellt.
+## Arbeit6 MAIN-LOOP 146E8 / AFDFC0 (moved from STATE.md)
+- MAIN LOOP (Arbeit6): main stage 146E8 runs while(!AD2778()); AD2778 = all tasks in list 0x17F8F3C (nodes via AD2750) vtbl[2]!=0. Task class vtbl 0x15DD3E0 (ctor AFE0A4, new in 124F4), [2]=AFDFC0: loop {AFE38C snapshot of struct 0x179ED20: byte0&&byte1 -> return 1 (=done, main leaves loop)}. byte0=1 via AFE200 (from AFE2A0 when AF32FC==1), byte1 via AFE1C8 = (C6390C(x)==0) when [obj+0x34]==1, reset AFE328/AF47A4. Hypothesis: byte0/byte1 set to 1 here too early (wrong HLE return value C6390C/AF32FC?) -> main loop ends. MEASURED: AF32FC returns string ptr 0x179A1E8, AFE200 starts, TASKWAIT #0 st0=1 st1=1 immediately (2 calls). C6390C=strcmp: byte1=(strcmp(AF32FC(), obj+0x48)==0), byte2 analogous. MEASURED STRCMP: a=b='BCES01893' (title ID, AF32FC=cellGame BootCheck struct 0x179A1E8, [0]==1=DG). Task = boot check, legitimately fulfilled. Only node in list 0x17F8F3C (AD2750 has only 1 caller) -> loop ends on HW too?! OPEN: what keeps main alive on HW after 146E8 (stages 141E8/91E464/1414C afterwards; 10338->1096C: AD2998==0 -> 13FD0 finalizer). Check whether 1096C path differs when AD2998!=0 (IsExitGame); possibly call tree of 13FD0/14884 + who fills the loop in 146E8 (cb @0x16CD0C0-0x2F40 / -0x2f3c).
 
-## Arbeit7 Game-Loop-Fund (aus STATE.md)
-- GAME-LOOP 1.22 GEFUNDEN (Arbeit7, probe_a7loop_20261123_232443_1): Gegenstueck zu 1.00 568800 = 0x616C80 (Schleife 616E6C: 3 Objekte r28+0x1d4, Tick 68FF84, Done-Byte +0x96 statt +0x91; Thread-Eintritt 6170AC, Loop {616C80 bis [obj+4]==1}). Setjmp-Cluster 616D14..616FF0 = 1.00 5686CC..568978. LAEUFT: tid1 ruft 616C80 1x (boot.mproject), dann tid30 via 6170AC mehrfach, 68FF84 tickt. Praemisse 'Loop startet nie' FALSCH; Stand = 1.00-Stand (Legal/Logo, IMMEDIATE-Draws, 1 Draw, C1 FAIL). main() kehrt legitim zurueck, Game laeuft in tid30. Naechster Blocker wie 1.00: Loader-Jobs in Tick-Handler 4 (Jobliste, vtbl+0x120==3) schliessen nie ab / SPURS soc-job-Completion -> kein 59/FI-Open.
+## Arbeit7 game-loop finding (from STATE.md)
+- GAME LOOP 1.22 FOUND (Arbeit7, probe_a7loop_20261123_232443_1): counterpart to 1.00 568800 = 0x616C80 (loop 616E6C: 3 objects r28+0x1d4, tick 68FF84, done byte +0x96 instead of +0x91; thread entry 6170AC, loop {616C80 until [obj+4]==1}). Setjmp cluster 616D14..616FF0 = 1.00 5686CC..568978. RUNNING: tid1 calls 616C80 once (boot.mproject), then tid30 via 6170AC several times, 68FF84 ticks. Premise 'loop never starts' WRONG; state = 1.00 state (legal/logo, IMMEDIATE draws, 1 draw, C1 FAIL). main() returns legitimately, game runs in tid30. Next blocker like 1.00: loader jobs in tick handler 4 (job list, vtbl+0x120==3) never finish / SPURS soc-job completion -> no 59/FI open.
 
-## Arbeit7 Wait-Analyse (aus STATE.md)
-- Arbeit7 Wait-Analyse (snap_a7): tid30 wartet in 8A7AD0-Schleife (Konsument) bis Zaehler [obj+0x1d8] > [obj+0x240]+1; Zaehler ++ nur in 8A88E8 (Produzent tid29), der VORHER C45408(1) = cond-timedwait (sys 0x6b, Timeout 0x989680=10 s) auf Obj 0x17E7FD8 macht (Flag 0x17E7A2E!=1 waehlt 7fb8, C45408 nutzt immer 7fd8). Einzige Signaler 7fd8/7fb8: C47A24/C47A00 = atexit-Handler (OPD 0x163BF30). -> tid29 ist Timer-Sleep o. Exit-Gate, kein fehlender Signaler belegt. HLE sys_cond timeout-Umrechnung geprueft (ok). AF870C=WaitOne(C45408(1)) in AF-Region. Kette ~9 Hyp. -> Strategiewechsel.
+## Arbeit7 wait analysis (from STATE.md)
+- Arbeit7 wait analysis (snap_a7): tid30 waits in loop 8A7AD0 (consumer) until counter [obj+0x1d8] > [obj+0x240]+1; counter ++ only in 8A88E8 (producer tid29), which BEFORE that does C45408(1) = cond timedwait (sys 0x6b, timeout 0x989680=10 s) on object 0x17E7FD8 (flag 0x17E7A2E!=1 selects 7fb8, C45408 always uses 7fd8). Only signalers 7fd8/7fb8: C47A24/C47A00 = atexit handler (OPD 0x163BF30). -> tid29 is timer sleep or exit gate; no missing signaler proven. HLE sys_cond timeout conversion checked (ok). AF870C=WaitOne(C45408(1)) in AF region. Chain ~9 hyp. -> change of strategy.
 
-## Arbeit7 (aus STATE.md verschoben)
-- Arbeit7 Snapshot work/snap_a7 (probe_a7snap_20261123_232734_1, SNAP_AT=70, Frame 3500: black 100%, C1 FAIL gemessen): 68FF84 hat 9 Aufrufer (u.a. 16924/16FD0 = Worker-Loop 'while([r29+0x11]) tick(*(singleton+0x1d4))', 17DAF0, 616E9C). Tick-Handler 1.22 Tabelle 0x15B242C: 68E35C,6907C0,6722FC,683A64,686C58(=Jobliste),66E6AC. 616C80-Objekt 7FEEE000: +0x48=0,+0x4c/4d=1, +0x1d4..0x1dc=0 -> 616E6C-Loop hat KEINE Objekte (kein Tick von dort). tid30 (fuehrte 616C80 aus) steht im Snapshot in lwcond_wait lr B03BE8 (Stack 920498,8A7B08,892988,AF0C2C = Task-Pool-Worker), 15 Threads lwcond_wait.
-- Arbeit7 Lauf a7base/a7nowait (je 100 s, Frame 3500): Produzent tid29 ruft 8A88DC ~6360x/100 s (=63 Hz, Wait wird normal geweckt, Frame-Pacing OK). Wait uebersprungen: kein Unterschied (32 IMMEDIATE-Draws, 139 fs-open, 5x 616C80, schwarz). Pacing/Zaehler 1d8 NICHT Blocker. Details Zaehler/atexit: eu-boot-log.md.
+## Arbeit7 (moved from STATE.md)
+- Arbeit7 snapshot work/snap_a7 (probe_a7snap_20261123_232734_1, SNAP_AT=70, frame 3500: black 100%, C1 FAIL measured): 68FF84 has 9 callers (incl. 16924/16FD0 = worker loop 'while([r29+0x11]) tick(*(singleton+0x1d4))', 17DAF0, 616E9C). Tick handler 1.22 table 0x15B242C: 68E35C,6907C0,6722FC,683A64,686C58(=job list),66E6AC. 616C80 object 7FEEE000: +0x48=0, +0x4c/4d=1, +0x1d4..0x1dc=0 -> 616E6C loop has NO objects (no tick from there). tid30 (ran 616C80) stands in snapshot in lwcond_wait lr B03BE8 (stack 920498,8A7B08,892988,AF0C2C = task pool worker), 15 threads lwcond_wait.
+- Arbeit7 runs a7base/a7nowait (100 s each, frame 3500): producer tid29 calls 8A88DC ~6360x/100 s (=63 Hz, wait is woken normally, frame pacing OK). Wait skipped: no difference (32 IMMEDIATE draws, 139 fs opens, 5x 616C80, black). Pacing/counter 1d8 NOT the blocker. Details counter/atexit: eu-boot-log.md.
 
-## Aus STATE.md verschoben (Arbeit9, 2026-11-24)
-- Arbeit8: AutoLoad2 WIRD erreicht (Prompt-Annahme falsch): GAME6 -4, dann ok/BKUP6 -4; gamedata/ im Repo-Root (PS3_GAMEDATA_ROOT) hat Alt-Saves GT6.N (1.00-Format). Return CBRESULT statt NODATA (GT6_SAVE_CBRES=1): kein Effekt.
-- Arbeit8 Oracle (RPCS3-Log Z.155401): GAME6 AutoLoad2 3x (je neuer Thread 'PDI', -4,-4, 3. ok mit GT6_1.N 16MB), dann LoadModule 0xF044 + sceNpTrophyInit; AutoSave2 BKUP6 +4 s. Wir: nach Load sofort sceNp Term (kein 0xF044/Trophy), kein Retry. Snaps work/snap_a8s50/a8s100: Worker 50 s aktiv, 100 s alle lwcond_wait, tid1 im Shutdown (lwmutex_destroy).
-- Arbeit8 Trophy-Kette: sceNpTrophyInit-Stub 10BDD20 <- B36E4C (Fn B36E00 TrophyMgr-Init) <- B36F80 <- B379E0 (Fn B37980, 0 direkte Aufrufer) bzw. B377BC (Fn B376E4) <- B359F0 (Fn B359CC, 0 Aufrufer). Beide Wurzeln nur indirekt (vtable/Task). Oracle main_thread: Stufen laufen, 146E8-Loop endet auch dort legitim (Arbeit6); main lebt dort in 13FD0-Finalizer-Wait weiter, Game in Threads.
-sceNpTerm-Caller = AF9870 (einziger, Fn ~AF9780: NP-Routine ruft 10BC740 NID E6C8F3F9, dann Term, unload sysmodule 0x16/0). Oracle: sceNpInit 76.08 s -> AutoLoad2 76.15 s, Term erst 106 s (Exit). Wir: Init -> Load -> Term sofort. AF9870 steht hinter strtol-artigem AF9448 + Unload 0x16/0 = Prozess-Teardown (main-Return, bekannte Quit-Maske), NICHT NP-Bedingung. Oracle: main_thread lebt bis 106 s. Frage: was haelt main im Oracle am Leben (Wait nach Stufe BFF0A0/Save-Load?) -> Oracle-Log main_thread-Calls 76-106 s (Z.155344-162073, nur main_thread filtern) vs unser tid1-Ende; kein weiterer NP/Save-Tiefgang.
+## Moved from STATE.md (Arbeit9, 2026-11-24)
+- Arbeit8: AutoLoad2 IS reached (prompt assumption wrong): GAME6 -4, then ok/BKUP6 -4; gamedata/ in repo root (PS3_GAMEDATA_ROOT) has old saves GT6.N (1.00 format). Return CBRESULT instead of NODATA (GT6_SAVE_CBRES=1): no effect.
+- Arbeit8 oracle (RPCS3 log line 155401): GAME6 AutoLoad2 3x (each new thread 'PDI', -4,-4, 3rd ok with GT6_1.N 16 MB), then LoadModule 0xF044 + sceNpTrophyInit; AutoSave2 BKUP6 +4 s. Ours: right after load immediately sceNp Term (no 0xF044/trophy), no retry. Snapshots work/snap_a8s50/a8s100: worker active 50 s, 100 s all lwcond_wait, tid1 in shutdown (lwmutex_destroy).
+- Arbeit8 trophy chain: sceNpTrophyInit stub 10BDD20 <- B36E4C (fn B36E00 TrophyMgr init) <- B36F80 <- B379E0 (fn B37980, 0 direct callers) resp. B377BC (fn B376E4) <- B359F0 (fn B359CC, 0 callers). Both roots only indirect (vtable/task). Oracle main_thread: stages run, 146E8 loop ends there legitimately too (Arbeit6); main lives on there in 13FD0 finalizer wait, game in threads.
+sceNpTerm caller = AF9870 (only one, fn ~AF9780: NP routine calls 10BC740 NID E6C8F3F9, then Term, unload sysmodule 0x16/0). Oracle: sceNpInit 76.08 s -> AutoLoad2 76.15 s, Term only at 106 s (exit). Ours: init -> load -> Term immediately. AF9870 sits behind strtol-like AF9448 + unload 0x16/0 = process teardown (main return, known quit mask), NOT an NP condition. Oracle: main_thread lives until 106 s. Question: what keeps main alive in the oracle (wait after stage BFF0A0/save load?) -> oracle log main_thread calls 76-106 s (lines 155344-162073, filter main_thread only) vs our tid1 end; no further NP/save deep dive.
 
-## Arbeit9 (2026-11-24) Trophy/F044-Kette = Script-Pfad
-- Oracle: 9qstY (Script-Thread, func AF0B94) macht LoadModule 0x32, NpInit(B4AE34/70), 3x AutoLoad2 (PDI-Threads), dann LoadModule 0xF044 (LR 10BB070) und Trophy-Init (Thread OEyq). Kein sceNpTerm in 9qstY.
-- boot_sequence_common.ad Z.254-269 (boot.adc, tools/adch_disasm.py -X utf8): if network_available { Login.setEulaCurrentVersion; LoginUtil.sync; checkSaveDataBind(); if LoginUtil.isOnline() {Login.checkNpEula(true)} }. checkNpEula = MNpEula (Klasse via 9D0458/9D06C4, ctor 9D0400->9CFBD0->AF8E34->AF3498 laedt F044).
-- Script-Methode checkNpEula = native 0x1954C (ClassInfo heap 0x40020A2C). CALLTRACE_TO 9D0458, 9D0580, AF8E34, 1954C, 9AE5D4: je 0 Treffer (60 s, Ctl: Format ok, indirekte Calls erkannt; 68FF84 nur direkt).
-- isOnline (OPD 162D888?/9AFCE4) = byte [obj+0x6850] (A09D34); Setter A0893C (stb 1) <- A0A110 <- 9AE5D4 (nativer Methode OPD 0x162D7A0 'initialize'? PDINetwork-Klasse, Registrierung 9ADD90 String 0x11B5758). isDummy=const false (9B0098). Setter 0x6850=0 in A088DC (shutdown).
-- Hypothese: bei uns wird PDINetwork-Methode 9AE5D4 (init/online) nie gerufen -> isOnline=false -> checkNpEula uebersprungen. Oracle: online (RPCS3 NP-Status).
-- Arbeit9: CALLTRACE_TO 9B0098 isDummy / 9AFCE4 isOnline: 0 Treffer -> Script erreicht boot_sequence_common Z.102 nie (oder direkter Call).
+## Arbeit9 (2026-11-24) trophy/F044 chain = script path
+- Oracle: 9qstY (script thread, func AF0B94) does LoadModule 0x32, NpInit(B4AE34/70), 3x AutoLoad2 (PDI threads), then LoadModule 0xF044 (LR 10BB070) and trophy init (thread OEyq). No sceNpTerm in 9qstY.
+- boot_sequence_common.ad lines 254-269 (boot.adc, tools/adch_disasm.py -X utf8): if network_available { Login.setEulaCurrentVersion; LoginUtil.sync; checkSaveDataBind(); if LoginUtil.isOnline() {Login.checkNpEula(true)} }. checkNpEula = MNpEula (class via 9D0458/9D06C4, ctor 9D0400->9CFBD0->AF8E34->AF3498 loads F044).
+- Script method checkNpEula = native 0x1954C (ClassInfo heap 0x40020A2C). CALLTRACE_TO 9D0458, 9D0580, AF8E34, 1954C, 9AE5D4: 0 hits each (60 s, control: format ok, indirect calls recognized; 68FF84 only direct).
+- isOnline (OPD 162D888?/9AFCE4) = byte [obj+0x6850] (A09D34); setter A0893C (stb 1) <- A0A110 <- 9AE5D4 (native method OPD 0x162D7A0 'initialize'? PDINetwork class, registration 9ADD90 string 0x11B5758). isDummy = const false (9B0098). Setter 0x6850=0 in A088DC (shutdown).
+- Hypothesis: with us PDINetwork method 9AE5D4 (init/online) is never called -> isOnline=false -> checkNpEula skipped. Oracle: online (RPCS3 NP status).
+- Arbeit9: CALLTRACE_TO 9B0098 isDummy / 9AFCE4 isOnline: 0 hits -> script never reaches boot_sequence_common line 102 (or direct call).
 
-## Arbeit10 (2026-11-24) NP-Term-Aufrufer belegt
-- Neuer Knob NP_TERM_BT=1 (third_party/.../libs/network/sceNp.c, ydkj_host_bt). Lauf work/probe_a10_npbt_*: Term-Kette (innen->aussen) B4AD4C <- A088DC <- 9AD1DC (= native PDINetwork.finalize, OPD 0x162D710, String 0x11B5768) <- A746E8 <- A7479C <- A5C070 <- AA55FC <- AA41FC <- A2F0EC <- A2FFCC <- A7BA60 (Run-Fn, ruft A2FFCC bei A7BC4C) <- A7E6BC <- A52140 <- 13C44 (main-Stufe) <- 1096C <- 1024C. Synchron im main-Thread (tid1), kein Fremdthread.
-- Also: Script/Projekt-Ausfuehrung ruft PDINetwork.finalize kurz nach AutoLoad (gtauto.mpackage wird direkt davor geladen). boot.adc enthaelt KEIN 'finalize' (Voll-Dump 11371 Zeilen). Handler 1198C = vtable-Slot0 (OPD 0x15E1E78) in Exit-Liste 0x17EFB6C, nur von 109E0-Walker nach main-Return gerufen -> NICHT der Term-Pfad hier.
-- Oracle: 3 PDI-Threads fuer AutoLoad (#50,#51,#53), wir 2 (tid38 -4, tid40 ok); danach Oracle vyENO(3008)+OEyq(Trophy). main_thread Oracle schlaeft 76->106 s. Wir: Thread-Folge identisch bis tid40, dann Ende (Term).
-- Offen: welcher Script/Native-Aufrufer in A5C070/A746E8 erzwingt finalize (Bedingung davor). CALLTRACE_TO 1198C = 0 Treffer.
-- Arbeit10 Draw-Pfad (probe_a10_draw_*, 90 s, Frame 3500): nur 30 RSX DRAW_ARRAYS prim=10 count=4 (Fullscreen-Quad) ALLE direkt nach Laden dialog.mproject (~Frame 3000 Logzeile 793-943), danach 0 Draws. Flips laufen weiter aus Game-Thread (SetPrepareFlip tid27 LR C44524 1837/30s, FlipImmediate tid29 LR C444D0) -> Game flippt leere Frames. Erklaerung: Application-Shutdown (finalize) vor Szenenaufbau. Capture: 1 Draw, schwarz.
-- Arbeit10: kein Script in boot/gtauto/dialog/andere .adc ruft PDINetwork.finalize (grep-Vorpruefung ueber alle adc mit beiden Woertern: 0 Treffer; gtauto 'finalize' = SceneFace). Term-Kette A7BA60 -> A2FFCC (Schleife A30020..A3007C ruft A2F290 pro Schritt) -> A2F0EC ist C++-Application-Terminierung, kein Script-Call. Oracle-Dateinamen (PDIPFS-Hash) nicht mit unseren vergleichbar (anderer Hash), Reihenfolge-Vergleich nur per Anzahl: Oracle 305 PDIPFS-Opens, wir 35. 8A7AA0 = bounded-Queue-Push mit Cond-Wait (tid30 100 s geparkt dort?) unbelegt, Objektadresse nicht aus Stack ableitbar.
-- Naechster Schritt: A2F290 (Schritt-Fn der A2FFCC-Schleife) + Abbruchbedingung bei A30038/A3004C lesen; wer setzt 'done' -> finalize.
-- Arbeit10 Oracle-main: main_thread loggt nach 76 s (sys_rsx_context_iomap, Zeile 155268) NICHTS bis 106 s (Exit-Request: IsLoaded, Term, process_exit) -> Oracle-main BLOCKIERT (kehrt nie zurueck). Bei uns laeuft die Term-Kette (Projekt-Unload/PDINetwork.finalize) synchron in tid1 ohne Host-Quit (kein REQUEST_EXITGAME im Log). A2FFCC = Warte-/Step-Schleife (A2F290 liefert 0/1/2/3; 2=retry, 3/0/1 = Ende) -> Projekt-Lauf endet bei uns, bei Oracle nicht. Hypothese: boot-Projekt endet/entlaedt (finalize aller Root-Objekte) weil Boot-Script frueh durchlaeuft; Oracle bleibt im Script (Netz/NP/Trophy-Pfad) haengen = wartet. Kein Script ruft finalize explizit.
+## Arbeit10 (2026-11-24) NP-term caller proven
+- New knob NP_TERM_BT=1 (third_party/.../libs/network/sceNp.c, ydkj_host_bt). Run work/probe_a10_npbt_*: term chain (inside->outside) B4AD4C <- A088DC <- 9AD1DC (= native PDINetwork.finalize, OPD 0x162D710, string 0x11B5768) <- A746E8 <- A7479C <- A5C070 <- AA55FC <- AA41FC <- A2F0EC <- A2FFCC <- A7BA60 (run fn, calls A2FFCC at A7BC4C) <- A7E6BC <- A52140 <- 13C44 (main stage) <- 1096C <- 1024C. Synchronous in main thread (tid1), no foreign thread.
+- So: script/project execution calls PDINetwork.finalize shortly after AutoLoad (gtauto.mpackage is loaded right before). boot.adc contains NO 'finalize' (full dump 11371 lines). Handler 1198C = vtable slot 0 (OPD 0x15E1E78) in exit list 0x17EFB6C, only called by 109E0 walker after main return -> NOT the term path here.
+- Oracle: 3 PDI threads for AutoLoad (#50,#51,#53), we 2 (tid38 -4, tid40 ok); then oracle vyENO(3008)+OEyq(trophy). Oracle main_thread sleeps 76->106 s. Ours: thread sequence identical up to tid40, then end (Term).
+- Open: which script/native caller in A5C070/A746E8 forces finalize (condition before it). CALLTRACE_TO 1198C = 0 hits.
+- Arbeit10 draw path (probe_a10_draw_*, 90 s, frame 3500): only 30 RSX DRAW_ARRAYS prim=10 count=4 (fullscreen quad) ALL directly after loading dialog.mproject (~frame 3000 log lines 793-943), then 0 draws. Flips continue from game thread (SetPrepareFlip tid27 LR C44524 1837/30s, FlipImmediate tid29 LR C444D0) -> game flips empty frames. Explanation: application shutdown (finalize) before scene build-up. Capture: 1 draw, black.
+- Arbeit10: no script in boot/gtauto/dialog/other .adc calls PDINetwork.finalize (grep pre-check over all adc with both words: 0 hits; gtauto 'finalize' = SceneFace). Term chain A7BA60 -> A2FFCC (loop A30020..A3007C calls A2F290 per step) -> A2F0EC is C++ application termination, not a script call. Oracle file names (PDIPFS hash) not comparable with ours (different hash), order comparison only by count: oracle 305 PDIPFS opens, we 35. 8A7AA0 = bounded queue push with cond wait (tid30 parked there for 100 s?) unproven, object address not derivable from stack.
+- Next step: read A2F290 (step fn of the A2FFCC loop) + abort condition at A30038/A3004C; who sets 'done' -> finalize.
+- Arbeit10 oracle main: main_thread logs NOTHING after 76 s (sys_rsx_context_iomap, line 155268) until 106 s (exit request: IsLoaded, Term, process_exit) -> oracle main BLOCKED (never returns). With us the term chain (project unload/PDINetwork.finalize) runs synchronously in tid1 without host quit (no REQUEST_EXITGAME in log). A2FFCC = wait/step loop (A2F290 returns 0/1/2/3; 2=retry, 3/0/1 = end) -> project run ends with us, not with oracle. Hypothesis: boot project ends/unloads (finalize of all root objects) because boot script runs through early; oracle stays in the script (net/NP/trophy path) and waits. No script calls finalize explicitly.
 
-## Arbeit11 (2026-11-24) A2F290 Statuspfad
-- A2F290 = Step eines Task/Script-Interpreters (Rueckgabe = [obj+0x24] nach A2F0AC-Zustandsmaschine; Jumptable 0x1569DEC). A2FFCC-Schleife: ret 2 -> yield (A1F8C4/A8604C) + Wiederholung; 0/1/3 -> verlassen. [obj+0x28]==3 (A2F4E0) wenn Feld != Global 0x1729948 -> ret 0.
-- Lauf probe_a11_a2f290: nur 5 Objekte (40007990,40007A10,4036B610,40393B90,40393C10), alle +24=4 +28=1; ret 0/1 (21x), NIE 2. Oracle-main wartet also (ret 2 bzw. blockiert dort), wir enden.
-- Lauf probe_a11_vcall2: vcall [obj+0x68] Slot 0x14 (Ziele AA140C,B11990,A62F8C,106C974,..) ret immer 0; nicht diskriminierend. probe_a11_assert: A217EC (Assert/Log) 0 Treffer -> kein Script-Fehler-Abbruch.
-- Oracle main_thread: letzte Aktion vor Block = sys_rsx_context_iomap (Z.155268); Worker 9qstY lesen PDIPFS/9/*/* (Z.155860ff.) weiter. Main wartet vermutlich auf Worker-Load, bei uns kehrt Schritt sofort durch.
-- Naechster (Strategiewechsel): Snapshot-Walk obj 40393C10/40007990 (+0x24/+0x28/+0x34/+0x6c Vektor) bei uns vs Erwartung; oder Umgehung: A2F290-Rueckgabe 1/0 -> 2 erzwingen (Guard) und pruefen, ob Loads/Draws weiterlaufen.
-- Arbeit11 Hyp4 probe_a11_force2 (A2F290-Ret am Call-Site A30028 -> 2 erzwungen, Env A11_FORCE2; Patch-Stand work/_bk_a11/ppu_recomp_022_force2.cpp): KEIN sceNp Term, tid1 yieldet in Schleife wie Oracle-main, Flips laufen (7677/120s), aber weiter schwarz (Capture 3500 non-black 0%), kein 59/FI. => Teardown ist Folge, nicht Ursache; Blocker liegt bei Worker-/Ladepfad (Oracle 3 AutoLoad-Threads, wir 2).
-- Arbeit11 Hyp5-6 (Knob A11_FORCE2=N im Call-Site A30028, Stand work/_bk_a11/ppu_recomp_022_force2n.cpp; ab Aufruf N ret->2): force ab 1 = Load stoppt nach 34 Opens (nur K/*). n=3..17: 82 Opens, n=20: 98, n=21: 139 Opens + sceNp Term. Ohne Force: 139 Opens + Term.
-  => Aufrufe 1-19 laden bis 82 Opens, Aufruf 20 bringt +41 Opens (GT6.N/tmp_*_work), Aufruf 21 SELBST (nicht sein Rueckgabewert) fuehrt Term aus (Kette A2F290+0x470 -> A2F0AC -> AA41FC -> A5C070 (virtuell, 0 direkte Aufrufer, r4-r6 = Methode/Args?) -> A746E8 -> 9AD1DC finalize).
-  Force-2 ab 1 ist als Baseline unbrauchbar (blockt vor den Loads); Oracle blockt nach den Loads (>= Aufruf 20).
-- Arbeit11 Hyp7 (probe_a11_step/_nat, Patch work/_bk_a11/ppu_recomp_022_nat.cpp): Steps 1-20 = EIN Objekt 40393C10 (vptr 015D39B0, ctx +68=40373FAC); Step 21 = NEUES Objekt 40393C90 (gleicher vptr, ctx 403731E4) -> neuer Script-Thread/Task. Er fuehrt Script-Natives aus (A746E8 = Native-Call-Trampolin, Ziel = [[this+0x14]]) und ruft hintereinander 9AD090 (->A0AEE0), 9AD0B8 (->A08850), 9AD1DC (finalize) = PDINetwork-Singleton-Wrapper (OPD 0x162D6D0/D6D8/D710), danach Ende. Namenstabelle 0x11B5640..: setNetworkSystem, initialize, finalize, initializeNp...; OPD->Name-Zuordnung offen (kein statischer Zeiger auf OPD).
-  Lesart: Task #2 (40393C90) laeuft bei uns bis zum Netz-Shutdown-Block durch; Oracle blockiert davor in einem Native des Tasks. Kandidaten davor: A3691C, A363C4, A56EFC, 8130AC, 809D40, A4887C (Namen offen).
-- Arbeit11 Hyp8-9: Native-Rueckgabewerte Step 15-21 (probe_a11_ret): ctr nach Call nicht Ziel -> unbrauchbar, keine Abweichung ableitbar. probe_a11_skipfin (finalize 9AD1DC uebersprungen, Env A11_SKIPFIN): Term kommt trotzdem (opens 139, kein 59/FI). NP_TERM_BT: Kette B4AD4C<-B4B114<-A081B4<-9AD598(PDINetwork-Native)<-A1EA64<-102BE4C<-A7BF50<-A1EAD0<-14900<-13FD0 = main()-Return-Finalizer. => Projekt-Schleife endet normal (Step 21 = Ende), Shutdown-Pfad egal welcher Aufrufer; Term ist Folge des Schleifenendes. Fix-Ort = warum Projekt/Task endet statt zu warten (Script-Bedingung, nicht finalize).
-- Arbeit11 DATEN-DIFF (scripts/opendiff.py <run-dir> [oracle.log]; 1. Aufruf): Default-hdd0: unsere K/-Index-Opens lesen keine PDIPFS/9/*-Daten (hdd0 hat keinen 9/-Baum) -> mit `-Hdd0Src work\gt6_hdd0_rp` (RPCS3-Daten, Junctions) folgen wir dem Oracle fast 1:1 (K/4D,9/H4/MS,K/R2,..., 5E/MG, 9/MQ/EK..9/7N/XG).
-  Abweichung 1: Systemsprache. Ours "system language 4 (host)" = DE -> 9/8Y/Y0 statt Oracle 9/PR/MF (English UK). Mit `PS3_LANG=en-gb` (=18) identisch. (Default-Lauf setzt Sprache vom Host -> ggf. PS3_LANG=en-gb in probe.ps1 Standard.)
-  Abweichung 2 (benign): 9/56/PW (boot.mproject) fehlt: "pfs override" liefert Klartext vom Host.
-  Abweichung 3 (ERSTE echte): nach 9/7N/XG oeffnet Oracle (PDI-Thread, ~76 s) /dev_hdd1/pditsm/pagefile.sys (unlink+create, VMPageFile, Fn B07748, Aufrufer via 0107Dxxx-Natives B07EC8/B08A14/B08EA8), dann tmp_save_work.dat (Pfad /dev_hdd1/, bei uns /dev_hdd1/cache/BCES01893/), grim2/grim007.db 2x, 9/S0/BE, GT6_1.0-5 (bei uns GT6.0-5), danach 9/UP/KS,DS/XC,WA/2N... Bei uns: B07748 NIE erreicht (Probe probe_a11_vmpf), kein pagefile/grim007; nach GT6.5 nur 9/TA/SR,RV/VG,MS/1Y,9J/VK,6M/BG dann Term.
+## Arbeit11 (2026-11-24) A2F290 status path
+- A2F290 = step of a task/script interpreter (return = [obj+0x24] after A2F0AC state machine; jump table 0x1569DEC). A2FFCC loop: ret 2 -> yield (A1F8C4/A8604C) + repeat; 0/1/3 -> leave. [obj+0x28]==3 (A2F4E0) if field != global 0x1729948 -> ret 0.
+- Run probe_a11_a2f290: only 5 objects (40007990,40007A10,4036B610,40393B90,40393C10), all +24=4 +28=1; ret 0/1 (21x), NEVER 2. So the oracle main waits (ret 2 resp. blocked there), we end.
+- Run probe_a11_vcall2: vcall [obj+0x68] slot 0x14 (targets AA140C,B11990,A62F8C,106C974,..) ret always 0; not discriminating. probe_a11_assert: A217EC (assert/log) 0 hits -> no script error abort.
+- Oracle main_thread: last action before block = sys_rsx_context_iomap (line 155268); worker 9qstY reads PDIPFS/9/*/* (line 155860ff.) further. Main presumably waits for worker load, with us the step returns immediately.
+- Next (change of strategy): snapshot walk obj 40393C10/40007990 (+0x24/+0x28/+0x34/+0x6c vector) ours vs expectation; or workaround: force A2F290 return 1/0 -> 2 (guard) and check whether loads/draws continue.
+- Arbeit11 Hyp4 probe_a11_force2 (A2F290 ret at call site A30028 -> 2 forced, env A11_FORCE2; patch state work/_bk_a11/ppu_recomp_022_force2.cpp): NO sceNp Term, tid1 yields in loop like oracle main, flips run (7677/120 s), but still black (capture 3500 non-black 0%), no 59/FI. => teardown is a consequence, not the cause; blocker lies in worker/load path (oracle 3 AutoLoad threads, we 2).
+- Arbeit11 Hyp5-6 (knob A11_FORCE2=N at call site A30028, state work/_bk_a11/ppu_recomp_022_force2n.cpp; from call N ret->2): force from 1 = load stops after 34 opens (only K/*). n=3..17: 82 opens, n=20: 98, n=21: 139 opens + sceNp Term. Without force: 139 opens + Term.
+  => calls 1-19 load up to 82 opens, call 20 brings +41 opens (GT6.N/tmp_*_work), call 21 ITSELF (not its return value) executes Term (chain A2F290+0x470 -> A2F0AC -> AA41FC -> A5C070 (virtual, 0 direct callers, r4-r6 = method/args?) -> A746E8 -> 9AD1DC finalize).
+  Force-2 from 1 is unusable as baseline (blocks before the loads); oracle blocks after the loads (>= call 20).
+- Arbeit11 Hyp7 (probe_a11_step/_nat, patch work/_bk_a11/ppu_recomp_022_nat.cpp): steps 1-20 = ONE object 40393C10 (vptr 015D39B0, ctx +68=40373FAC); step 21 = NEW object 40393C90 (same vptr, ctx 403731E4) -> new script thread/task. It runs script natives (A746E8 = native call trampoline, target = [[this+0x14]]) and in sequence calls 9AD090 (->A0AEE0), 9AD0B8 (->A08850), 9AD1DC (finalize) = PDINetwork singleton wrapper (OPD 0x162D6D0/D6D8/D710), then ends. Name table 0x11B5640..: setNetworkSystem, initialize, finalize, initializeNp...; OPD->name assignment open (no static pointer to OPD).
+  Reading: task #2 (40393C90) runs with us through to the network shutdown block; oracle blocks before that in a native of the task. Candidates before: A3691C, A363C4, A56EFC, 8130AC, 809D40, A4887C (names open).
+- Arbeit11 Hyp8-9: native return values steps 15-21 (probe_a11_ret): ctr after call not target -> unusable, no deviation derivable. probe_a11_skipfin (finalize 9AD1DC skipped, env A11_SKIPFIN): term comes anyway (opens 139, no 59/FI). NP_TERM_BT: chain B4AD4C<-B4B114<-A081B4<-9AD598 (PDINetwork native)<-A1EA64<-102BE4C<-A7BF50<-A1EAD0<-14900<-13FD0 = main() return finalizer. => project loop ends normally (step 21 = end), shutdown path irrespective of caller; term is consequence of loop end. Fix location = why project/task ends instead of waiting (script condition, not finalize).
+- Arbeit11 DATA DIFF (scripts/opendiff.py <run-dir> [oracle.log]; 1st call): default hdd0: our K/-index opens read no PDIPFS/9/* data (hdd0 has no 9/ tree) -> with `-Hdd0Src work\gt6_hdd0_rp` (RPCS3 data, junctions) we follow the oracle nearly 1:1 (K/4D, 9/H4/MS, K/R2, ..., 5E/MG, 9/MQ/EK..9/7N/XG).
+  Deviation 1: system language. Ours "system language 4 (host)" = DE -> 9/8Y/Y0 instead of oracle 9/PR/MF (English UK). With `PS3_LANG=en-gb` (=18) identical. (Default run takes the language from the host -> maybe PS3_LANG=en-gb as standard in probe.ps1.)
+  Deviation 2 (benign): 9/56/PW (boot.mproject) missing: "pfs override" serves plaintext from host.
+  Deviation 3 (FIRST real one): after 9/7N/XG the oracle opens (PDI thread, ~76 s) /dev_hdd1/pditsm/pagefile.sys (unlink+create, VMPageFile, fn B07748, caller via 0107Dxxx natives B07EC8/B08A14/B08EA8), then tmp_save_work.dat (path /dev_hdd1/, ours /dev_hdd1/cache/BCES01893/), grim2/grim007.db 2x, 9/S0/BE, GT6_1.0-5 (ours GT6.0-5), then 9/UP/KS,DS/XC,WA/2N... With us: B07748 NEVER reached (probe probe_a11_vmpf), no pagefile/grim007; after GT6.5 only 9/TA/SR,RV/VG,MS/1Y,9J/VK,6M/BG then Term.
 
-## Aus STATE.md verschoben (Arbeit11 Trim)
-- (Arbeit11) A2F290 liefert bei uns 0/1 (nie 2); vcall/assert-Probes ohne Befund. Naechster: Guard A2F290 ret->2 (Umgehung) oder Snapshot-Walk obj 40393C10. Details eu-boot-log.md Arbeit11.
-- (Arbeit11) Guard A2F290 ret->2: Term weg, tid1 blockt wie Oracle, aber weiter schwarz/kein 59/FI. Teardown nur Folge. Naechster: dritten AutoLoad-Thread (Oracle #53) finden: wer erzeugt ihn, warum bei uns nicht.
-- (Arbeit11) Term kommt aus Step-Aufruf #21 der A2FFCC-Schleife (nicht aus Rueckgabewert); force ret 2 ab #20 haelt tid1, aber nur 98 Opens, kein 59/FI. Naechster: A5C070-Entry loggen (r4-r6 + String) bei Aufruf 21: welche Methode ruft finalize.
-- (Arbeit11) Step 21 = neues Task-Objekt 40393C90, ruft Natives 9AD090,9AD0B8,finalize(9AD1DC) in Folge. Naechster: Natives davor (A3691C,A363C4,A56EFC,8130AC,809D40,A4887C) namentlich zuordnen (Registrierungscode), welches blockieren muss (Oracle).
-- (Arbeit11) finalize-Skip aendert nichts: Term kommt via main-Return-Finalizer (13FD0). Symptom-Kette 9 Hyp. -> STOP. Naechster Strategiewechsel: Script des Task 40393C90 per adch_disasm identifizieren (Task-Name aus Obj+0x68/Script-Loader-Log) und dessen Wait-/Bedingungs-Natives gegen Oracle vergleichen.
-(Arbeit9) Trophy/F044 = Script-Pfad: boot_sequence_common.ad Z.254-269 ruft Login.checkNpEula nur wenn LoginUtil.isOnline() (= Byte [PDINetwork+0x6850], Setter A0893C <- A0A110 <- native 9AE5D4). CALLTRACE_TO 9AE5D4/1954C/9D0458/AF8E34: 0 Treffer. Details eu-boot-log.md "Arbeit9".
-Naechster: (1) Wer ruft 9AE5D4 im Script (Methodenname via OPD 0x162D7A0, String 0x11B5758) und wo im .adc (grep adch_disasm-Dump); (2) warum bei uns nie: Bedingung davor (MNetworkInterface.isUp? NP-Status). Wenn isUp/NP-Status: HLE sceNpManagerGetStatus/sceNetCtl auf ONLINE-aequivalent pruefen (Oracle-Log), 1 Lauf.
-- Arbeit11 SAVE-DIVERGENZ: Oracle 76.15-76.57 s: 3x AutoLoad2 GAME6 (je funcStat -4 -> 0x8002b401), dazwischen unlink/create /dev_hdd1/tmp_{save,db,garage}_work.dat, danach sysmodule 0xF044 (LR 10BB070) + sceNpTrophyInit/CreateContext (Thread OEyq). VMPageFile = Folge von Page-Faults (MpAnk), kein Trigger.
-  Ours (leeres savedata via PS3_GAMEDATA_ROOT=work/_gd_empty, en-gb, rp-hdd0): AutoLoad2 GAME6 -4, dann BKUP6 -4, dann Term; nie F044/TrophyInit. Alt-Save gamedata/ (22.11.) gab 2. Load result 0 (Dateien GT6.0-5).
-  Negativ: GT6_SAVE_CBRES=1 (Return 0x8002b401 statt NODATA) -> unveraendert BKUP6; PS3_SYSCACHE_PLAIN=1 (neuer Knob cellSysutil.c: getCachePath=/dev_hdd1 wie Oracle) -> unveraendert. Sysmodule-Folge Oracle: ...0x32, 0xF044, 0x5,0x24,...; ours endet nach 0x32.
-  Offen: Wer waehlt GAME6 vs BKUP6 (Request-Objekt Worker AF0B94, Felder +0x90/+0x94/+0x9c, Erzeuger AF0A44 generischer Thread-Creator). Dirname per Format zusammengebaut (kein String im ELF).
-- Arbeit11 weitere Negative (alle mit en-gb, rp-hdd0, leeres savedata): PS3_MEM_AVAIL_REAL=1 (neuer Knob ppu_loader.cpp case 352: total 0xD500000, avail=total-sys_memory_allocate-mmapper; Oracle-Werte 0xd2d0000->0x8cd0000) -> unveraendert (GAME6,BKUP6,Term). Knobs PS3_SYSCACHE_PLAIN/PS3_MEM_AVAIL_REAL liegen in third_party (gitignored) -> bei Neuaufbau aus dieser Zeile neu setzen.
-  Oracle mountet SysCache als /dev_hdd1 (VFS-Remap auf caches/BCES01893_*), AF50B8/AF5194/AF51B8/AF51D4 (Save-Wrapper) werden bei uns NIE gerufen -> AutoLoad2 kommt ueber anderen Pfad (Thread-Request-Objekt, dirName inline +0x70, Result +0xB0, Worker AF0B94/AF5704).
+## Moved from STATE.md (Arbeit11 trim)
+- (Arbeit11) A2F290 returns 0/1 with us (never 2); vcall/assert probes without finding. Next: guard A2F290 ret->2 (workaround) or snapshot walk obj 40393C10. Details eu-boot-log.md Arbeit11.
+- (Arbeit11) Guard A2F290 ret->2: Term gone, tid1 blocks like oracle, but still black/no 59/FI. Teardown only a consequence. Next: find the third AutoLoad thread (oracle #53): who creates it, why not with us.
+- (Arbeit11) Term comes from step call #21 of the A2FFCC loop (not from return value); force ret 2 from #20 holds tid1, but only 98 opens, no 59/FI. Next: log A5C070 entry (r4-r6 + string) at call 21: which method calls finalize.
+- (Arbeit11) step 21 = new task object 40393C90, calls natives 9AD090,9AD0B8,finalize(9AD1DC) in sequence. Next: name the natives before it (A3691C,A363C4,A56EFC,8130AC,809D40,A4887C) by registration code, which must block (oracle).
+- (Arbeit11) finalize skip changes nothing: term comes via main-return finalizer (13FD0). Symptom chain 9 hyp. -> STOP. Next change of strategy: identify script of task 40393C90 via adch_disasm (task name from obj+0x68 / script loader log) and compare its wait/condition natives against the oracle.
+(Arbeit9) Trophy/F044 = script path: boot_sequence_common.ad lines 254-269 calls Login.checkNpEula only if LoginUtil.isOnline() (= byte [PDINetwork+0x6850], setter A0893C <- A0A110 <- native 9AE5D4). CALLTRACE_TO 9AE5D4/1954C/9D0458/AF8E34: 0 hits. Details eu-boot-log.md "Arbeit9".
+Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 0x11B5758) and where in the .adc (grep adch_disasm dump); (2) why never with us: condition before it (MNetworkInterface.isUp? NP status). If isUp/NP status: check HLE sceNpManagerGetStatus/sceNetCtl against ONLINE-equivalent (oracle log), 1 run.
+- Arbeit11 SAVE DIVERGENCE: oracle 76.15-76.57 s: 3x AutoLoad2 GAME6 (each funcStat -4 -> 0x8002b401), in between unlink/create /dev_hdd1/tmp_{save,db,garage}_work.dat, then sysmodule 0xF044 (LR 10BB070) + sceNpTrophyInit/CreateContext (thread OEyq). VMPageFile = consequence of page faults (MpAnk), not a trigger.
+  Ours (empty savedata via PS3_GAMEDATA_ROOT=work/_gd_empty, en-gb, rp-hdd0): AutoLoad2 GAME6 -4, then BKUP6 -4, then Term; never F044/TrophyInit. Old save gamedata/ (22.11.) gave 2nd load result 0 (files GT6.0-5).
+  Negative: GT6_SAVE_CBRES=1 (return 0x8002b401 instead of NODATA) -> unchanged BKUP6; PS3_SYSCACHE_PLAIN=1 (new knob cellSysutil.c: getCachePath=/dev_hdd1 like oracle) -> unchanged. Sysmodule sequence oracle: ...0x32, 0xF044, 0x5,0x24,...; ours ends after 0x32.
+  Open: who selects GAME6 vs BKUP6 (request object worker AF0B94, fields +0x90/+0x94/+0x9c, creator AF0A44 generic thread creator). Dir name assembled by format (no string in ELF).
+- Arbeit11 further negatives (all with en-gb, rp-hdd0, empty savedata): PS3_MEM_AVAIL_REAL=1 (new knob ppu_loader.cpp case 352: total 0xD500000, avail=total-sys_memory_allocate-mmapper; oracle values 0xd2d0000->0x8cd0000) -> unchanged (GAME6,BKUP6,Term). Knobs PS3_SYSCACHE_PLAIN/PS3_MEM_AVAIL_REAL live in third_party (gitignored) -> re-set from this line on rebuild.
+  Oracle mounts SysCache as /dev_hdd1 (VFS remap to caches/BCES01893_*), AF50B8/AF5194/AF51B8/AF51D4 (save wrappers) are NEVER called with us -> AutoLoad2 comes via another path (thread request object, dirName inline +0x70, result +0xB0, worker AF0B94/AF5704).
 
-## Arbeit12 (2026-11-24) AutoLoad2-Request statisch + 3 Probes (probe_a12_cb/def/cbres)
-- AutoLoad2-Stub 0x10C0BF0 hat EINEN Aufrufer: AF5704 (Request-Execute-Methode, Flag r4 -> AutoSave2 10C0790/AutoLoad2 10C0BF0, Result -> obj+0xB0, dirName inline obj+0x70). AF5674/AF5738 = Geschwister (List/Fixed). Request-Objekte 0xB8 gross (7fd78000, 7fd780b8), vtable-Aufruf, kein direkter xref.
-- funcStat OPD 1637970 -> AF5260 -> AF51F0 (parkt cbResult/get/set in Mgr, state 0x6c=5). Game-Seite 89BA3C (stat handler): get->isNewData!=0 -> 89B9E0(result=-4) -> AF5060 weckt. Oracle identisch (-4), kein Unterschied im Callback.
-- 80F710 (Result->Script-Code Mapping 0x8002BE05->3, BE04->2, 0->0, 1->1, sonst 4) + 80FCAC/AF4EF8 (List-Pfad) wird bei uns NIE gerufen: BKUP6/GAME6 kommen ueber anderen Request-Pfad (AF5xxx-Klassen ctor AF5334..AF5C50).
-- GT6_SAVE_CBRES=1 und Default: identisch GAME6,BKUP6,Term. Fazit: Rueckgabe/Callback nicht ursaechlich; Auswahl GAME6 vs Retry liegt im Aufrufer der Request-Klasse (Script/Native), Oracle 3x GAME6 dazwischen nur pagefile.sys-Recreate.
-- Generated 017/023 restauriert (Backups work/_bk_a12/*_clean.cpp, Probe-Patch work/_bk_a12/patch*.py).
-- Arbeit12 Probe a12_ctor: Request-Objekt (0xB8) wird je Save-Op frisch gebaut: ctor AF5528 (vptr 015DD1D8) aus 89D07C (Mgr-Init 89Cxxx/89D0xx, alloc c51c38), dirName-Setter AF5334 (lr AF5650, r4=0x16379A0, r5=0x40), Execute AF5674 via AF0C2C (Worker AF0B94 ruft Functor obj+0x20). GAME6 und BKUP6 = 2 getrennte Mgr-Objekte (7fd78000, 7fd780b8) => 2 Init-Aufrufe 89D07C, also entscheidet der Aufrufer von 89Cxxx-Init (Script-Native/Save-Controller), nicht Return/Callback.
-- Sackgasse: 0x8256xx (AF5A14/AF596C, Status-Strings none/update/maintenance/cancel/error, vptr 015DD1F0) ist NP/Update-Status-Native, NICHT Save-Retry.
-- Offen: Aufrufer von 89D07C-Funktion (xref --call auf Funktionsanfang ~89CFxx) + Aufrufer-Kette; wo wird dirName (GAME/BKUP-Format 0x11a...) gewaehlt; Oracle ruft dasselbe 3x -> vermutlich Schleife mit Retry-Zaehler im Save-Controller.
+## Arbeit12 (2026-11-24) AutoLoad2 request static + 3 probes (probe_a12_cb/def/cbres)
+- AutoLoad2 stub 0x10C0BF0 has ONE caller: AF5704 (request execute method, flag r4 -> AutoSave2 10C0790/AutoLoad2 10C0BF0, result -> obj+0xB0, dirName inline obj+0x70). AF5674/AF5738 = siblings (list/fixed). Request objects 0xB8 large (7fd78000, 7fd780b8), vtable call, no direct xref.
+- funcStat OPD 1637970 -> AF5260 -> AF51F0 (parks cbResult/get/set in mgr, state 0x6c=5). Game side 89BA3C (stat handler): get->isNewData!=0 -> 89B9E0(result=-4) -> AF5060 wakes. Oracle identical (-4), no difference in callback.
+- 80F710 (result -> script code mapping 0x8002BE05->3, BE04->2, 0->0, 1->1, else 4) + 80FCAC/AF4EF8 (list path) is NEVER called with us: BKUP6/GAME6 come via another request path (AF5xxx class ctor AF5334..AF5C50).
+- GT6_SAVE_CBRES=1 and default: identical GAME6,BKUP6,Term. Conclusion: return/callback not causal; choice GAME6 vs retry lies in the caller of the request class (script/native), oracle 3x GAME6 in between only pagefile.sys recreate.
+- Generated 017/023 restored (backups work/_bk_a12/*_clean.cpp, probe patch work/_bk_a12/patch*.py).
+- Arbeit12 probe a12_ctor: request object (0xB8) is freshly built per save op: ctor AF5528 (vptr 015DD1D8) from 89D07C (mgr init 89Cxxx/89D0xx, alloc c51c38), dirName setter AF5334 (lr AF5650, r4=0x16379A0, r5=0x40), execute AF5674 via AF0C2C (worker AF0B94 calls functor obj+0x20). GAME6 and BKUP6 = 2 separate mgr objects (7fd78000, 7fd780b8) => 2 init calls 89D07C, so the caller of the 89Cxxx init decides (script native/save controller), not return/callback.
+- Dead end: 0x8256xx (AF5A14/AF596C, status strings none/update/maintenance/cancel/error, vptr 015DD1F0) is an NP/update status native, NOT save retry.
+- Open: caller of the 89D07C function (xref --call on function start ~89CFxx) + caller chain; where dirName (GAME/BKUP format 0x11a...) is chosen; oracle calls the same 3x -> probably loop with retry counter in the save controller.
 
-## STATE-Auslagerung Arbeit14 (2026-11-24)
-- VERSIONS-DIVERGENZ AUFGELOEST (Arbeit7): work/bin/EMAIN.SELF = 9209104 B = RPCS3-EMAIN (1.22, ELF 23787792 B); alte 8843160-B-Zeile war 1.00. Rest-Diff: Save-Prefix: RPCS3 oeffnet USRDIR/GT6_1.N (16 MB, create), wir GT6.N (kleine Alt-Dateien in work/gt6_hdd0, 22.11.). Format '%s.%d' bei F87934; Prefix-Quelle offen. Prefix 'GT6' kommt aus Daten-Lookup (0x85360: Key-Suche 0x10e6310/18/20 in Config-Baum, kein fester Format-String); cellSaveData-HLE bei uns nie gerufen (0 Log), RPCS3 ruft AutoLoad2 (SECUREFILE GT6_1.0, Page_fault in Fn).
-- (Arbeit11) DATEN-DIFF: mit -Hdd0Src work\gt6_hdd0_rp + PS3_LANG=en-gb folgen wir Oracle-Opens bis 9/7N/XG. Erste echte Abweichung: Oracle oeffnet danach /dev_hdd1/pditsm/pagefile.sys (VMPageFile B07748, bei uns nie) + grim2/grim007.db + GT6_1.N. Naechster: Aufrufer der 0107Dxxx-Natives -> wer erzeugt VMPageFile/grim DB (Script-Pfad), Bedingung. scripts/opendiff.py.
-- (Arbeit11) VMPageFile = Page-Fault-Folge (MpAnk behandelt Fault im AutoLoad2-Buffer), kein Trigger. Oracle: 3x AutoLoad2 GAME6 alle -4 (NODATA), dann sysmodule 0xF044. Unser gamedata/ (22.11.) hatte altes GAME6 -> 2. Load result 0. Mit PS3_GAMEDATA_ROOT=work/_gd_empty: -4, Term trotzdem nach 9/6M/BG.
-- (Arbeit12) AutoLoad2 nur via Request-Execute AF5704 (obj+0x70 dir, +0xB0 result); funcStat/-4/Return identisch zu Oracle, CBRES egal. Retry-vs-BKUP6 liegt im Request-Erzeuger (AF5334-AF5C50 ctors, vtable). Naechster: vtable-Ptr der Request-Klasse (xref --field 0 / snap) -> Erzeuger.
-- (Arbeit12) GAME6/BKUP6 = 2 frische Mgr-Objekte (ctor AF5528 aus 89D07C, dir-Setter AF5334). Entscheider = Aufrufer der Mgr-Init-Funktion um 89CF10-89D07C. 0x8256xx = NP-Update-Status, nicht relevant.
+## STATE handover Arbeit14 (2026-11-24)
+- VERSION DIVERGENCE RESOLVED (Arbeit7): work/bin/EMAIN.SELF = 9209104 B = RPCS3 EMAIN (1.22, ELF 23787792 B); old 8843160 B line was 1.00. Remaining diff: save prefix: RPCS3 opens USRDIR/GT6_1.N (16 MB, create), we GT6.N (small old files in work/gt6_hdd0, 22.11.). Format '%s.%d' at F87934; prefix source open. Prefix 'GT6' comes from data lookup (0x85360: key search 0x10e6310/18/20 in config tree, no fixed format string); cellSaveData HLE never called with us (0 log), RPCS3 calls AutoLoad2 (SECUREFILE GT6_1.0, page fault in fn).
+- (Arbeit11) DATA DIFF: with -Hdd0Src work\gt6_hdd0_rp + PS3_LANG=en-gb we follow oracle opens up to 9/7N/XG. First real deviation: oracle then opens /dev_hdd1/pditsm/pagefile.sys (VMPageFile B07748, never with us) + grim2/grim007.db + GT6_1.N. Next: callers of the 0107Dxxx natives -> who creates VMPageFile/grim DB (script path), condition. scripts/opendiff.py.
+- (Arbeit11) VMPageFile = page-fault consequence (MpAnk handles fault in AutoLoad2 buffer), not a trigger. Oracle: 3x AutoLoad2 GAME6 all -4 (NODATA), then sysmodule 0xF044. Our gamedata/ (22.11.) had old GAME6 -> 2nd load result 0. With PS3_GAMEDATA_ROOT=work/_gd_empty: -4, Term nevertheless after 9/6M/BG.
+- (Arbeit12) AutoLoad2 only via request execute AF5704 (obj+0x70 dir, +0xB0 result); funcStat/-4/return identical to oracle, CBRES irrelevant. Retry-vs-BKUP6 lies in the request creator (AF5334-AF5C50 ctors, vtable). Next: vtable ptr of the request class (xref --field 0 / snap) -> creator.
+- (Arbeit12) GAME6/BKUP6 = 2 fresh mgr objects (ctor AF5528 from 89D07C, dir setter AF5334). Decider = caller of the mgr init function around 89CF10-89D07C. 0x8256xx = NP update status, not relevant.
 
-## Arbeit12/13 STATE-Zeilen
-- (Arbeit13) GAME6/BKUP6 = 2 Aufrufe der Script-Native 0x89D59C (lr 8147A0, Caller 814700-8147E8 Name-Arg aus Tabelle stride 0x60) -> 89D4C8 -> AF55E0, Return = bool (89BBC0: 1 wenn ctrl.a8[4]==0 else 0). Bei uns a8[4]=1 -> Return 0 -> Script versucht BKUP6. Naechster: Setter a8[4] (89B9E0 stw 1,4(r4), Leser/Loescher), Oracle-Wert 0? 
-- (Arbeit13) Umgehung 89BBC0 Return=1: AutoLoad2 GAME6 2x (kein BKUP6, wie Oracle-Retry), dann sceNp Term (Oracle: 3. GAME6 + sysmodule F044). Ursache a8[4]=1 offen; Term-Bedingung nach Retry offen.
+## Arbeit12/13 STATE lines
+- (Arbeit13) GAME6/BKUP6 = 2 calls of the script native 0x89D59C (lr 8147A0, caller 814700-8147E8 name arg from table stride 0x60) -> 89D4C8 -> AF55E0, return = bool (89BBC0: 1 if ctrl.a8[4]==0 else 0). With us a8[4]=1 -> return 0 -> script tries BKUP6. Next: setter of a8[4] (89B9E0 stw 1,4(r4), reader/clearer), oracle value 0?
+- (Arbeit13) Workaround 89BBC0 return=1: AutoLoad2 GAME6 2x (no BKUP6, like oracle retry), then sceNp Term (oracle: 3rd GAME6 + sysmodule F044). Cause a8[4]=1 open; term condition after retry open.
 
-## Arbeit14 Auslagerung
-- (Arbeit14) Batch GT6_SAVE_ISNEW0 (neuer Knob cellSaveData.c): g6 -> 2x GAME6 cb=-3 dann Term; all -> 1x; base -> GAME6+BKUP6 dann Term. Term unabh. von isNewData. Oracle: 3x GAME6 (3 PDI-Threads) dann AutoSave2 BKUP6, kein Term.
-- (Arbeit14) Kette Save (Arb.11-14) >10 Hyp. beendet. Naechster: Term-Ausloeser ausserhalb Save (Aufrufer sceNpTerm-Thread/Script-Retry-Zaehler) oder Umgehung Term (Guard) -> naechster Blocker.
-- (Arbeit14) network_available (boot_sequence_common.ad) = (type in gt6/academy/demo), nur false wenn PDINetwork.isDummy -> bei uns true. Nicht Ursache. LoginUtil.checkSaveDataBind laedt NICHT (nur online_id-Vergleich).
-- (Arbeit14) Batch PS3_NET_ONLINE=1+PSNR_SERVER (NpStatus ONLINE): kein F044/Trophy, Term wie zuvor. Oracle ruft NetCtlGetInfo/NetStartDialog + Sockets nach GAME6; wir nie. Loads kommen aus scripts/gt6/SaveDataUtil.ad (_autoLoad/load, main.adc 0x69055; GAME6-Daten 6DED0 in boot.adc Z.254).
+## Arbeit14 handover
+- (Arbeit14) Batch GT6_SAVE_ISNEW0 (new knob cellSaveData.c): g6 -> 2x GAME6 cb=-3 then Term; all -> 1x; base -> GAME6+BKUP6 then Term. Term independent of isNewData. Oracle: 3x GAME6 (3 PDI threads) then AutoSave2 BKUP6, no Term.
+- (Arbeit14) Save chain (Arb.11-14) >10 hyp. ended. Next: Term trigger outside save (caller of sceNpTerm thread / script retry counter) or workaround Term (guard) -> next blocker.
+- (Arbeit14) network_available (boot_sequence_common.ad) = (type in gt6/academy/demo), only false if PDINetwork.isDummy -> with us true. Not the cause. LoginUtil.checkSaveDataBind does NOT load (only online_id comparison).
+- (Arbeit14) Batch PS3_NET_ONLINE=1+PSNR_SERVER (NpStatus ONLINE): no F044/trophy, Term as before. Oracle calls NetCtlGetInfo/NetStartDialog + sockets after GAME6; we never. Loads come from scripts/gt6/SaveDataUtil.ad (_autoLoad/load, main.adc 0x69055; GAME6 data 6DED0 in boot.adc line 254).
 
-## Arbeit15 (2026-11-24) NetCtl-Dialog / Main-Loop
-- HLE-Trace (PS3_HLE_TRACE=30000, NID->Name via Oracle-Importliste, Skript im Scratchpad): nach AutoLoad2 (GT6.5) ruft Oracle in Thread 9qstY NetCtlNetStartDialogLoadAsync/UnloadAsync, cellMusicInitialize2, sceNpTrophy*, EntitlementById, AudioOutConfigure, Sockets, AutoSave2 BKUP6. Wir: nur SpursJobGuardNotify, Pad/Kb, dann sceNpManagerUnregisterCallback + sceNp2Term (Shutdown).
-- NetStartDialog-Aufrufer: 798C1C (Zustandsmaschine Obj 0x16EC2E0, State 1 -> LoadAsync, 3 -> Unload; von 6C7664 per Tick, nur ~10-99 Aufrufe in Boot-Phase, State immer 0 -> Force auf 1 nie ausgeloest), B494C4 (0 Treffer CALLTRACE), AF9350 (per Iteration der Main-Loop 146E8, Aufrufer 0x1474C).
-- Main-Loop 146E8 ERZWUNGEN (AD2778 -> 0, Env A15_LOOP): main bleibt in Loop, AF9350 ruft NetStartDialog Load/Unload (lief), ABER nur 4 fs-open, kein sceNp2Init/AutoLoad -> Loop 146E8 liegt VOR AutoLoad-Stufe; Dauerloop verhindert Folgestufen. C1 FAIL (0% non-black). => Loop-Ende bei uns legitim, Quit-Ausloeser NICHT hier. Patches: work/_bk_a15/*.a15.cpp (generated restauriert).
-- Oracle-NetStartDialog (77 s, Thread 9qstY) = nach AutoLoad in Worker-Thread, nicht aus 146E8; Aufrufer-Thread/Funktion dort weiter offen (AF93B8/B49524/798C70 Kandidaten; 798C1C State-Setter unbekannt: BSS, kein imm/field-Treffer).
-- Arbeit15 Thread-Abgleich: Oracle-Thread 9qstY (func AF0B94 = Task-Pool-Worker, prio 2176, stack 0x10000, von main_thread bei 75,7 s erzeugt) == unser tid30 "9qstY" (gleiche Namen/prio/stack in beiden, Namen deterministisch). Oracle fuehrt darin NetStartDialog/Music/Trophy/Sockets aus = Job, den main submitted und auf den main wartet (main-Stille 76-106 s). Bei uns: tid30 parkt als Worker im lwcond_wait (kein Job) und main laeuft durch. Naechster: Job-Submit in main (nach sys_rsx_context_iomap) im Oracle-Ablauf = welcher Task-Submit/Wait-Aufruf in tid1 nach AutoLoad; bei uns Submit-Funktion per CALLTRACE (AF0C2C/920498 Worker-Seite, Submit-Seite suchen) und pruefen, ob Submit passiert aber Wait fehlt.
+## Arbeit15 (2026-11-24) NetCtl dialog / main loop
+- HLE trace (PS3_HLE_TRACE=30000, NID->name via oracle import list, script in scratchpad): after AutoLoad2 (GT6.5) the oracle in thread 9qstY calls NetCtlNetStartDialogLoadAsync/UnloadAsync, cellMusicInitialize2, sceNpTrophy*, EntitlementById, AudioOutConfigure, sockets, AutoSave2 BKUP6. Us: only SpursJobGuardNotify, pad/kb, then sceNpManagerUnregisterCallback + sceNp2Term (shutdown).
+- NetStartDialog callers: 798C1C (state machine obj 0x16EC2E0, state 1 -> LoadAsync, 3 -> Unload; called from 6C7664 per tick, only ~10-99 calls in boot phase, state always 0 -> forcing to 1 never triggered), B494C4 (0 CALLTRACE hits), AF9350 (per iteration of main loop 146E8, caller 0x1474C).
+- Main loop 146E8 FORCED (AD2778 -> 0, env A15_LOOP): main stays in loop, AF9350 calls NetStartDialog load/unload (ran), BUT only 4 fs opens, no sceNp2Init/AutoLoad -> loop 146E8 lies BEFORE the AutoLoad stage; permanent loop prevents following stages. C1 FAIL (0% non-black). => loop end with us legitimate, quit trigger NOT here. Patches: work/_bk_a15/*.a15.cpp (generated restored).
+- Oracle NetStartDialog (77 s, thread 9qstY) = after AutoLoad in worker thread, not from 146E8; caller thread/function there still open (candidates AF93B8/B49524/798C70; 798C1C state setter unknown: BSS, no imm/field hit).
+- Arbeit15 thread comparison: oracle thread 9qstY (func AF0B94 = task pool worker, prio 2176, stack 0x10000, created by main_thread at 75.7 s) == our tid30 "9qstY" (same names/prio/stack in both, names deterministic). Oracle runs NetStartDialog/Music/Trophy/Sockets in it = job that main submits and waits for (main silence 76-106 s). With us: tid30 parks as worker in lwcond_wait (no job) and main runs through. Next: job submit in main (after sys_rsx_context_iomap) in the oracle run = which task submit/wait call in tid1 after AutoLoad; with us find submit function via CALLTRACE (AF0C2C/920498 worker side, search submit side) and check whether submit happens but wait is missing.
 
 
-## STATE-Trim 2026-11-24
-- Quit NUR MASKIERT (Arbeit6): p3-Guard parkt tid1 im Shutdown (AC7418 Event-Wait AC746C, WD@60s). Skip der Wait -> Teardown bei ~98 Flips. Game-Threads laufen weiter.
+## STATE trim 2026-11-24
+- Quit ONLY MASKED (Arbeit6): p3 guard parks tid1 in shutdown (AC7418 event wait AC746C, WD@60 s). Skip of the wait -> teardown at ~98 flips. Game threads continue running.
