@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: Arbeit14. a8[4] = isNewData der StatGet (korrekt 1, kein HLE-Bug). Save-Kette Arb.11-14 beendet: Term kommt nach 1-2 GAME6-Loads unabhaengig von isNewData (Knob GT6_SAVE_ISNEW0=<substr> in third_party cellSaveData.c, nur lokal, Binary enthaelt ihn). Oracle: 3x GAME6 (3 PDI-Threads), dann AutoSave2 BKUP6, kein Term.
-Naechster Schritt: Wer ruft sceNp Term (Thread/Aufrufer, `xref.py --call` + CALLTRACE nur indirekt) und was entscheidet dort (Script-Retry-Zaehler?). Alternativ Guard-Patch auf Term-Aufruf und Lauf bis naechster Blocker (Batch: probe.ps1 je Variante einzeln per `pwsh -File`, Parallel max 2; Start-Process powershell 5.1 scheitert an Get-FileHash).
-Nicht wiederholen: LEDGER §4; Save-Prefix, a8[4]/isNewData, AutoLoad2 Return/CBRES, Bypass 89BBC0.
+Stand: Arbeit14 (letzter Commit bf720f4). Save/Term/NP-Kette komplett widerlegt: mit Oracle-Save (work/_gd_oracle via PS3_GAMEDATA_ROOT, gitignored) laedt AutoLoad2 vollstaendig, sceNp Term (= Shutdown-Beginn) laeuft trotzdem parallel zu den File-Ops. network_available, isNewData, NP-ONLINE: alles ohne Wirkung. Knobs (nur lokal, third_party): GT6_SAVE_ISNEW0, GT6_NP_NOTERM.
+Naechster Schritt: Quit-Ausloeser VOR dem main()-Return (0x14010, tid1, 13FD0 Finalizer) finden, nicht Term. `scripts/opendiff.py` Oracle vs ours NACH dem Save-Load: was ruft Oracle als naechstes (Dmux/Pamf/59-FI), was wir stattdessen; welcher Script/Native-Return startet bei uns den Shutdown. Probe: `pwsh -File scripts\probe.ps1 -Boot notut -Hdd0Src work\gt6_hdd0_rp -Seconds 100 -Env "PS3_LANG=en-gb;PS3_GAMEDATA_ROOT=<abs work/_gd_oracle>"` (je Variante eigener pwsh-Start, max 2 parallel).
+Nicht wiederholen: LEDGER §4; Save-Prefix/AutoLoad2/isNewData/a8[4], NP-Status ONLINE, Term-Guard, network_available.
 Laeuft noch: nichts.
 Lesen: STATE.md (letzte 3 Zeilen).
