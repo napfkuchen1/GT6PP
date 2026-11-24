@@ -36,3 +36,4 @@ Script-VM-Adressen 9EEA88/9F0748 sind 1.00 (0 Calls in 1.22).
 - Tools: probe.ps1 (-KeepDb, -Hdd0Src), gt6_gprof (GT6_GPROF=1), PAD_LOG, scripts/live-padlog.ps1, tools/adch_disasm.py. probe killt gt6 per taskkill /T.
 
 - (Arbeit11) DATEN-DIFF: mit -Hdd0Src work\gt6_hdd0_rp + PS3_LANG=en-gb folgen wir Oracle-Opens bis 9/7N/XG. Erste echte Abweichung: Oracle oeffnet danach /dev_hdd1/pditsm/pagefile.sys (VMPageFile B07748, bei uns nie) + grim2/grim007.db + GT6_1.N. Naechster: Aufrufer der 0107Dxxx-Natives -> wer erzeugt VMPageFile/grim DB (Script-Pfad), Bedingung. scripts/opendiff.py.
+- (Arbeit11) VMPageFile = Page-Fault-Folge (MpAnk behandelt Fault im AutoLoad2-Buffer), kein Trigger. Oracle: 3x AutoLoad2 GAME6 alle -4 (NODATA), dann sysmodule 0xF044. Unser gamedata/ (22.11.) hatte altes GAME6 -> 2. Load result 0. Mit PS3_GAMEDATA_ROOT=work/_gd_empty: -4, Term trotzdem nach 9/6M/BG.
