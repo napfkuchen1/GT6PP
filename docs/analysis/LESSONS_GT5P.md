@@ -1,29 +1,29 @@
-# Lessons aus GT5P (Schwesterport, gleiche PDI-Engine)
-Quelle: third_party/GT5P/docs/progress.md (Phase 12-16). Nur Fakten daraus; "(Annahme)" = nicht belegt.
+# Lessons from GT5P (sister port, same PDI engine)
+Source: third_party/GT5P/docs/progress.md (phases 12-16). Facts only from there; "(assumption)" = not proven.
 
-## Pro Phase: Symptom -> Ursache -> Beleg
-- P16 (ps3recomp master): Freelist-Schaden + 4/7/108-Assets-Streuung weg nach Re-Lift. Welcher Upstream-Fix es war: NICHT belegt. Check: `bash scripts/soak.sh 8 40`.
-- P16 Main haengt: `li r11,0x6B` = syscall 107 sys_cond_wait, Timeout 0, niemand signalt. Welche Cond/wer signalt: offen (Annahme: gleiche Klasse wie P11).
-- P15 longjmp: lifter macht `blr` in longjmp (func_00A0A57C) zu `return;` -> Kontrolle landet beim Aufrufer statt am setjmp-Site -> LZ-Decoder-Loop laeuft 4 MB ueber Fenster.
-  Fix: `scripts/setjmp_patch.py` (host-setjmp je Site, Buffer-Stack). Nach JEDEM Re-Lift neu anwenden. Wirkung: Assets 4 -> 108/7.
-- P15 Fundort: `scripts/bbcount.py` (Zaehler auf jedes Label einer Funktion) -> Hot-Loop 49,8 Mio Treffer; Register aendern sich ohne Schreiber im Loop => ein Call war schuld.
-- P14 Switch: find_functions folgt nur direkten Branches; `bctr` ueber Jump-Table (246 Tabellen, 1710 Ziele) blieb unlifted. Tabelle steht hinter bctr, Eintraege = signed 32-bit Offsets.
-  Folge: 4,4 Mio Busy-Spins auf Queue 0 verschwanden. Check: "unresolved indirect" = 0.
-- P13 Kommandozeile: argv ist Array aus 64-bit-Zeigern (CRT liest Stride 8, schreibt 4). `boot_from=gamedata` noetig (bdvd sucht USRDIR/GT.VOL). argv[0] = "/dev_bdvd/PS3_GAME/USRDIR/EMAIN.SELF".
-  Relativer Pfad `PDIPFS/K/4D` braucht cellFs-Mapping. Danach PDIPFS gemountet, sys_cond_signal 0 -> 36 pro Boot.
-- P12 Skript: Boot-Ende ruft `scripts/gt5p/Application` (liegt in PDIPFS). Ohne Mount: kein Attract-Objekt, kein Frame-Loop. `scripts/rtti.py`: 1442 Vtables, 8314 Virtuals (Binary hat RTTI).
-- P12 Idle-Deadlock: Main in sys_cond_wait; Worker-Loop func_00935690 wartet auf sys_event_queue_receive (Queue 5: 1901 Receives, 0 Events); sys_cond_signal 0x aufgerufen.
-  Befund: Sender fuer Queue 5 existiert nicht, weil der Code, der ihn anlegt (PDIPFS-Mount/Script), nie lief.
-- HLE-Writer: `cellDiscGameGetBootDiscInfo` mit 3 statt 1 Parameter deklariert -> schrieb "BLES00000" in OPD-Tabelle (r4). Zufalls-Crashes -> 6/6 saubere Boots nach Fix (ps3recomp#109).
-- HLE-Writer 2: `VM_HLE_INJECT_BASE` (GCM-Labels/Offset-Tabellen, 0x8000 B) lag auf Game-Heap 0x20000000 -> Allocator-Size-Class-Tabelle mit 0xFFFF ueberschrieben -> Livelock (ps3recomp#104).
-  Fund: Host-Stores sehen LBP_WW nicht. `GT5P_CANARY=<addr>:<erwartet>` + `GT5P_CANARY_ARM=<call#>[:<page>]` (Page-Guard) klammerte 0x20003000..0x20007000 ein.
-- Heap/OOM: Alloc 264 B scheitert (calls=2155 zero=2000), Freelist-Knoten +4 als Groesse gelesen = Fehlschluss; `[flcheck]` Bad-Chains; Ursache war der Runtime-Schreiber, nicht func_006A4400.
-- Audit: `scripts/audit_cmp.py` (Signedness/Breite/CR-Feld je Compare), `scripts/audit_branch.py` (Branch-Dekodierung). Beide gruen => Lifter-Verdacht ausgeschlossen.
+## Per phase: symptom -> cause -> evidence
+- P16 (ps3recomp master): freelist damage + 4/7/108 asset scatter gone after re-lift. Which upstream fix did it: NOT proven. Check: `bash scripts/soak.sh 8 40`.
+- P16 main hangs: `li r11,0x6B` = syscall 107 sys_cond_wait, timeout 0, nobody signals. Which cond / who signals: open (assumption: same class as P11).
+- P15 longjmp: lifter turns `blr` in longjmp (func_00A0A57C) into `return;` -> control lands in the caller instead of the setjmp site -> LZ decoder loop runs 4 MB past the window.
+  Fix: `scripts/setjmp_patch.py` (host setjmp per site, buffer stack). Re-apply after EVERY re-lift. Effect: assets 4 -> 108/7.
+- P15 find site: `scripts/bbcount.py` (counter on every label of a function) -> hot loop 49.8 M hits; registers change without a writer in the loop => a call was the cause.
+- P14 switch: find_functions only follows direct branches; `bctr` over jump table (246 tables, 1710 targets) stayed unlifted. Table sits behind bctr, entries = signed 32-bit offsets.
+  Consequence: 4.4 M busy spins on queue 0 disappeared. Check: "unresolved indirect" = 0.
+- P13 command line: argv is an array of 64-bit pointers (CRT reads stride 8, writes 4). `boot_from=gamedata` needed (bdvd looks for USRDIR/GT.VOL). argv[0] = "/dev_bdvd/PS3_GAME/USRDIR/EMAIN.SELF".
+  Relative path `PDIPFS/K/4D` needs cellFs mapping. Afterwards PDIPFS mounted, sys_cond_signal 0 -> 36 per boot.
+- P12 script: boot end calls `scripts/gt5p/Application` (lives in PDIPFS). Without mount: no attract object, no frame loop. `scripts/rtti.py`: 1442 vtables, 8314 virtuals (binary has RTTI).
+- P12 idle deadlock: main in sys_cond_wait; worker loop func_00935690 waits on sys_event_queue_receive (queue 5: 1901 receives, 0 events); sys_cond_signal 0x called.
+  Finding: no sender for queue 5 exists, because the code that creates it (PDIPFS mount/script) never ran.
+- HLE writer: `cellDiscGameGetBootDiscInfo` declared with 3 instead of 1 parameter -> wrote "BLES00000" into OPD table (r4). Random crashes -> 6/6 clean boots after fix (ps3recomp#109).
+- HLE writer 2: `VM_HLE_INJECT_BASE` (GCM labels/offset tables, 0x8000 B) lay on game heap 0x20000000 -> allocator size-class table overwritten with 0xFFFF -> livelock (ps3recomp#104).
+  Finding: host stores do not see LBP_WW. `GT5P_CANARY=<addr>:<expected>` + `GT5P_CANARY_ARM=<call#>[:<page>]` (page guard) bracketed 0x20003000..0x20007000.
+- Heap/OOM: alloc 264 B fails (calls=2155 zero=2000), freelist node +4 read as size = false conclusion; `[flcheck]` bad chains; cause was the runtime writer, not func_006A4400.
+- Audit: `scripts/audit_cmp.py` (signedness/width/CR field per compare), `scripts/audit_branch.py` (branch decoding). Both green => lifter suspicion ruled out.
 
-## Pruefregeln fuer GT6
-a) Idle-Deadlock: Warter benennen (Cond/Queue-ID, Syscall-Nr.), dann Sender suchen: wer postet diese Queue / ruft sys_cond_signal? Zaehler pro Queue: Receives vs. Events.
-   Nie Wait faken (FLOW_CONDKICK) als Fix. Fehlender Sender = vorgelagerter Code lief nicht.
-b) Spiel = Skript: werden PDIPFS-Mount und Script-Load (z.B. Application-Skript) wirklich aufgerufen? Erst Aufruf zaehlen, dann Folgesymptome deuten.
-c) Erst Runtime-HLE-Schreiber ausschliessen: Arg-Anzahl jedes HLE-Stubs gegen SDK; HLE-Basis (VM_HLE_INJECT_BASE) gegen Gast-Heap-Mappings; Canary + Page-Guard, LBP_WW ist host-blind.
-d) Lifter: setjmp/longjmp (`scripts/setjmp_patch.py`) und Switch/bctr-Tabellen: Gast-Libc longjmp vorhanden? Jump-Table-Ziele gelifted? Unresolved-indirect-Zaehler = 0?
-e) Pro Schluss EIN Befehl, der ihn widerlegt (bbcount, audit_*, soak.sh, Canary); ohne Lauf als "Hypothese" markieren. Strukturelle Lesarten waren oft falsch, Messungen selten.
+## Test rules for GT6
+a) Idle deadlock: name the waiter (cond/queue ID, syscall no.), then find the sender: who posts this queue / calls sys_cond_signal? Counter per queue: receives vs. events.
+   Never fake the wait (FLOW_CONDKICK) as a fix. Missing sender = upstream code did not run.
+b) Game = script: are PDIPFS mount and script load (e.g. Application script) really called? Count the call first, then interpret follow-up symptoms.
+c) Rule out runtime HLE writers first: argument count of each HLE stub vs. SDK; HLE base (VM_HLE_INJECT_BASE) vs. guest heap mappings; canary + page guard, LBP_WW is host-blind.
+d) Lifter: setjmp/longjmp (`scripts/setjmp_patch.py`) and switch/bctr tables: guest libc longjmp present? Jump-table targets lifted? Unresolved-indirect counter = 0?
+e) Per conclusion ONE command that refutes it (bbcount, audit_*, soak.sh, canary); without a run mark it as "hypothesis". Structural readings were often wrong, measurements rarely.
