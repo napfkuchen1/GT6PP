@@ -48,7 +48,7 @@ def transcript_info(d):
     try:
         with open(p, encoding="utf-8", errors="replace") as f:
             head = f.read(30000)
-            sup = not ("working session GT6PP" in head or "Arbeitssession" in head)  # only worker sessions are guarded
+            sup = ("GT6PP supervisor" in head) or not ("working session GT6PP" in head or "Arbeitssession" in head)  # only worker sessions are guarded
         for line in open(p, encoding="utf-8", errors="replace"):
             if '"usage"' not in line:
                 continue
