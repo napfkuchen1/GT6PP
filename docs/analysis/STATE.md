@@ -39,3 +39,4 @@ Script-VM-Adressen 9EEA88/9F0748 sind 1.00 (0 Calls in 1.22).
 
 - (Arbeit11) A2F290 liefert bei uns 0/1 (nie 2); vcall/assert-Probes ohne Befund. Naechster: Guard A2F290 ret->2 (Umgehung) oder Snapshot-Walk obj 40393C10. Details eu-boot-log.md Arbeit11.
 - (Arbeit11) Guard A2F290 ret->2: Term weg, tid1 blockt wie Oracle, aber weiter schwarz/kein 59/FI. Teardown nur Folge. Naechster: dritten AutoLoad-Thread (Oracle #53) finden: wer erzeugt ihn, warum bei uns nicht.
+- (Arbeit11) Term kommt aus Step-Aufruf #21 der A2FFCC-Schleife (nicht aus Rueckgabewert); force ret 2 ab #20 haelt tid1, aber nur 98 Opens, kein 59/FI. Naechster: A5C070-Entry loggen (r4-r6 + String) bei Aufruf 21: welche Methode ruft finalize.
