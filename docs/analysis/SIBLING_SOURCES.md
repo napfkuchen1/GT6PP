@@ -11,3 +11,8 @@
 3. Log heap/memory at start: `sys_memory_get_user_memory_size` (SYSCALLS.md l.352), `sys_memory_allocate`/container calls of GT6; look for an alloc failure before the shutdown (GT5 heap-layout analogy, GT5P l.1144).
 4. Compare GT5P "shutdown after N jobs" / pending-flag trace with our chain.
 5. Only as one batch (`-Parallel 3-4`): `PS3_PRIO_START`, `PPU_RESV_OFF`, more game threads (hint only, no GT6 evidence).
+
+## Update source and completeness audit (user hint 2026-11-24)
+- https://nenkai.github.io/gt-modding-hub/ps3/other/updates/#gt6 lists BCES01893 updates 1.01-1.22 (`EP9001-BCES01893_00-0000000000000000-A01xx-V0100-PE.pkg`, 1.02-1.22 under `.../BCES01893_T359/b80952de9329a9ba/`). Updates must be installed IN ORDER, none skipped (except delisted 1.01). Page gives no sizes/hashes/contents; it warns of "massive issues on RPCS3 from 1.06". Install/decrypt: see that site's "Decrypting USRDIR files".
+- Observed locally (not yet analysed): our served data is disc GT.VOL (1.00 tree, `work/gt6_vol`) with only EMAIN swapped to 1.22 (from the RPCS3 update). Default `work/gt6_hdd0/.../USRDIR/PDIPFS` = 25 MB; the oracle copy `work/gt6_hdd0_rp/.../PDIPFS` = 14 GB (update overlay `PDIPFS/K/..` is looked up at boot, eu-boot-log l.38). Probes with `-Hdd0Src work\gt6_hdd0_rp` use the oracle data.
+- Audit task: compare the oracle's update USRDIR file list/sizes (EBOOT.BIN 165712 B, EMAIN.SELF 9209104 B, PDIPFS, GT6_1.N saves) with what our probe actually serves (default vs `_rp`); check every file the 1.22 update replaces/adds is present and readable by the VFS (open-failures in the log for USRDIR/PDIPFS paths). Hypothesis: mixed 1.00 data + 1.22 EMAIN explains missing load progress (no PDIPFS/59/FI open).
