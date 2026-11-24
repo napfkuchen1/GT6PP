@@ -45,3 +45,4 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit17) Next: PS3_SNAP_AT never fires (3 runs). Fix arming (ppu_loader.cpp:3581 lv2_syscall) or use PS3_WD_AT-style trigger, then snap_diff.
 - (Arbeit18) SNAP_AT fine; earlier runs killed by parallel probe.ps1. Single run arb18_snap140 -> then snap_diff vs a15loop.
 - (Arbeit18) snapshots work: tid30 only diff (guard -> timed poll loop AD3200..AD323C). Next: who feeds producer 8A88E8 = parked threads' common lr AF0CB4 (x20) / B03BE8 lwcond waiters; xref callers of 8A88E8.
+- (Arbeit18) SNAP_AT works (parallel probe killed earlier runs). Snaps guard/base/a15loop: tid1 in finalizer 13FD0 always; 8A7AD0 guard = symptom, drop. Next: why main 14010 returns/A15_LOOP not holding (verify env in build), compare stage returns vs Oracle.
