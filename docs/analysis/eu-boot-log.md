@@ -365,3 +365,7 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 - (Arbeit18) snap diff guard vs base @140s (work/snap_a18_{base,guard}): ONLY tid30 differs: base lwcond_wait(8A7AD0), guard running cia 16377C0 lr AD323C (stopwatch/time-get 0xAEFD7C->sys time stub); other 39 threads identical (parked: 130/141/107 syscalls, lwcond 1,2,5,17-19). Guard just moves tid30 into a timed poll; producer 8A88E8 still absent.
 - (Arbeit18) Sibling check 3: guard run PS3_SCTRACE=1 120 s (327 MB log): all lv2 syscalls ret 0 except sc130 ETIMEDOUT x1706; NO memory alloc failure. 8A8890 producer gated by obj+0x1d0 byte (cleared by 8A6EDC finalize in tid1 = known quit chain, boot-log l.220).
 - (Arbeit18) Snap@100-140 s (guard, base, A15_LOOP=1): tid1 ALWAYS in finalizer chain 13FD0->148A0->AAE108->AB0430->AC7B14->AC746C->AE2870 (event/lwcond join). So tid30 wait 8A7AD0 + guard = shutdown symptom; guard approach dead. Core Q unchanged: why main 14010 returns (A15_LOOP=1 does not hold it in this build).
+
+
+## STATE trim 2026-11-24
+- C1 FAIL: capture frame 3500 black (1 draw, 0 nonblack). b5b260 cache fill (p4) ported, no effect, no 59/FI open.

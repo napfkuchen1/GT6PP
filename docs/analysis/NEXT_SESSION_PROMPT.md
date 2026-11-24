@@ -1,6 +1,6 @@
-Goal: Main menu (C6).
-State: last commit = Arbeit17 commit (guard_conswait); PROGRESS: 2026-11-24 | probe_arb17_conswait_20261124_114217_1 | notut | consumer-wait guard 8A7AD0 fires, no load progress (no PDIPFS/59/FI, Pamf, Vdec).
-Next step: PS3_SNAP_AT never fires (3 runs, eu-boot-log Arbeit17). Fix arming: ppu_loader.cpp:3581 (lv2_syscall) or trigger the snapshot via watchdog thread; then snap_diff (guard run vs a15loop). Decision rule: no snapshot after fix -> skip snapshot, go to first game-level wait after loading. Strategy order for any stuck chain (decide yourself, never ask the user): (1) fix the failed tool, (2) snapshot diff/walk offline, (3) bypass guard + next blocker, (4) SIBLING_SOURCES.md checks 1-3.
-Do not repeat: LEDGER §4; Save/Term/NP; 146E8 forcing; 798C1C force; 8A7AD0 guard alone (Arbeit17); parallel probe.ps1 runs (taskkill kills each other); PS3_SNAP_AT as is.
+Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
+State: last commit c34065e Arbeit18: snapshots show tid1 always in finalizer; conswait guard is a s; PROGRESS: 2026-11-24 | fbad759 | notut | ok FAIL - - - - - | probe_a15loop_20261124_110206_1 | non-black=0% lang=en-gb
+Next step: SNAP_AT works (cause: parallel probe kill). Snapshots guard/base/A15_LOOP: tid1 always in finalizer 13FD0->AC746C (main 14010 returned); 8A7AD0 guard = shutdown symptom, drop it. NEW STRATEGY (SIBLING check 1/oracle compare): Oracle's AutoLoad2 -> job in worker 9qstY (AF0B94 task pool) submitted by main_thread at ~75 s; find who submits it (xref --call AF0B94 task submit) and why main 14010 returns before. If nothing: diff stage returns of 14010 vs Oracle trace.
+Do not repeat: 8A7AD0 guard / conswait (Arbeit18: symptom of shutdown); PS3_SNAP_AT debugging (fixed); A15_LOOP env (not in build, was temp patch)
 Still running: nothing
-Read: docs/analysis/eu-boot-log.md (tail: Arbeit16, Arbeit17); tools/guard_conswait.py.
+Read: docs/analysis/eu-boot-log.md (tail: Arbeit18, lines 334-338)
