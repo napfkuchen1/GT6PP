@@ -302,3 +302,10 @@ Naechster: (1) Wer ruft 9AE5D4 im Script (Methodenname via OPD 0x162D7A0, String
   Offen: Wer waehlt GAME6 vs BKUP6 (Request-Objekt Worker AF0B94, Felder +0x90/+0x94/+0x9c, Erzeuger AF0A44 generischer Thread-Creator). Dirname per Format zusammengebaut (kein String im ELF).
 - Arbeit11 weitere Negative (alle mit en-gb, rp-hdd0, leeres savedata): PS3_MEM_AVAIL_REAL=1 (neuer Knob ppu_loader.cpp case 352: total 0xD500000, avail=total-sys_memory_allocate-mmapper; Oracle-Werte 0xd2d0000->0x8cd0000) -> unveraendert (GAME6,BKUP6,Term). Knobs PS3_SYSCACHE_PLAIN/PS3_MEM_AVAIL_REAL liegen in third_party (gitignored) -> bei Neuaufbau aus dieser Zeile neu setzen.
   Oracle mountet SysCache als /dev_hdd1 (VFS-Remap auf caches/BCES01893_*), AF50B8/AF5194/AF51B8/AF51D4 (Save-Wrapper) werden bei uns NIE gerufen -> AutoLoad2 kommt ueber anderen Pfad (Thread-Request-Objekt, dirName inline +0x70, Result +0xB0, Worker AF0B94/AF5704).
+
+## Arbeit12 (2026-11-24) AutoLoad2-Request statisch + 3 Probes (probe_a12_cb/def/cbres)
+- AutoLoad2-Stub 0x10C0BF0 hat EINEN Aufrufer: AF5704 (Request-Execute-Methode, Flag r4 -> AutoSave2 10C0790/AutoLoad2 10C0BF0, Result -> obj+0xB0, dirName inline obj+0x70). AF5674/AF5738 = Geschwister (List/Fixed). Request-Objekte 0xB8 gross (7fd78000, 7fd780b8), vtable-Aufruf, kein direkter xref.
+- funcStat OPD 1637970 -> AF5260 -> AF51F0 (parkt cbResult/get/set in Mgr, state 0x6c=5). Game-Seite 89BA3C (stat handler): get->isNewData!=0 -> 89B9E0(result=-4) -> AF5060 weckt. Oracle identisch (-4), kein Unterschied im Callback.
+- 80F710 (Result->Script-Code Mapping 0x8002BE05->3, BE04->2, 0->0, 1->1, sonst 4) + 80FCAC/AF4EF8 (List-Pfad) wird bei uns NIE gerufen: BKUP6/GAME6 kommen ueber anderen Request-Pfad (AF5xxx-Klassen ctor AF5334..AF5C50).
+- GT6_SAVE_CBRES=1 und Default: identisch GAME6,BKUP6,Term. Fazit: Rueckgabe/Callback nicht ursaechlich; Auswahl GAME6 vs Retry liegt im Aufrufer der Request-Klasse (Script/Native), Oracle 3x GAME6 dazwischen nur pagefile.sys-Recreate.
+- Generated 017/023 restauriert (Backups work/_bk_a12/*_clean.cpp, Probe-Patch work/_bk_a12/patch*.py).
