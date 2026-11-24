@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit f1b6a23 Arbeit22: tools/trace_enter.py, findings: main returns after MGOM.start ; PROGRESS: 2026-11-24 | fbad759 | notut | ok FAIL - - - - - | probe_a15loop_20261124_110206_1 | non-black=0% lang=en-gb
-Next step: Oracle-emulation done (main blocked after MGOM.start, GT6_PUMP_ITERS=0): workers idle, 49 opens, no 3rd AutoLoad thread. Find who should wake worker events AC1C78/AD8C08 and why tid38-40 exit (AF0B94+0xE8); diff vs oracle thread/event sequence
-Do not repeat: A2F290 force-2 on main refuted; MGOM.start ack is instant (legit); main-exit chain done
+State: last commit a341c1e Arbeit22: tools/apply_block.py (main blocks after MGOM.start, env A22_BL; PROGRESS: 2026-11-24 | 94997a5 | notut | ok FAIL - - - - - | probe_a22c1_20261124_172347_1 | non-black=1%
+Next step: Presents frame frozen (frame 2000..14000 identical). Build has A22_BLOCK patch (run -Env GT6_PUMP_ITERS=0;A22_BLOCK=1; tools/apply_block.py re-applies after lift). Find what scene waits for: snapshot diff of MGOM/scene objects 60s vs 120s, or next-project load request
+Do not repeat: A2F290 force2; main exit chain; vblank/timebase fine
 Still running: nothing
 Read: STATE.md (last 3 lines)
