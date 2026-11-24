@@ -33,6 +33,7 @@
 #include <setjmp.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define GT6_JMP_MAX 16
 
@@ -71,6 +72,7 @@ extern "C" void gt6_jmp_unwind(int depth) { if (depth < g_depth) g_depth = depth
 extern "C" void gt6_jmp_fire(uint32_t buf_ea, int value)
 {
     uint32_t key = gt6_jmp_key(buf_ea);
+    if (getenv("A29_JMP")) { static int n; if (n++ < 200) fprintf(stderr, "[A29J] fire buf=%08X val=%d depth=%d\n", buf_ea, value, g_depth); }
     for (int i = g_depth - 1; i >= 0; i--) {
         if (g_jmp[i].buf_ea != key) continue;
         g_depth = i;                       /* the target frame is the new top */
