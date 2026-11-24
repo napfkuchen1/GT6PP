@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20
-State: last commit 9e9d155 docs: handover; PROGRESS: 2026-11-24 | bffd68b | notut | ok FAIL - - - - - | probe_a23act_20261124_182010_1 | non-black=1%
-Next step: Boot script task never resumes after SaveDataUtilGT6.loadEveryWhereForGame (l94; load itself completes): find script-task resume mechanism (A2F290/A2EA5C state machine, SET_STATE yield) and why tid30 pump does not run the task; A22_BLOCK patch in generated 016 (copy work/_bk_a22/ppu_recomp_016_blockpatched.cpp); calltrace: PS3_CALLTRACE_LR=A74734 grep '^\[CALL\] ->'; boot script dump python -I -X utf8 tools/adch_disasm.py work/gt6_vol/projects/gt6/boot/boot.adc
-Do not repeat: MGOM node state 144; PDINetwork/Trophy natives; load completion (done); pad presses
+State: last commit 9d856ff docs: Arbeit25 boot task re-poll finding; PROGRESS: 2026-11-24 | bffd68b | notut | ok FAIL - - - - - | probe_a23act_20261124_182010_1 | non-black=1%
+Next step: Boot task B90 (40393B90, script task, checkGameData/loadEveryWhere l94, st=1) never re-polled after final SET_STATE 1; polled earlier via node tree 6B7E4C (69098C/6DD844). snap_83435343 (PS3_SNAP_AT=70) has B90/C10 st=1, +0x34 ctx 40384C88. Find where task is parked / which list should poll it (snap_walk, xref writers of task +0x34/+0x1C), or compare oracle. Gen 014/017/022 carry A25 hooks
+Do not repeat: A25_POLL 683318 per-frame (refuted); HMonitor wake A4FBE8; AD4294 loop alive
 Still running: nothing
-Read: docs/analysis/STATE.md (last 6 lines)
+Read: docs/analysis/STATE.md
