@@ -43,3 +43,5 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit16) Next: caller/entry of 8A88E8 (which job/thread increments 0x1d8, why stalls at 31); compare Oracle increments via CALLTRACE on 8A88E8.
 - (Arbeit17) WORKAROUND 8A7AD0 consumer wait skipped (tools/guard_conswait.py, post-lift; opt-out GT6_NO_CONSWAIT). Probe arb17_conswait notut 320s: guard fires, NO load progress (no PDIPFS/59/FI, Pamf, Vdec, non-black). Same 16 SPU mfc-list STALL img=5 as baseline a15loop.
 - (Arbeit17) Next: PS3_SNAP_AT never fires (3 runs). Fix arming (ppu_loader.cpp:3581 lv2_syscall) or use PS3_WD_AT-style trigger, then snap_diff.
+- (Arbeit18) SNAP_AT fine; earlier runs killed by parallel probe.ps1. Single run arb18_snap140 -> then snap_diff vs a15loop.
+- (Arbeit18) snapshots work: tid30 only diff (guard -> timed poll loop AD3200..AD323C). Next: who feeds producer 8A88E8 = parked threads' common lr AF0CB4 (x20) / B03BE8 lwcond waiters; xref callers of 8A88E8.

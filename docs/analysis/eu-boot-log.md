@@ -361,3 +361,5 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 - SPU mfc-list STALL img=5 elem 0x01550 x16 in both runs = not new; not the blocker.
 - Conclusion: the 8A7AD0 wait is not the loading blocker. Workaround insufficient alone.
 - (Arbeit17) PS3_SNAP_AT=140/175 (guard probe, 200-220 s, 3 runs): NO [SNAP] line, no snap_* dir. Snapshot thread armed in lv2_syscall (ppu_loader.cpp:3581) never starts here. Snapshot diff blocked until fixed (check arming path / env pass-through).
+- (Arbeit18) PS3_SNAP_AT non-trigger CAUSE: the 3 snap runs were parallel probe.ps1 (taskkill killed each other at 42-73 s < 140 s). Arming code OK. Re-run single: arb18_snap140.
+- (Arbeit18) snap diff guard vs base @140s (work/snap_a18_{base,guard}): ONLY tid30 differs: base lwcond_wait(8A7AD0), guard running cia 16377C0 lr AD323C (stopwatch/time-get 0xAEFD7C->sys time stub); other 39 threads identical (parked: 130/141/107 syscalls, lwcond 1,2,5,17-19). Guard just moves tid30 into a timed poll; producer 8A88E8 still absent.
