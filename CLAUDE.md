@@ -2,7 +2,7 @@
 
 Projekt: Gran Turismo 6 (EU, BCES01893) als static recomp auf Windows. Ziel aktuell: Hauptmenue.
 Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
-**Einstieg (Kontext-Budget, Fenster 200k): nur `docs/analysis/NEXT_SESSION_PROMPT.md` + `STATE.md` lesen** (zusammen <=6 KB). `LEDGER.md`/`PROGRESS.md`/`LESSONS_GT5P.md`/`PORT.md` NICHT komplett laden, nur per `grep` gezielt (Fakt/Tabellenende `Select -Last 5`). Aeltere Logs (`eu-boot-log.md`, `CONTINUE-HERE.md`, `HANDOFF.md`, `work/MENU_RUN_NOTES.md`) nur Nachschlagewerk. Nie ganze Skripte (probe.ps1 18 KB) lesen, nur Zeilenbereiche.
+**Einstieg (Kontext-Budget, Fenster 200k; Handoff-Schwelle 210k (ctxwatch)): nur `docs/analysis/NEXT_SESSION_PROMPT.md` + `STATE.md` lesen** (zusammen <=6 KB). `LEDGER.md`/`PROGRESS.md`/`LESSONS_GT5P.md`/`PORT.md` NICHT komplett laden, nur per `grep` gezielt (Fakt/Tabellenende `Select -Last 5`). Aeltere Logs (`eu-boot-log.md`, `CONTINUE-HERE.md`, `HANDOFF.md`, `work/MENU_RUN_NOTES.md`) nur Nachschlagewerk. Nie ganze Skripte (probe.ps1 18 KB) lesen, nur Zeilenbereiche.
 
 **Stil: Caveman ultra** (Plugin hier abgeschaltet; Spawn-Prompts NICHT `/caveman ultra` aktivieren lassen, Stil steht hier): Artikel/Fuellwoerter/Hoeflichkeit weglassen, Fragmente, Kurzwoerter, Technikbegriffe exakt; Code/Commits normal. Startkontext ~50-55k (Tools gesperrt in `.claude/settings.local.json`), Handoff bei >=200k echtem Kontext.
 
@@ -22,7 +22,7 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 - **Suchen ueber >3 Dateien = Subagent** (Explore/general-purpose), nur Fazit zurueck. Statt Wegwerf-Python: `scripts/xref.py` (Leser/Schreiber eines Feldes `--field 0x90 [--rw r|w] [--in LO-HI]`, Aufrufer `--call`, Konstante `--imm`) und `scripts/gdis.py <ea> [n|--fn|--opd]` (Disassembly). Kein neues Einmal-Skript, bevor geprueft ist, dass diese es nicht koennen.
 - **Output-Limit:** jeder Befehl max. ~40 Zeilen Ausgabe (`| head -40`, `--max`, `loganalyze.py`). Nie `cat` auf Logs/Dumps.
 - **Flag erst nach Setter UND Leser:** ein Flag/Feld gilt nie als "Fertig-Signal", bevor `xref.py --field <off> --rw w` (Setter) und `--rw r` (Leser) gezeigt haben, wer es setzt und was es steuert (Fehlschluss Hyp. 37 "+0x91 = fertig", Hyp. 41 "Flag = Projekt done": war Quit-Pfad).
-- **Kontext-Uebergabe bei ~200k Tokens:** Session schreibt selbst STATE.md (Aktive Kette/Erledigt/Naechster Schritt) + `docs/analysis/NEXT_SESSION_PROMPT.md`, committed lokal (Identitaet s.o.) und meldet "Uebergabe bereit". Nie abrupt bei vollem Kontext enden.
+- **Kontext-Uebergabe bei ~210k Tokens:** Session schreibt selbst STATE.md (Aktive Kette/Erledigt/Naechster Schritt) + `docs/analysis/NEXT_SESSION_PROMPT.md`, committed lokal (Identitaet s.o.) und meldet "Uebergabe bereit". Nie abrupt bei vollem Kontext enden.
 - **Platz:** `scripts\clean-work.ps1 -KeepLast 10 [-Apply]` archiviert alte `work/probe_*`/`snap_*` nach `work/ARCHIV/runs` (nie loeschen). Vor Laufserien ausfuehren.
 - Hypothese zuerst statisch pruefen (Code lesen), erst dann Probe-Lauf. Vor jedem Lauf pruefen, ob die Frage nicht schon in STATE.md beantwortet ist.
 - Nichts loeschen: Alt-Dateien nach `work/ARCHIV/` bzw. `ARCHIV/`.
@@ -35,7 +35,7 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 - **Kette erzwingt Strategiewechsel:** Kette "ein Objekt/Feld tiefer" (Hyp. 93-117) ist laenger als die 3-Schritte-Regel. Nach Hyp. 117 NICHT Hyp. 118 in derselben Kette: stattdessen (a) Snapshot-Diff `scripts/snap_diff` 140 s vs 175 s, (b) Snapshot-Walk Vektor vor/nach X-Press, oder (c) Umgehung (Guard-Patch) + direkt zum naechsten Blocker nach der Ladephase. Heisenbug: Guard-Survivor-Laeufe weiterverfolgen statt Race-Ursache.
 - **Statisch vor Lauf:** Aufrufer-Baum (`xref.py --call`, `gdis.py --fn`) komplett durchgehen, erst dann EIN Lauf. Kein Lauf pro Einzelfrage.
 - **Laeufe bündeln:** `-Parallel 3-4` (hdd0 getrennt) mit mehreren Varianten/Flags pro Batch (z.B. Exit-Race: 4 Laeufe mit `PS3_CALLTRACE_TO`+`CALLTRACE_AFTER=60`), nicht sequentiell. `-Boot` nicht innerhalb eines Batches mischen (boot.adc geteilt).
-- **Uebergabe nur bei Kontext ~200k oder Blocker**, nicht wegen Hypothesen-Zaehler. NEXT_SESSION_PROMPT.md bleibt 1 Absatz.
+- **Uebergabe nur bei Kontext ~210k oder Blocker**, nicht wegen Hypothesen-Zaehler. NEXT_SESSION_PROMPT.md bleibt 1 Absatz.
 
 ## Ueberwacher-Regeln (2026-11-23, siehe STATE.md "UEBERWACHER-FINDINGS")
 - **Symptom-Ketten max. 10 Hyp.** (Hyp. 83-117 = 35 in einer Kette). Vor jeder neuen Hyp.: fuehrt ihre Antwort zum Ziel (Menue), oder nur tiefer ins Symptom? Guard/Umgehung zeigt, dass Symptom nicht blockiert -> Kette beenden.
@@ -68,7 +68,7 @@ Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
 
 ## Audit-Regeln (2026-11-24, Audit der letzten 24 h)
 - **Gesperrte Kette Save/Term/NP/Quit (Arbeit7-14, 8 Sessions, ~60 Hyp.):** widerlegt, siehe NEXT_SESSION_PROMPT. Neue Session darf sie nicht fortsetzen; erste Aktion = Strategiewechsel (opendiff Oracle-vs-ours NACH Save-Load, Snapshot-Diff).
-- **Ueberwacher:** spawnt pro Session nur mit neuer Strategie, die im Prompt in 1 Satz begruendet ist; Handoff-Schwelle steht NUR in `ctxwatch.py` (Default), keine Zahl in Nachrichten; Regeln/CLAUDE.md nur auf User-Wunsch aendern. Antworten auf Sessions kurz (<=3 Saetze), keine Wiederholung von CLAUDE.md-Regeln.
+- **Ueberwacher:** spawnt pro Session nur mit neuer Strategie, die im Prompt in 1 Satz begruendet ist; Handoff-Schwelle steht NUR in `ctxwatch.py` (Default 210k), keine Zahl in Nachrichten; Regeln/CLAUDE.md nur auf User-Wunsch aendern. Antworten auf Sessions kurz (<=3 Saetze), keine Wiederholung von CLAUDE.md-Regeln.
 - **Modell:** alles Sonnet 5.5, 3,2 Mio Output-Tokens/24 h. Routine (STATE/Commit/Log-Auswertung) an Subagent `model: haiku`; Opus nur fuer neue Strategie nach 3 widerlegten Hyp. einer Kette.
-- **Hilfsskripte:** Commit `scripts\gcommit.ps1 "msg" [-Push]` (Identitaet+Push-Pruefung); vor Turn-Ende `scripts\orphans.ps1 -Kill` (verwaiste gt6.exe).
+- **Hilfsskripte:** Commit `scripts\gcommit.ps1 "msg" [-Push]` (Identitaet+Push-Pruefung); vor Turn-Ende `scripts\orphans.ps1 -Kill` (verwaiste gt6.exe). Uebergabe: `python scripts/handover.py --schritt "..." [--commit]` (STATE trimmen + Prompt aus Vorlage). commit-msg-Hook blockt docs:-Commits <30 min (Ausnahme "handover"/"trim" oder GT6_FORCE_COMMIT=1).
 - **Commits:** max. 1 docs-Commit je 3-4 Hyp. (24 h: 82 docs-Commits von 124 = Verstoss).
