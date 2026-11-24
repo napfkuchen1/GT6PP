@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 12dcec3 Arbeit21: tasks only run on tid1 (no worker claims), shutdown wait chain; PROGRESS: 2026-11-24 | fbad759 | notut | ok FAIL - - - - - | probe_a15loop_20261124_110206_1 | non-black=0% lang=en-gb
-Next step: Only tid1 ever runs task bodies (A2F0AC via poll A2F290/A2FFCC loop; no worker, sleep-race refuted). Main later waits in shutdown 14884->AAE0F0->..->AE2844 lwcond. Oracle: worker 9qstY runs 6171FC task and creates Z-9m6/PDI threads. Find how a task is dispatched to a worker vs run inline: task state +0x28/request r4 machine A2EA5C, A4F938, A8548C, A2F0AC type switch; look for a config/flag (thread count, SPU/cpu query) choosing mt mode. Use PS3_WD_AT for thread states. Rebuild first (generated restored).
-Do not repeat: Np2Init; finalize neuter; AFDFC0 title check legit; BFF0A0 default callbacks by design; 14010 stages all return; poll sleep race
+State: last commit 8ff9852 Arbeit22: sync-pump hack runs game loop inline on main; GT6_PUMP_ITERS=0; PROGRESS: 2026-11-24 | fbad759 | notut | ok FAIL - - - - - | probe_a15loop_20261124_110206_1 | non-black=0% lang=en-gb
+Next step: MGOM thread (entry 6170AC, created by AD4754 from 619198) never starts with GT6_PUMP_ITERS=0 (main waits in 6171D0). gdis AF003C + vtable slot8 of the thread object returned by AF003C (AD4794 vcall) -> why start skipped/deferred; log slot8 target + AD4390 at runtime via generated patch. Make PUMP_ITERS=0 default once the thread starts. Probe: probe.ps1 -Boot notut -Hdd0Src work\gt6_hdd0_rp -Env 'GT6_PUMP_ITERS=0;PS3_THREAD_BT=1' -Seconds 90
+Do not repeat: sync-pump inline was the cause of tid1 inline loop (done, STATE Arbeit22); SNAP_AT env broken, use PS3_WD_AT; workers AD1670 idle is normal
 Still running: nothing
-Read: STATE.md (last 3 lines)
+Read: docs/analysis/STATE.md (last 4 lines)
