@@ -41,3 +41,5 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit15) Next: who starts 9qstY actions on the Oracle (NetStartDialog callers B494C4/798C70 via CALLTRACE in the Oracle-equivalent task 40393C90 step 21); find the 798C1C state setter.
 - (Arbeit16) snap_a8s50 tid30 = in consumer wait 8A7AD0 (stack ret 8A7B08): obj 7FFCACA8 +0x1d8=31 < +0x240+1=38, waits. Producer writer 8A88E8 (std 0x1d8). Details eu-boot-log Arbeit16.
 - (Arbeit16) Next: caller/entry of 8A88E8 (which job/thread increments 0x1d8, why stalls at 31); compare Oracle increments via CALLTRACE on 8A88E8.
+- (Arbeit17) WORKAROUND 8A7AD0 consumer wait skipped (tools/guard_conswait.py, post-lift; opt-out GT6_NO_CONSWAIT). Probe arb17_conswait notut 320s: guard fires, NO load progress (no PDIPFS/59/FI, Pamf, Vdec, non-black). Same 16 SPU mfc-list STALL img=5 as baseline a15loop.
+- (Arbeit17) Next: no further guard in the consumer; the wait was not the loading blocker. Snapshot diff (scripts/snap_diff.py) of guard run vs baseline at ~140 s, then the first game-level wait after loading.

@@ -354,3 +354,9 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 
 ## STATE trim 2026-11-24
 - main()=0x14010: all stages run, IsExitGame(AD2998)=0 always. BFF0A0 (stage 1414C) is only the init launcher (malloc ok, C1F4C8=alloc 0x6000, BFF578=setup stub), returns r3=0 IMMEDIATELY (~line 460 in the log, before MenuClassDefine loads). tid1 is already in the shutdown wait at WD@12s (13FD0 finalizer) -> main() returns <12 s, game keeps running in tid3/workers.
+
+## Arbeit17 (2026-11-24) consumer-wait workaround
+- Guard tools/guard_conswait.py on 8A7AD0 loc_008A7AF4 (skip lwcond wait -> loc_008A7B4C). Build ok (exit 0).
+- Probe work/probe_arb17_conswait_20261124_114217_1 (notut, 320 s): guard hit 3x (log cap). No PDIPFS/59/FI, Pamf, Vdec, non-black. SetPrepareFlip 1987 (baseline a15loop 6384 -> different length/state).
+- SPU mfc-list STALL img=5 elem 0x01550 x16 in both runs = not new; not the blocker.
+- Conclusion: the 8A7AD0 wait is not the loading blocker. Workaround insufficient alone.
