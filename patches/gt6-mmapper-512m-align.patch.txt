@@ -1,0 +1,17 @@
+Arbeit22: sys_memory.c mapper_address() -- 512MB window alignment (apply to third_party/ps3recomp-v020/runtime/syscalls/sys_memory.c)
+
+In mapper_address(), before computing `addr`/`size`:
+
+    int big = (requested >= 0x20000000u) && !(requested & (requested - 1u));
+    if (big && alignment < requested) alignment = requested;
+
+and in the reserved[] overlap loop add the condition
+    !(big && reserved[i][0] == VM_SYS_VM_BASE) &&
+so a >=512MB power-of-two window may take the unused sys_vm window (0x60000000).
+
+Why: GT6 PDI heap (17B4C78) looks pointers up with (ptr>>13)&0xFFFF; a 512MB window not on a 512MB boundary
+(we returned 0x70000000) makes realloc of its own blocks fail (B09520=-0xA3), C58EC8 then returns without
+unlocking allocator mutex #1 (lwm 0x017E8888) -> pacer tid30 starved. With the fix: flips run, 54+ file opens.
+
+Diagnostic (optional) in runtime/ppu/ppu_sysprx.cpp sys_lwmutex_lock: env PS3_LWM_WATCH=<hexaddr> records
+last lock lr/sp + 7 caller frames, printed in the [LWM-CONVOY] BLOCKs line (PS3_LWMUTEX_TRACE=1).
