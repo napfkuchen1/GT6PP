@@ -360,3 +360,4 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 - Probe work/probe_arb17_conswait_20261124_114217_1 (notut, 320 s): guard hit 3x (log cap). No PDIPFS/59/FI, Pamf, Vdec, non-black. SetPrepareFlip 1987 (baseline a15loop 6384 -> different length/state).
 - SPU mfc-list STALL img=5 elem 0x01550 x16 in both runs = not new; not the blocker.
 - Conclusion: the 8A7AD0 wait is not the loading blocker. Workaround insufficient alone.
+- (Arbeit17) PS3_SNAP_AT=140/175 (guard probe, 200-220 s, 3 runs): NO [SNAP] line, no snap_* dir. Snapshot thread armed in lv2_syscall (ppu_loader.cpp:3581) never starts here. Snapshot diff blocked until fixed (check arming path / env pass-through).
