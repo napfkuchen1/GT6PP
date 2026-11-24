@@ -4,13 +4,13 @@
 Blocks the stop (decision=block) unless the last assistant text has a line starting
 'STOP-GRUND: MENUE|BLOCKER|UEBERGABE' or MAX (25) continuations without a new commit were forced.
 Disable: create work/.stop-guard-off. Counter: work/.stop-guard-count.
-"""
+"""  # token kept literal: the SENT regex below depends on it
 import json, os, re, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CNT = os.path.join(ROOT, "work", ".stop-guard-count")
 OFF = os.path.join(ROOT, "work", ".stop-guard-off")
-MAX = 25  # aufeinanderfolgende Blocks OHNE neuen Commit
+MAX = 25  # consecutive blocks WITHOUT a new commit
 HEADF = os.path.join(ROOT, "work", ".stop-guard-head")
 SENT = re.compile(r"^\s*STOP-GRUND:\s*(MENUE|BLOCKER|UEBERGABE)", re.I | re.M)
 
@@ -82,9 +82,9 @@ def main():
         pass
     print(json.dumps({
         "decision": "block",
-        "reason": "Stop-Guard (%d/%d): Hypothese fertig ist kein Turn-Ende (CLAUDE.md Turn-Ende-Regel). "
-                  "STATE.md aktualisieren, lokal committen (napfkuchen1, kein Trailer), SOFORT die naechste Hypothese starten. "
-                  "Anhalten NUR mit Zeile am Zeilenanfang: STOP-GRUND: MENUE / BLOCKER <grund> / UEBERGABE" % (n + 1, MAX)}))
+        "reason": "Stop-Guard (%d/%d): a finished hypothesis is not the end of the turn (CLAUDE.md turn-end rule). "
+                  "Update STATE.md, commit locally (napfkuchen1, no trailer), IMMEDIATELY start the next hypothesis. "
+                  "Stop ONLY with a line at the start of a line: STOP-GRUND: MENUE / BLOCKER <reason> / UEBERGABE" % (n + 1, MAX)}))
     return 0
 
 

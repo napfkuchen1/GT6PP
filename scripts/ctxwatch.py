@@ -1,24 +1,26 @@
 """ctxwatch.py [--limit 210000] [--session <id-prefix>]
-Kontext der laufenden Claude-Session aus dem Transcript (.jsonl): echte usage-Werte der letzten
-Assistant-Antwort (input + cache_creation + cache_read). Fallback: chars/3.6 + 90k Fixanteil.
-Exit 0 = ok, 10 = Handoff faellig (>= limit)."""
+Context of the running Claude session from the transcript (.jsonl): real usage values of the last
+assistant reply (input + cache_creation + cache_read). Fallback: chars/3.6 + 90k fixed share.
+Exit 0 = ok, 10 = handoff due (>= limit)."""
 import glob, json, os, sys
 
-FIX = 90000  # gemessener Startkontext (Tools+System+CLAUDE.md), nur Fallback
+FIX = 90000  # measured start context (tools+system+CLAUDE.md), fallback only
 a = sys.argv[1:]
 limit = int(a[a.index("--limit") + 1]) if "--limit" in a else 210000
 sess = a[a.index("--session") + 1] if "--session" in a else ""
 d = os.path.join(os.path.expanduser("~"), ".claude", "projects", "C--Users-user-Downloads-Games-GT6-ClaudeCode-GT6PP")
 fs = [f for f in glob.glob(os.path.join(d, "*.jsonl")) if os.path.basename(f).startswith(sess)]
 if not fs:
-    print("ctxwatch: kein Transcript"); sys.exit(0)
+    print("ctxwatch: no transcript"); sys.exit(0)
 fs.sort(key=os.path.getmtime, reverse=True)
 def is_worker(p):
+    # Match both the English and the legacy German work-session marker (older spawn prompts)
     try:
-        return "Du bist die Arbeitssession" in open(p, errors="ignore").read(20000)
+        t = open(p, errors="ignore").read(20000)
+        return "You are the work session" in t or "Du bist die Arbeitssession" in t
     except OSError:
         return False
-f = next((p for p in fs if is_worker(p)), fs[0])  # Arbeitssession bevorzugt, nicht den Ueberwacher
+f = next((p for p in fs if is_worker(p)), fs[0])  # prefer the work session, not the supervisor
 def txt(o):
     if isinstance(o, str): return len(o)
     if isinstance(o, list): return sum(txt(x) for x in o)
