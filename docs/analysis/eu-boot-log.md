@@ -258,3 +258,4 @@ sceNpTerm-Caller = AF9870 (einziger, Fn ~AF9780: NP-Routine ruft 10BC740 NID E6C
 - Script-Methode checkNpEula = native 0x1954C (ClassInfo heap 0x40020A2C). CALLTRACE_TO 9D0458, 9D0580, AF8E34, 1954C, 9AE5D4: je 0 Treffer (60 s, Ctl: Format ok, indirekte Calls erkannt; 68FF84 nur direkt).
 - isOnline (OPD 162D888?/9AFCE4) = byte [obj+0x6850] (A09D34); Setter A0893C (stb 1) <- A0A110 <- 9AE5D4 (nativer Methode OPD 0x162D7A0 'initialize'? PDINetwork-Klasse, Registrierung 9ADD90 String 0x11B5758). isDummy=const false (9B0098). Setter 0x6850=0 in A088DC (shutdown).
 - Hypothese: bei uns wird PDINetwork-Methode 9AE5D4 (init/online) nie gerufen -> isOnline=false -> checkNpEula uebersprungen. Oracle: online (RPCS3 NP-Status).
+- Arbeit9: CALLTRACE_TO 9B0098 isDummy / 9AFCE4 isOnline: 0 Treffer -> Script erreicht boot_sequence_common Z.102 nie (oder direkter Call).
