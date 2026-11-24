@@ -38,3 +38,4 @@ Script-VM-Adressen 9EEA88/9F0748 sind 1.00 (0 Calls in 1.22).
 - Tools: probe.ps1 (-KeepDb, -Hdd0Src), gt6_gprof (GT6_GPROF=1), PAD_LOG, scripts/live-padlog.ps1, tools/adch_disasm.py. probe killt gt6 per taskkill /T.
 
 - (Arbeit11) A2F290 liefert bei uns 0/1 (nie 2); vcall/assert-Probes ohne Befund. Naechster: Guard A2F290 ret->2 (Umgehung) oder Snapshot-Walk obj 40393C10. Details eu-boot-log.md Arbeit11.
+- (Arbeit11) Guard A2F290 ret->2: Term weg, tid1 blockt wie Oracle, aber weiter schwarz/kein 59/FI. Teardown nur Folge. Naechster: dritten AutoLoad-Thread (Oracle #53) finden: wer erzeugt ihn, warum bei uns nicht.
