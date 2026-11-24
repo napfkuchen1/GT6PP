@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit f05c51d Arbeit21: finalize-neuter negative, teardown chain to 13FD0; PROGRESS: 2026-11-24 | fbad759 | notut | ok FAIL - - - - - | probe_a15loop_20261124_110206_1 | non-black=0% lang=en-gb
-Next step: Find which main stage in 14010 (calls 148b4,1416c,147bc,13de4,143e8,ce2170,146e8,141e8,91e464,1414c, each followed by AD2998 check -> bne 14114 exit) returns first and why; use PS3_CALLTRACE_FROM or snap at 10s; then fix. Rebuild first (generated restored, binary still has A21_NOFIN hook, harmless).
-Do not repeat: Np2Init/0x45; finalize neuter (A21_NOFIN) no effect; GT6_SAVE_CBRES/empty savedata
+State: last commit 4edfc40 docs: handover; PROGRESS: 2026-11-24 | fbad759 | notut | ok FAIL - - - - - | probe_a15loop_20261124_110206_1 | non-black=0% lang=en-gb
+Next step: Find where oracle main_thread blocks after rsx_iomap 75.98s (-SBXs thread, K/CF, 9/56/PW opens) that ours skips: our 14010 stages all return in ms (A21STG). Compare 1414C/BFF0A0 and shutdown 13FD0 (A7BF50, A1EAD0) wait paths with oracle thread creates (-SBXs missing in ours); use PPU_WWATCH=<hex> [ww] to find writers. Rebuild first.
+Do not repeat: Np2Init; finalize neuter; AFDFC0 boot check legit (title match); BFF0A0 default callbacks by design
 Still running: nothing
 Read: STATE.md (last 3 lines)
