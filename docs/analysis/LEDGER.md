@@ -30,3 +30,4 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - GT5P check (b): GT6 loads script main.adc ('[GT6] script override' in log) + 30 PDIPFS opens -> mount/script load run; GT5P cause P12 does not apply. (a) lwcond sender for loader 9qstY still open (one run with lwcond_signal counter needed).
 - 1.22 quit: snap series 6-40 s shows flag 0x1796DC8 always 0; main at 6 s in init wait (task 0x7FFCEE90), from 8 s shutdown -> quit not via loop 146E8; savedata fileBuf (0x901A0000/0x931C0000) no overlap.
 - 2026-11-23 version: work/bin/EMAIN.SELF 9209104 B = RPCS3-update EMAIN (1.22), lift is 1.22 (not disc base 8843160 B). Save prefix diff: RPCS3 GT6_1.N vs ours GT6.N (hdd0 old saves 22.11.; format %s.%d @F87934).
+- 2026-11-24 Arbeit22: heap fix (512MB mmapper alignment) + GT6_PUMP_ITERS=0 + main blocked after MGOM.start => boot project renders 'SCE presents' (probe_a22cap_20261124_171454_1). Main-exit cause: root task legit finishes; oracle main blocks (unknown why).
