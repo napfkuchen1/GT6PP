@@ -40,7 +40,7 @@ Language: chat with the user is German. Everything in the repo is English (see t
 
 ## Supervisor rules (2026-11-23, see STATE.md "SUPERVISOR FINDINGS")
 - **Symptom chains max. 10 hyp.** (Hyp. 83-117 = 35 in one chain). Before each new hyp.: does its answer lead to the goal (menu), or only deeper into the symptom? If a guard/workaround shows the symptom does not block -> end the chain.
-- **Check runtime knobs before a deep dive:** `third_party/ps3recomp-v020/docs/DIAGNOSTICS.md` + `SYSCALLS.md` (e.g. `PS3_PRIO_START`, `PPU_RESV_OFF`, `SPU_LOCKSTEP_QUANTUM`) and sister port `third_party/GT5P/docs/progress.md` (same PDI engine) first.
+- **Check runtime knobs before a deep dive:** `third_party/ps3recomp-v020/docs/DIAGNOSTICS.md` + `SYSCALLS.md` (e.g. `PS3_PRIO_START`, `PPU_RESV_OFF`, `SPU_LOCKSTEP_QUANTUM`) and sister port `third_party/GT5P/docs/progress.md` (same PDI engine) first. Sibling sources (gt5-recomp, ps3recomp upstream, ordered checks): `docs/analysis/SIBLING_SOURCES.md`.
 - **Probe result != live result:** probe.ps1 uses fresh userdb/boot.adc patches; verify with a live run with a persistent db before "hangs" counts as a finding.
 - **Race suspicion -> rule out HLE writers first** (stub with wrong argument count / runtime writes into guest heap) before chasing guest-code races.
 
