@@ -2,6 +2,7 @@
 
 Projekt: Gran Turismo 6 (EU, BCES01893) als static recomp auf Windows. Ziel aktuell: Hauptmenue.
 Sprache mit dem User: Deutsch. Commits/PRs/Fork-Texte: Englisch.
+**Englisch-Pflicht (Repo lokal+remote):** alles, was im Repo landet oder gepusht wird (Commit-/PR-Texte, Code-Kommentare, Skripte, neue/geaenderte Docs inkl. STATE/PROGRESS/NEXT_SESSION_PROMPT/Logs) auf Englisch. Nur der Chat mit dem User ist Deutsch. Bestehende deutsche Dateien beim naechsten Anfassen uebersetzen (kein Massen-Rewrite). commit-msg-Hook blockt deutsche Commit-Texte.
 **Einstieg (Kontext-Budget, Fenster 200k; Handoff-Schwelle 210k (ctxwatch)): nur `docs/analysis/NEXT_SESSION_PROMPT.md` + `STATE.md` lesen** (zusammen <=6 KB). `LEDGER.md`/`PROGRESS.md`/`LESSONS_GT5P.md`/`PORT.md` NICHT komplett laden, nur per `grep` gezielt (Fakt/Tabellenende `Select -Last 5`). Aeltere Logs (`eu-boot-log.md`, `CONTINUE-HERE.md`, `HANDOFF.md`, `work/MENU_RUN_NOTES.md`) nur Nachschlagewerk. Nie ganze Skripte (probe.ps1 18 KB) lesen, nur Zeilenbereiche.
 
 **Stil: Caveman ultra** (Plugin hier abgeschaltet; Spawn-Prompts NICHT `/caveman ultra` aktivieren lassen, Stil steht hier): Artikel/Fuellwoerter/Hoeflichkeit weglassen, Fragmente, Kurzwoerter, Technikbegriffe exakt; Code/Commits normal. Startkontext ~50-55k (Tools gesperrt in `.claude/settings.local.json`), Handoff bei >=200k echtem Kontext.
