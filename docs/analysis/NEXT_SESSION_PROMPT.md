@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: Arbeit10 (Commit siehe git log). Term = C++-Projekt-Teardown (PDINetwork.finalize 9AD1DC) synchron in tid1 via 13C44->A52140->A7E6BC->A7BA60->A2FFCC (Step-Schleife, A2F290 Rueckgabe 0-3). Kein Host-Quit, kein Script-Caller. Oracle-main blockiert 76->106 s, kehrt nie zurueck. Draws: 30 Quads nach dialog.mproject, dann 0.
-Naechster Schritt: A2F290 lesen (gdis 0xA2F290 120), Rueckgabecodes 0-3 + Abbruchquelle; EIN Lauf mit HOSTBT/Log an A2F290-Rueckgabe (Wert pro Iteration). Regel: liefert A2F290 bei uns 0/1/3 waehrend Oracle-Pfad 2 (wartet) -> Quelle dieses Status (Job/Projekt-Load-Status) per xref --field aufschluesseln; HLE-Rueckgabe zuerst pruefen.
-Nicht wiederholen: Z.102-Hypothese, CALLTRACE_TO 1198C, Script-grep nach finalize (0), Save-Varianten.
+Stand: Arbeit11, Commit bb1e06e (opendiff.py + Diff-Doku). Teardown = Folge (Step 21 Script-Task, main-Return-Finalizer 13FD0), Kette beendet. DATEN-DIFF (scripts/opendiff.py <run-dir>): mit `probe.ps1 -Hdd0Src work\gt6_hdd0_rp` + Env `PS3_LANG=en-gb` folgen unsere Opens dem Oracle bis 9/7N/XG.
+Naechster Schritt: Erste echte Abweichung: Oracle oeffnet danach /dev_hdd1/pditsm/pagefile.sys (VMPageFile, Fn B07748, Probe: bei uns 0 Treffer), dann grim2/grim007.db, GT6_1.N. Statisch: `xref.py --call 0xB07748` -> B07EC8/B08A14/B08EA8 -> B08CE8/B090D0/0107D0B4.. aufwaerts bis zur Bedingung/Native; HLE-Rueckgabe (cellFs /dev_hdd1, sysCache, fcntl) zuerst. Wenn Bedingung = Rueckgabewert/Pfad (bei uns /dev_hdd1/cache/BCES01893/ statt /dev_hdd1/) -> HLE fixen, EIN Lauf mit opendiff.
+Nicht wiederholen: A2F290-Status/Teardown/finalize-Skip (LEDGER, eu-boot-log Arbeit11); max. 3 neue: Force-2 bringt nichts, Sprache DE war Input-Divergenz, pfs override (9/56/PW) benign.
 Laeuft noch: nichts.
-Lesen: STATE.md, eu-boot-log.md "Arbeit10".
+Lesen: STATE.md, eu-boot-log.md "Arbeit11".
