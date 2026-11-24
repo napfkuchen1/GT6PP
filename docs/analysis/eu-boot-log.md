@@ -319,3 +319,7 @@ Naechster: (1) Wer ruft 9AE5D4 im Script (Methodenname via OPD 0x162D7A0, String
 - (Arbeit11) VMPageFile = Page-Fault-Folge (MpAnk behandelt Fault im AutoLoad2-Buffer), kein Trigger. Oracle: 3x AutoLoad2 GAME6 alle -4 (NODATA), dann sysmodule 0xF044. Unser gamedata/ (22.11.) hatte altes GAME6 -> 2. Load result 0. Mit PS3_GAMEDATA_ROOT=work/_gd_empty: -4, Term trotzdem nach 9/6M/BG.
 - (Arbeit12) AutoLoad2 nur via Request-Execute AF5704 (obj+0x70 dir, +0xB0 result); funcStat/-4/Return identisch zu Oracle, CBRES egal. Retry-vs-BKUP6 liegt im Request-Erzeuger (AF5334-AF5C50 ctors, vtable). Naechster: vtable-Ptr der Request-Klasse (xref --field 0 / snap) -> Erzeuger.
 - (Arbeit12) GAME6/BKUP6 = 2 frische Mgr-Objekte (ctor AF5528 aus 89D07C, dir-Setter AF5334). Entscheider = Aufrufer der Mgr-Init-Funktion um 89CF10-89D07C. 0x8256xx = NP-Update-Status, nicht relevant.
+
+## Arbeit12/13 STATE-Zeilen
+- (Arbeit13) GAME6/BKUP6 = 2 Aufrufe der Script-Native 0x89D59C (lr 8147A0, Caller 814700-8147E8 Name-Arg aus Tabelle stride 0x60) -> 89D4C8 -> AF55E0, Return = bool (89BBC0: 1 wenn ctrl.a8[4]==0 else 0). Bei uns a8[4]=1 -> Return 0 -> Script versucht BKUP6. Naechster: Setter a8[4] (89B9E0 stw 1,4(r4), Leser/Loescher), Oracle-Wert 0? 
+- (Arbeit13) Umgehung 89BBC0 Return=1: AutoLoad2 GAME6 2x (kein BKUP6, wie Oracle-Retry), dann sceNp Term (Oracle: 3. GAME6 + sysmodule F044). Ursache a8[4]=1 offen; Term-Bedingung nach Retry offen.

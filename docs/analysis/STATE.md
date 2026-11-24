@@ -34,8 +34,9 @@ Script-VM-Adressen 9EEA88/9F0748 sind 1.00 (0 Calls in 1.22).
 - Spinner-Zustand (alt): 37 Threads geparkt, 29 in sys_lwcond_wait (pc 0xA4305C); Ausloeser des 59/FI-Requests unbekannt.
 - Tools: probe.ps1 (-KeepDb, -Hdd0Src), gt6_gprof (GT6_GPROF=1), PAD_LOG, scripts/live-padlog.ps1, tools/adch_disasm.py. probe killt gt6 per taskkill /T.
 
-- (Arbeit13) GAME6/BKUP6 = 2 Aufrufe der Script-Native 0x89D59C (lr 8147A0, Caller 814700-8147E8 Name-Arg aus Tabelle stride 0x60) -> 89D4C8 -> AF55E0, Return = bool (89BBC0: 1 wenn ctrl.a8[4]==0 else 0). Bei uns a8[4]=1 -> Return 0 -> Script versucht BKUP6. Naechster: Setter a8[4] (89B9E0 stw 1,4(r4), Leser/Loescher), Oracle-Wert 0? 
-- (Arbeit13) Umgehung 89BBC0 Return=1: AutoLoad2 GAME6 2x (kein BKUP6, wie Oracle-Retry), dann sceNp Term (Oracle: 3. GAME6 + sysmodule F044). Ursache a8[4]=1 offen; Term-Bedingung nach Retry offen.
 - (Arbeit14) a8[4] geklaert: ctrl+0xa8 = CellSaveDataStatGet (AF5260/80/A0 = funcStat-Wrapper, r4=GetStat), [4]=isNewData. =1 bei fehlendem Dir korrekt (RPCS3 gleich). Kein Bug im HLE.
 - (Arbeit14) Batch GT6_SAVE_ISNEW0 (neuer Knob cellSaveData.c): g6 -> 2x GAME6 cb=-3 dann Term; all -> 1x; base -> GAME6+BKUP6 dann Term. Term unabh. von isNewData. Oracle: 3x GAME6 (3 PDI-Threads) dann AutoSave2 BKUP6, kein Term.
 - (Arbeit14) Kette Save (Arb.11-14) >10 Hyp. beendet. Naechster: Term-Ausloeser ausserhalb Save (Aufrufer sceNpTerm-Thread/Script-Retry-Zaehler) oder Umgehung Term (Guard) -> naechster Blocker.
+- (Arbeit14) network_available (boot_sequence_common.ad) = (type in gt6/academy/demo), nur false wenn PDINetwork.isDummy -> bei uns true. Nicht Ursache. LoginUtil.checkSaveDataBind laedt NICHT (nur online_id-Vergleich).
+- (Arbeit14) Batch PS3_NET_ONLINE=1+PSNR_SERVER (NpStatus ONLINE): kein F044/Trophy, Term wie zuvor. Oracle ruft NetCtlGetInfo/NetStartDialog + Sockets nach GAME6; wir nie. Loads kommen aus scripts/gt6/SaveDataUtil.ad (_autoLoad/load, main.adc 0x69055; GAME6-Daten 6DED0 in boot.adc Z.254).
+- (Arbeit14) Naechster: SaveDataUtil.load Return-Array [?,success,?] + Aufrufer/Retry-Schleife (main.adc 69143 ff, adch_disasm) -> welcher Fehlerpfad fuehrt zu PDINetwork.finalize/Term.
