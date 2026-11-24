@@ -23,8 +23,6 @@ Baseline-Probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; `-Boot orig
 - GAME-LOOP 1.22 = 0x616C80 (1.00: 568800), Thread-Eintritt 6170AC, Tick 68FF84, laeuft (tid1/tid30); Details eu-boot-log.md.
 ## Naechster Schritt
 (Arbeit10) Term = Script/Projekt-Aufruf PDINetwork.finalize (9AD1DC) in tid1 via 13C44..A2FFCC, Details eu-boot-log.md "Arbeit10". Bedingung davor finden.
-(Arbeit9) Trophy/F044 = Script-Pfad: boot_sequence_common.ad Z.254-269 ruft Login.checkNpEula nur wenn LoginUtil.isOnline() (= Byte [PDINetwork+0x6850], Setter A0893C <- A0A110 <- native 9AE5D4). CALLTRACE_TO 9AE5D4/1954C/9D0458/AF8E34: 0 Treffer. Details eu-boot-log.md "Arbeit9".
-Naechster: (1) Wer ruft 9AE5D4 im Script (Methodenname via OPD 0x162D7A0, String 0x11B5758) und wo im .adc (grep adch_disasm-Dump); (2) warum bei uns nie: Bedingung davor (MNetworkInterface.isUp? NP-Status). Wenn isUp/NP-Status: HLE sceNpManagerGetStatus/sceNetCtl auf ONLINE-aequivalent pruefen (Oracle-Log), 1 Lauf.
 Offene Hook-Anker: PackageNullGuard 5F81B0 (1.22-Anker per Signatur aus work/bin/_t100.elf), H113 A25C64 (kein 1.00-Code im git -> verwerfen). Danach SPURS-Walker, a3, AdjustScreen REALFLAG, ZWAP.
 
 ## Widerlegt / Symptom (nicht wiederholen)
@@ -37,9 +35,4 @@ Script-VM-Adressen 9EEA88/9F0748 sind 1.00 (0 Calls in 1.22).
 - VERSIONS-DIVERGENZ AUFGELOEST (Arbeit7): work/bin/EMAIN.SELF = 9209104 B = RPCS3-EMAIN (1.22, ELF 23787792 B); alte 8843160-B-Zeile war 1.00. Rest-Diff: Save-Prefix: RPCS3 oeffnet USRDIR/GT6_1.N (16 MB, create), wir GT6.N (kleine Alt-Dateien in work/gt6_hdd0, 22.11.). Format '%s.%d' bei F87934; Prefix-Quelle offen. Prefix 'GT6' kommt aus Daten-Lookup (0x85360: Key-Suche 0x10e6310/18/20 in Config-Baum, kein fester Format-String); cellSaveData-HLE bei uns nie gerufen (0 Log), RPCS3 ruft AutoLoad2 (SECUREFILE GT6_1.0, Page_fault in Fn).
 - Tools: probe.ps1 (-KeepDb, -Hdd0Src), gt6_gprof (GT6_GPROF=1), PAD_LOG, scripts/live-padlog.ps1, tools/adch_disasm.py. probe killt gt6 per taskkill /T.
 
-- (Arbeit11) A2F290 liefert bei uns 0/1 (nie 2); vcall/assert-Probes ohne Befund. Naechster: Guard A2F290 ret->2 (Umgehung) oder Snapshot-Walk obj 40393C10. Details eu-boot-log.md Arbeit11.
-- (Arbeit11) Guard A2F290 ret->2: Term weg, tid1 blockt wie Oracle, aber weiter schwarz/kein 59/FI. Teardown nur Folge. Naechster: dritten AutoLoad-Thread (Oracle #53) finden: wer erzeugt ihn, warum bei uns nicht.
-- (Arbeit11) Term kommt aus Step-Aufruf #21 der A2FFCC-Schleife (nicht aus Rueckgabewert); force ret 2 ab #20 haelt tid1, aber nur 98 Opens, kein 59/FI. Naechster: A5C070-Entry loggen (r4-r6 + String) bei Aufruf 21: welche Methode ruft finalize.
-- (Arbeit11) Step 21 = neues Task-Objekt 40393C90, ruft Natives 9AD090,9AD0B8,finalize(9AD1DC) in Folge. Naechster: Natives davor (A3691C,A363C4,A56EFC,8130AC,809D40,A4887C) namentlich zuordnen (Registrierungscode), welches blockieren muss (Oracle).
-- (Arbeit11) finalize-Skip aendert nichts: Term kommt via main-Return-Finalizer (13FD0). Symptom-Kette 9 Hyp. -> STOP. Naechster Strategiewechsel: Script des Task 40393C90 per adch_disasm identifizieren (Task-Name aus Obj+0x68/Script-Loader-Log) und dessen Wait-/Bedingungs-Natives gegen Oracle vergleichen.
 - (Arbeit11) DATEN-DIFF: mit -Hdd0Src work\gt6_hdd0_rp + PS3_LANG=en-gb folgen wir Oracle-Opens bis 9/7N/XG. Erste echte Abweichung: Oracle oeffnet danach /dev_hdd1/pditsm/pagefile.sys (VMPageFile B07748, bei uns nie) + grim2/grim007.db + GT6_1.N. Naechster: Aufrufer der 0107Dxxx-Natives -> wer erzeugt VMPageFile/grim DB (Script-Pfad), Bedingung. scripts/opendiff.py.
