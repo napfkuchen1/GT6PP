@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20
-State: last commit 860b739 docs: Arbeit25 poll driver finding; PROGRESS: 2026-11-24 | bffd68b | notut | ok FAIL - - - - - | probe_a23act_20261124_182010_1 | non-black=1%
-Next step: Task B90 (40393B90) polled once after HMonitor wait then never; skip-load bypass same stall => generic missing per-frame poll driver. All polls inside project start 6DD7C8 / one-shot node flush 683318. Find what 6B5570 attaches project into (node r4, project+0x40 readers 6B5FC4/6B60AC/6B6138/6B7194/6B7CC0) and who should call per-frame project update; snap_83435343 (heap may differ)
-Do not repeat: A25_POLL; skip-load bypass; HMonitor wake; save-load
+State: last commit c48e1f1 docs: Arbeit25 project class; PROGRESS: 2026-11-24 | bffd68b | notut | ok FAIL - - - - - | probe_a23act_20261124_182010_1 | non-black=1%
+Next step: Project class vt 15B31E0 (update slot 0x178=6A68C0); 5 instances in snap_83435343 (6FF38200,6FF38600,6FF39400,6FF86E00,6FF87800): snap_walk obj each, find the one owning boot task B90 40393B90 and why its per-frame update (node tree 6B7C48) is not called after wait-resume (task polled once then never). skip-load bypass and A25_POLL refuted
+Do not repeat: A25_POLL; skip-load bypass; save-load
 Still running: nothing
 Read: docs/analysis/STATE.md
