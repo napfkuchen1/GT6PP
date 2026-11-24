@@ -42,3 +42,4 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit22) Pad CROSS presses at 30/50 s do not advance Presents (visually same, 49 opens): scene not waiting for input.
 - (Arbeit22) WD@40s threads with game chains: tid30 ADB780>ADB918>ADA4C0>AFB6B4>AFD93C>ADC1C8 (pump), 8A6C00/8A89C8/8A9194 (wait), 91A56C, 910BD8, AF86E8/AF8794/AF8810 (C4537C = timed waits). Candidates for the Presents wait: 8A6C00 chain, 91A56C.
 - (Arbeit22) 8A6C00 = plain condvar idle wait of worker 8A9194 (tid27), not the Presents blocker. Remaining: 91A56C; else find Presents scene object via draw caller.
+- (Arbeit22) 91A56C = worker job-loop idle (lock+condvar wait B03BAC), not the Presents blocker. All idle waits ruled out; next: find Presents scene object via draw caller (RSX draw ops 2/frame) and read fade state.
