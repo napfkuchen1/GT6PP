@@ -1,6 +1,6 @@
 Ziel: Hauptmenue (C6), EU 1.22 + ps3recomp v0.20.
-Stand: Arbeit10. sceNpTerm-Aufrufer belegt (NP_TERM_BT=1): synchron in tid1 via main-Stufe 13C44 <- A52140 <- A7E6BC <- A7BA60 (Run-Fn) -> A2FFCC -> A2F0EC -> AA41FC -> AA55FC -> A5C070 -> A7479C -> A746E8 -> 9AD1DC (native PDINetwork.finalize) -> A088DC -> B4AD4C Term. Script/Projekt ruft finalize kurz nach AutoLoad (gtauto.mpackage laedt davor). Oracle: kein finalize, main schlaeft 76->106 s.
-Naechster Schritt: wer/warum ruft finalize: HOSTBT-Tiefe/Frames bei A5C070/A7479C ansehen (gdis, Aufrufer-Slot), welches Script-Projekt (gtauto/boot) die Methode 'finalize' ruft; in adch-Dump (tools/adch_disasm.py, alle Projekte grep 'finalize') Bedingung davor finden. Wenn Bedingung = Netz/Np-Status OFFLINE: Oracle-Status pruefen (sceNpManagerGetStatus bei uns OFFLINE).
-Nicht wiederholen: Save-Prefix, Frame-Pacing, AFDFC0, CALLTRACE_TO 1198C/9B0098/9AFCE4 (0 Treffer, Term-Pfad ist nicht 1198C), Z.102-Hypothese.
+Stand: Arbeit10 (Commit siehe git log). Term = C++-Projekt-Teardown (PDINetwork.finalize 9AD1DC) synchron in tid1 via 13C44->A52140->A7E6BC->A7BA60->A2FFCC (Step-Schleife, A2F290 Rueckgabe 0-3). Kein Host-Quit, kein Script-Caller. Oracle-main blockiert 76->106 s, kehrt nie zurueck. Draws: 30 Quads nach dialog.mproject, dann 0.
+Naechster Schritt: A2F290 lesen (gdis 0xA2F290 120), Rueckgabecodes 0-3 + Abbruchquelle; EIN Lauf mit HOSTBT/Log an A2F290-Rueckgabe (Wert pro Iteration). Regel: liefert A2F290 bei uns 0/1/3 waehrend Oracle-Pfad 2 (wartet) -> Quelle dieses Status (Job/Projekt-Load-Status) per xref --field aufschluesseln; HLE-Rueckgabe zuerst pruefen.
+Nicht wiederholen: Z.102-Hypothese, CALLTRACE_TO 1198C, Script-grep nach finalize (0), Save-Varianten.
 Laeuft noch: nichts.
 Lesen: STATE.md, eu-boot-log.md "Arbeit10".
