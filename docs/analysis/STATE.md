@@ -22,6 +22,7 @@ Baseline-Probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; `-Boot orig
 
 - GAME-LOOP 1.22 = 0x616C80 (1.00: 568800), Thread-Eintritt 6170AC, Tick 68FF84, laeuft (tid1/tid30); Details eu-boot-log.md.
 ## Naechster Schritt
+(Arbeit10) Term = Script/Projekt-Aufruf PDINetwork.finalize (9AD1DC) in tid1 via 13C44..A2FFCC, Details eu-boot-log.md "Arbeit10". Bedingung davor finden.
 (Arbeit9) Trophy/F044 = Script-Pfad: boot_sequence_common.ad Z.254-269 ruft Login.checkNpEula nur wenn LoginUtil.isOnline() (= Byte [PDINetwork+0x6850], Setter A0893C <- A0A110 <- native 9AE5D4). CALLTRACE_TO 9AE5D4/1954C/9D0458/AF8E34: 0 Treffer. Details eu-boot-log.md "Arbeit9".
 Naechster: (1) Wer ruft 9AE5D4 im Script (Methodenname via OPD 0x162D7A0, String 0x11B5758) und wo im .adc (grep adch_disasm-Dump); (2) warum bei uns nie: Bedingung davor (MNetworkInterface.isUp? NP-Status). Wenn isUp/NP-Status: HLE sceNpManagerGetStatus/sceNetCtl auf ONLINE-aequivalent pruefen (Oracle-Log), 1 Lauf.
 Offene Hook-Anker: PackageNullGuard 5F81B0 (1.22-Anker per Signatur aus work/bin/_t100.elf), H113 A25C64 (kein 1.00-Code im git -> verwerfen). Danach SPURS-Walker, a3, AdjustScreen REALFLAG, ZWAP.

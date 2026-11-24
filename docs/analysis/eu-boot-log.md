@@ -259,3 +259,9 @@ sceNpTerm-Caller = AF9870 (einziger, Fn ~AF9780: NP-Routine ruft 10BC740 NID E6C
 - isOnline (OPD 162D888?/9AFCE4) = byte [obj+0x6850] (A09D34); Setter A0893C (stb 1) <- A0A110 <- 9AE5D4 (nativer Methode OPD 0x162D7A0 'initialize'? PDINetwork-Klasse, Registrierung 9ADD90 String 0x11B5758). isDummy=const false (9B0098). Setter 0x6850=0 in A088DC (shutdown).
 - Hypothese: bei uns wird PDINetwork-Methode 9AE5D4 (init/online) nie gerufen -> isOnline=false -> checkNpEula uebersprungen. Oracle: online (RPCS3 NP-Status).
 - Arbeit9: CALLTRACE_TO 9B0098 isDummy / 9AFCE4 isOnline: 0 Treffer -> Script erreicht boot_sequence_common Z.102 nie (oder direkter Call).
+
+## Arbeit10 (2026-11-24) NP-Term-Aufrufer belegt
+- Neuer Knob NP_TERM_BT=1 (third_party/.../libs/network/sceNp.c, ydkj_host_bt). Lauf work/probe_a10_npbt_*: Term-Kette (innen->aussen) B4AD4C <- A088DC <- 9AD1DC (= native PDINetwork.finalize, OPD 0x162D710, String 0x11B5768) <- A746E8 <- A7479C <- A5C070 <- AA55FC <- AA41FC <- A2F0EC <- A2FFCC <- A7BA60 (Run-Fn, ruft A2FFCC bei A7BC4C) <- A7E6BC <- A52140 <- 13C44 (main-Stufe) <- 1096C <- 1024C. Synchron im main-Thread (tid1), kein Fremdthread.
+- Also: Script/Projekt-Ausfuehrung ruft PDINetwork.finalize kurz nach AutoLoad (gtauto.mpackage wird direkt davor geladen). boot.adc enthaelt KEIN 'finalize' (Voll-Dump 11371 Zeilen). Handler 1198C = vtable-Slot0 (OPD 0x15E1E78) in Exit-Liste 0x17EFB6C, nur von 109E0-Walker nach main-Return gerufen -> NICHT der Term-Pfad hier.
+- Oracle: 3 PDI-Threads fuer AutoLoad (#50,#51,#53), wir 2 (tid38 -4, tid40 ok); danach Oracle vyENO(3008)+OEyq(Trophy). main_thread Oracle schlaeft 76->106 s. Wir: Thread-Folge identisch bis tid40, dann Ende (Term).
+- Offen: welcher Script/Native-Aufrufer in A5C070/A746E8 erzwingt finalize (Bedingung davor). CALLTRACE_TO 1198C = 0 Treffer.
