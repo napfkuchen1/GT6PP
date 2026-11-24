@@ -1,0 +1,18 @@
+mutex id=1 name= owner_tid=0 lock_count=0 waiters=0 recursive=1
+mutex id=2 name= owner_tid=0 lock_count=0 waiters=0 recursive=1
+mutex id=3 name= owner_tid=0 lock_count=0 waiters=0 recursive=1
+mutex id=4 name= owner_tid=0 lock_count=0 waiters=0 recursive=1
+mutex id=5 name= owner_tid=0 lock_count=0 waiters=0 recursive=1
+cond id=1 name= mutex_id=1
+cond id=2 name= mutex_id=2
+cond id=3 name= mutex_id=3
+cond id=4 name= mutex_id=4
+cond id=5 name= mutex_id=5
+evq id=1 name=VMPF000 key=0x3A7B5717940CD7EF cap=127 count=0 cancelled=0 waiters=1
+evq id=2 name=PDIMEMRE key=0x25002FFF1CD4D80E cap=127 count=0 cancelled=0 waiters=0
+evq id=3 name= key=0x0 cap=127 count=0 cancelled=0 waiters=1
+evq id=4 name= key=0x0 cap=1 count=1 cancelled=0 waiters=0
+  evq id=4 pending[0] src=0x0 d1=0x700F8000 d2=0xC d3=0x0
+evq id=5 name= key=0x23A0 cap=4 count=0 cancelled=0 waiters=1
+evport id=1 -> evq id=1
+evport id=2 -> evq id=3

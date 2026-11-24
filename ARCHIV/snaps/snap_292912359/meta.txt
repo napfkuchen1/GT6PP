@@ -1,0 +1,1 @@
+ram_main.bin=0x00010000 ram_hle.bin=0x50000000 big-endian guest bytes
