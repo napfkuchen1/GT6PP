@@ -38,6 +38,32 @@ def last_text(d):
     return out
 
 
+MIN_HANDOVER = 190000  # UEBERGABE only accepted from this context size (workers handed over at 87k/135k)
+
+
+def transcript_info(d):
+    """(is_supervisor, last_context_tokens) from the transcript."""
+    p = d.get("transcript_path")
+    sup, last = False, 0
+    try:
+        with open(p, encoding="utf-8", errors="replace") as f:
+            head = f.read(30000)
+            sup = "GT6PP supervisor" in head
+        for line in open(p, encoding="utf-8", errors="replace"):
+            if '"usage"' not in line:
+                continue
+            try:
+                u = (json.loads(line).get("message") or {}).get("usage") or {}
+            except Exception:
+                continue
+            t = (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
+            if t:
+                last = t
+    except Exception:
+        pass
+    return sup, last
+
+
 def main():
     try:
         d = json.load(sys.stdin)
@@ -47,6 +73,9 @@ def main():
         return 0
     cwd = str(d.get('cwd', '')).replace(chr(92), '/')
     if '/.claude/worktrees/' in cwd:  # do not throttle Monitor/worktree sessions
+        return 0
+    sup, ctx = transcript_info(d)
+    if sup:  # supervisor is resumed by the app when workers end; forcing it only produces fake BLOCKER lines
         return 0
     txt = last_text(d)
     n = 0
@@ -69,7 +98,11 @@ def main():
             open(HEADF, "w").write(head)
         except Exception:
             pass
-    reason_ok = bool(SENT.search(txt))
+    m = SENT.search(txt)
+    reason_ok = bool(m)
+    early = bool(m) and m.group(1).upper() == "UEBERGABE" and 0 < ctx < MIN_HANDOVER
+    if early:
+        reason_ok = False
     if reason_ok or n >= MAX:
         try:
             os.remove(CNT)
@@ -84,7 +117,8 @@ def main():
         "decision": "block",
         "reason": "Stop-Guard (%d/%d): a finished hypothesis is not the end of the turn (CLAUDE.md turn-end rule). "
                   "Update STATE.md, commit locally (napfkuchen1, no trailer), IMMEDIATELY start the next hypothesis. "
-                  "Stop ONLY with a line at the start of a line: STOP-GRUND: MENUE / BLOCKER <reason> / UEBERGABE" % (n + 1, MAX)}))
+                  "Stop ONLY with a line at the start of a line: STOP-GRUND: MENUE / BLOCKER <reason> / UEBERGABE. "
+                  "%s" % (n + 1, MAX, ("UEBERGABE refused: context only %dk (<%dk). A broken tool/probe is not a blocker: fix it (max 2 attempts) or take the bypass, then continue." % (ctx // 1000, MIN_HANDOVER // 1000)) if early else "")}))
     return 0
 
 
