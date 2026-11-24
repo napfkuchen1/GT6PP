@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 8e9d2ff docs: handover; PROGRESS: 2026-11-24 | fbad759 | notut | ok FAIL - - - - - | probe_a15loop_20261124_110206_1 | non-black=0% lang=en-gb
-Next step: Np2 lead CLOSED (Np2Init runs in ours, same slot as oracle). Chain Save/Term/NP/Quit exhausted again. Strategy (3): bypass the finalize guard (find who calls PDINetwork.finalize 9AD1DC via script run 13C44/13D94, skip it with a guarded env patch) and look at the next blocker, or strategy (4) SIBLING_SOURCES.md checks (GT5P/gt5-recomp: what makes tid1 stay in game loop). Oracle: main waits, worker 9qstY runs game loop, ours main runs it inline (A7E5F4/A7BC50 submit-vs-inline decision) - static check first.
-Do not repeat: Np2Init/IsLoaded(0x45) lead (verified present); GT6_SAVE_CBRES/empty savedata (no effect); pagefile.sys/VMPageFile (page-fault consequence)
+State: last commit f05c51d Arbeit21: finalize-neuter negative, teardown chain to 13FD0; PROGRESS: 2026-11-24 | fbad759 | notut | ok FAIL - - - - - | probe_a15loop_20261124_110206_1 | non-black=0% lang=en-gb
+Next step: Find which main stage in 14010 (calls 148b4,1416c,147bc,13de4,143e8,ce2170,146e8,141e8,91e464,1414c, each followed by AD2998 check -> bne 14114 exit) returns first and why; use PS3_CALLTRACE_FROM or snap at 10s; then fix. Rebuild first (generated restored, binary still has A21_NOFIN hook, harmless).
+Do not repeat: Np2Init/0x45; finalize neuter (A21_NOFIN) no effect; GT6_SAVE_CBRES/empty savedata
 Still running: nothing
 Read: STATE.md (last 3 lines)
