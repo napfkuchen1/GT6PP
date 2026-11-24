@@ -37,3 +37,4 @@ Script-VM-Adressen 9EEA88/9F0748 sind 1.00 (0 Calls in 1.22).
 - VERSIONS-DIVERGENZ AUFGELOEST (Arbeit7): work/bin/EMAIN.SELF = 9209104 B = RPCS3-EMAIN (1.22, ELF 23787792 B); alte 8843160-B-Zeile war 1.00. Rest-Diff: Save-Prefix: RPCS3 oeffnet USRDIR/GT6_1.N (16 MB, create), wir GT6.N (kleine Alt-Dateien in work/gt6_hdd0, 22.11.). Format '%s.%d' bei F87934; Prefix-Quelle offen. Prefix 'GT6' kommt aus Daten-Lookup (0x85360: Key-Suche 0x10e6310/18/20 in Config-Baum, kein fester Format-String); cellSaveData-HLE bei uns nie gerufen (0 Log), RPCS3 ruft AutoLoad2 (SECUREFILE GT6_1.0, Page_fault in Fn).
 - Tools: probe.ps1 (-KeepDb, -Hdd0Src), gt6_gprof (GT6_GPROF=1), PAD_LOG, scripts/live-padlog.ps1, tools/adch_disasm.py. probe killt gt6 per taskkill /T.
 
+- (Arbeit11) A2F290 liefert bei uns 0/1 (nie 2); vcall/assert-Probes ohne Befund. Naechster: Guard A2F290 ret->2 (Umgehung) oder Snapshot-Walk obj 40393C10. Details eu-boot-log.md Arbeit11.
