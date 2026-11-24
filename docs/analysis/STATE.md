@@ -12,7 +12,6 @@ Schicht fuer Schicht, 1.00-Referenz `git show 6697a6d:<pfad>` -> Hooks nach 1.22
 Baseline-Probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; `-Boot orig|noadj|notut` nie parallel mischen (boot.adc geteilt).
 
 ## Stand
-- Quit NUR MASKIERT (Arbeit6): p3-Guard parkt tid1 im Shutdown (AC7418 Event-Wait AC746C, WD@60s). Skip der Wait -> Teardown bei ~98 Flips. Game-Threads laufen weiter.
 - main()=0x14010: alle Stufen laufen, IsExitGame(AD2998)=0 immer. BFF0A0 (Stufe 1414C) ist nur Init-Launcher (malloc ok, C1F4C8=Alloc 0x6000, BFF578=Setup-Stub), returnt SOFORT r3=0 (~Z.460 im Log, vor MenuClassDefine-Loads). tid1 steht bei WD@12s schon im Shutdown-Wait (13FD0 Finalizer) -> main() kehrt <12 s zurueck, Game laeuft in tid3/Workern weiter.
 - C1 FAIL: Capture Frame 3500 schwarz (1 Draw, 0 nonblack). b5b260 Cache-Fill (p4) portiert, kein Effekt, kein 59/FI-Open.
 - Binary traegt noch Diagnose (022/023 generated sind clean, Diagnose in work/_bk_*): vor Baseline `scripts\build-all.ps1`.
@@ -40,3 +39,5 @@ Script-VM-Adressen 9EEA88/9F0748 sind 1.00 (0 Calls in 1.22).
 - (Arbeit14) ORACLE-FUND: GAME6-Load 1+2 -> funcStat -4 (je ~0,2 s), Load 3 ERFOLG: SECUREFILE GT6_1.0..N (16 MB) gelesen = Oracle hat ECHTEN Save. Wir: kein Save -> Erstboot-Pfad -> Quit. Next: Save-Fixture (PARAM.SFO+GT6_1.N in gamedata GAME6) oder Erstboot-Pfad (AutoSave2 BKUP6 statt Quit) pruefen.
 - (Arbeit14) Oracle-Save (RPCS3 savedata/BCJS37016-GAME6 -> work/_gd_oracle, PS3_GAMEDATA_ROOT) wird geladen: Load1 -4 wie Oracle, Load2 result 0 + alle GT6.0-5 gelesen. ABER sceNp Term laeuft PARALLEL waehrend der File-Ops (Z.609, vor GT6.4) -> Save-Kette = Rotheringe; Term kommt aus tid1 main()-Rueckkehr/Finalizer (Arbeit6/10).
 - (Arbeit14) Offen: Oracle liest GT6_1.N, wir GT6.N (Prefix). Naechster: warum kehrt main() 0x14010 nach ~12 s zurueck, Oracle-main_thread bleibt bis Quit (1:46)? Stufen-Rueckgaben/Wait in main vergleichen.
+- (Arbeit15) Oracle ruft nach AutoLoad2 in Thread 9qstY NetStartDialog/Music/Trophy/Entitlement/AutoSave2; wir nur sceNp2Term. Main-Loop 146E8 erzwungen offen halten (A15_LOOP): liegt VOR AutoLoad, kein Effekt (C1 FAIL). Details eu-boot-log.md Arbeit15.
+- (Arbeit15) Naechster: wer startet bei Oracle 9qstY-Aktionen (NetStartDialog-Aufrufer B494C4/798C70 per CALLTRACE in Oracle-aequivalentem Task 40393C90 Step 21 pruefen); 798C1C-State-Setter finden.
