@@ -2,7 +2,7 @@
 """Claude Code Stop hook: keep the session working after a finished hypothesis.
 
 Blocks the stop (decision=block) unless the last assistant text has a line starting
-'STOP-GRUND: MENUE|BLOCKER|UEBERGABE' or 8 continuations in a row were already forced.
+'STOP-GRUND: MENUE|BLOCKER|UEBERGABE' or MAX (25) continuations without a new commit were forced.
 Disable: create work/.stop-guard-off. Counter: work/.stop-guard-count.
 """
 import json, os, re, subprocess, sys
