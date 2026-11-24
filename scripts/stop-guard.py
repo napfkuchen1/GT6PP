@@ -48,7 +48,7 @@ def transcript_info(d):
     try:
         with open(p, encoding="utf-8", errors="replace") as f:
             head = f.read(30000)
-            sup = "GT6PP supervisor" in head
+            sup = not ("working session GT6PP" in head or "Arbeitssession" in head)  # only worker sessions are guarded
         for line in open(p, encoding="utf-8", errors="replace"):
             if '"usage"' not in line:
                 continue
@@ -75,7 +75,7 @@ def main():
     if '/.claude/worktrees/' in cwd:  # do not throttle Monitor/worktree sessions
         return 0
     sup, ctx = transcript_info(d)
-    if sup:  # supervisor is resumed by the app when workers end; forcing it only produces fake BLOCKER lines
+    if sup:  # non-worker (supervisor, audit, chat) is resumed by the app when workers end; forcing it only produces fake BLOCKER lines
         return 0
     txt = last_text(d)
     n = 0
