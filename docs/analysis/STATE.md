@@ -12,7 +12,6 @@ Layer by layer, 1.00 reference `git show 6697a6d:<path>` -> port hooks to 1.22 (
 Baseline probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; never mix `-Boot orig|noadj|notut` in parallel (boot.adc is shared).
 
 ## State
-- main()=0x14010: all stages run, IsExitGame(AD2998)=0 always. BFF0A0 (stage 1414C) is only the init launcher (malloc ok, C1F4C8=alloc 0x6000, BFF578=setup stub), returns r3=0 IMMEDIATELY (~line 460 in the log, before MenuClassDefine loads). tid1 is already in the shutdown wait at WD@12s (13FD0 finalizer) -> main() returns <12 s, game keeps running in tid3/workers.
 - C1 FAIL: capture frame 3500 black (1 draw, 0 nonblack). b5b260 cache fill (p4) ported, no effect, no 59/FI open.
 - Binary still carries diagnostics (022/023 generated are clean, diagnostics in work/_bk_*): run `scripts\build-all.ps1` before a baseline.
 
@@ -40,3 +39,5 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit14) Open: Oracle reads GT6_1.N, we read GT6.N (prefix). Next: why does main() 0x14010 return after ~12 s, while Oracle main_thread stays until quit (1:46)? Compare stage returns/wait in main.
 - (Arbeit15) After AutoLoad2 the Oracle calls NetStartDialog/Music/Trophy/Entitlement/AutoSave2 in thread 9qstY; we only sceNp2Term. Main loop 146E8 kept open (A15_LOOP): it lies BEFORE AutoLoad, no effect (C1 FAIL). Details in eu-boot-log.md Arbeit15.
 - (Arbeit15) Next: who starts 9qstY actions on the Oracle (NetStartDialog callers B494C4/798C70 via CALLTRACE in the Oracle-equivalent task 40393C90 step 21); find the 798C1C state setter.
+- (Arbeit16) snap_a8s50 tid30 = in consumer wait 8A7AD0 (stack ret 8A7B08): obj 7FFCACA8 +0x1d8=31 < +0x240+1=38, waits. Producer writer 8A88E8 (std 0x1d8). Details eu-boot-log Arbeit16.
+- (Arbeit16) Next: caller/entry of 8A88E8 (which job/thread increments 0x1d8, why stalls at 31); compare Oracle increments via CALLTRACE on 8A88E8.

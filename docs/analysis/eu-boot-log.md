@@ -340,3 +340,17 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 
 ## STATE trim 2026-11-24
 - Quit ONLY MASKED (Arbeit6): p3 guard parks tid1 in shutdown (AC7418 event wait AC746C, WD@60 s). Skip of the wait -> teardown at ~98 flips. Game threads continue running.
+
+## Arbeit16 (2026-11-24) tid30 snapshot walk (work/snap_a8s50, offline, no new run)
+- tid30 "9qstY" parked in lwcond wait (lr 00B03BE8 = shared idle wait of pool workers). Stack return 008A7B08 = inside consumer wait 8A7AD0 (ld 0x240 producer count, ld 0x1d8 done count, loop 8A7AF4..8A7B0C: wait while obj[0x240]+1 > obj[0x1d8]).
+- Consumer object = stack ptr 7FFCACA8: +0x1d8 = 0x1F (31), +0x240 = 0x25 (37) -> waits for 6 more increments of 0x1d8.
+- Only writer of 0x1d8 in the 8A region: 008A88E8 `std r9, 0x1d8(r30)` (producer candidate, = tid29 side per NEXT_SESSION_PROMPT). xref.py --field needs hex without range; --in format is decimal/0x-int only.
+- 01644F38 (earlier candidate) is NOT the consumer object (+0x240 = ptr).
+- Not yet: who calls 8A88E8 (function entry), and whether the Oracle run increments 0x1d8 at all in the same job.
+- Producer function = 008A8890 (stdu r1,-0xa0; only caller 008A89C4 `b 0x8a8890`, loop inside same fn). Gate: lbz obj+0x1d0 (==0 -> skip to 8A89A0). Body: ld obj+0x1d8 +1 -> std (8A88E8), then calls 0xC45408 / 0xB03998 / 0x8A85A0 / 0xB038EC.
+- Handshake object (r3 of 8A7AD0/8A8890): consumer sets +0x1d1 (stb, 8A7B00) before lwcond wait, producer gates on +0x1d0. Flags are set in the same object.
+- Open: who writes +0x1d0 and +0x240 on the job object (writers via xref --field in decimal ranges only: xref --field 0x240 --rw w without --in). Next: find the job object creator (main/tid1 side) that sets 0x240 and submits.
+
+
+## STATE trim 2026-11-24
+- main()=0x14010: all stages run, IsExitGame(AD2998)=0 always. BFF0A0 (stage 1414C) is only the init launcher (malloc ok, C1F4C8=alloc 0x6000, BFF578=setup stub), returns r3=0 IMMEDIATELY (~line 460 in the log, before MenuClassDefine loads). tid1 is already in the shutdown wait at WD@12s (13FD0 finalizer) -> main() returns <12 s, game keeps running in tid3/workers.
