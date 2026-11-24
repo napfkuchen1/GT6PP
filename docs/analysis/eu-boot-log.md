@@ -369,3 +369,4 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 
 ## STATE trim 2026-11-24
 - C1 FAIL: capture frame 3500 black (1 draw, 0 nonblack). b5b260 cache fill (p4) ported, no effect, no 59/FI open.
+- (Arbeit18) Main stages 14010: loop 146E8 exit = task struct 0x179ED20 byte0&byte1 both 1 in snapshots (done, legit); stages after loop (965460, 91E464, BFF0A0 gfx/config init w/ early-outs +0xc8, BFDFF4) are init only. No static lead left for 'why main returns'; GT5P heap-overrun hint (glyph count 31x20, HEAPPAD) has no GT6 knob.
