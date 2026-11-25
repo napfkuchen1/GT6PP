@@ -467,3 +467,12 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 - PPU_RESV_STORE was a no-op for guest stores (hook only in HLE ppu_memory.h; inline stores bypass). Fixed in patch gt6-a33.
 - 100 s runs probe_a33ab*: base 3 map stalls/aborts + 3 aborts/AV; resv 5 stalls, 1 Presents; affinity 1 (whole process) 6/6 Presents at ~5 fps.
 - 150 s probe_a33pin* (PPU_ONECORE=1): 3 alive at 150 s, 1 STALLED@85, 2 exit 0xC00000FD (85 s, 151 s); host stack repeats func_00C59350+0x518/0x743.
+
+
+## STATE trim 2026-11-25
+- (Arbeit32) -Affinity 5 (2 CPUs) still stalls. PPU_WWATCH=0x6FFFF610 silent; SPU_DMA_WATCH output unrelated (range check suspect). Next: find the lock around that map (race vs corruption).
+- (Arbeit32) PPU_RESV_OFF=1: 4/4 stall or flip freeze (worse than default, 2x2 runs a32resv*) -> atomics/reservation semantics implicated; check them first.
+- (Arbeit32) PPU_RESV_STORE=1 (plain stores break reservations), 4 runs a32rs*: 2 reach 96/102 loads + survive 100 s (3 savedata loads = boot restarts, last PresentsRootSCEE), 2 stall.
+- (Arbeit33) SOLVED boot race: 2x3 runs each, default 0/6 stable, PPU_RESV_STORE=1 (now covering guest stores) 1/6, 1 host core 6/6 to PresentsRootSCEE.
+- (Arbeit33) PPU_ONECORE=1 (default in gt6 main.cpp, patch gt6-a33) pins only guest PPU threads: 6/6 Presents, no map stall, ~35 fps; tools boot-batch.ps1/boot-outcome.py.
+- (Arbeit33) New blocker (2 of 6 + 1 stall): 0xC00000FD, endless recursion in allocator tree func_00C59350 (tid14 prio 224) = remaining corruption; test PPU_PRIO_MAP=1.
