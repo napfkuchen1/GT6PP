@@ -799,3 +799,11 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit42) ROOT of (nil).toInt: SPECDB (specdb/GT6/DB0106.dat) prepare returns SQLite rc=26 NOTADB; page 1 handed to SQLite is the
 - (Arbeit43) DB key found: script open passes key string; aac2a8 stores {1,str,len} at FileObject+0x90, ptr +0x9C. Host open override
 - (Arbeit44) FIXED keyed open: host bytes now pass guest key layer 0xAC874C (Salsa20, state [FileObject+0x60]+0x1C;
+
+
+## STATE trim 2026-11-25
+- (Arbeit45) FIXED f8ef048: xFileSize C1F848 -> stream stat ABD328 gave 1.00 TOC size (16041984 vs 16602112); hook
+- (Arbeit45) FIXED b219eca: port cache-fill hook clobbered cr7 -> grim007.db buffer freed, ptr=1 -> rc=26. Gone.
+- (Arbeit45) Overlay work/gt6_vol_a45 (a40t + skipopening): readable credit dialogs -> GT Mode loading. Opening .pam (535 MB)
+- (Arbeit45) Debug prints [A2x] in gen 013/014/015/022 gated by GT6_A27 (backup work/_bk_a45/a27); GT6_PFS_TRACE slows load.
+- (Arbeit46) FIXED faa32e5: GT Mode reload loop = car DB SQLITE_CORRUPT in lockBtree (dbSize 15666 < header 16213):

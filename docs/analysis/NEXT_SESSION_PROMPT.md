@@ -1,6 +1,6 @@
-Goal: Stabilize the main menu (GT Mode home) reached in Arbeit46.
-State: last commit 4da0de7 fix: 32 MB host stack for guest context fibers (GT Mode menu renders), A; PROGRESS: 2026-11-25 | 4da0de7 | vol | ok ok FAIL FAIL ok FAIL - | probe_a46menu_20261125_191732_1 | non-black=81%
-Next step: Main menu reached (a46menu, work/_a46/main_menu_home.png). Next if requested: fix black tiles + message ID in popup (GT003_GET_FIRST_CAR0), then X on popup -> car dealer; if black tiles persist after 300 s idle, check texture/file loads in the log
+Goal: M1: complete, correct main menu (intro plays, controllable, no gfx/text errors, live run + pad); then M2 first race.
+State: last commit 98b4518 docs: handover PROGRESS line for main menu run; PROGRESS: 2026-11-25 | 4da0de7 | vol | ok ok FAIL FAIL ok FAIL - | probe_a46menu_20261125_191732_1 | non-black=81%
+Next step: M1 checklist in STATE.md, order T1 text -> G1 black tiles. STOP-GRUND: MENUE only when all M1 items verified incl. live run
 Do not repeat: DB size/corrupt fixes (f8ef048, faa32e5), fiber stack (4da0de7)
 Still running: nothing
 Read: STATE.md; eu-boot-log.md Arbeit46

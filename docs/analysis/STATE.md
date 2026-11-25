@@ -4,7 +4,18 @@ State: 2026-11-25. Branch `eu-first-build`, main checkout. Disc EU `BCES01893`. 
 Rules: `CLAUDE.md`. Facts: `LEDGER.md` (grep). Checkpoints/runs: `PROGRESS.md`. History: `eu-boot-log.md` (grep). One line per finding.
 
 ## Goal
-Main menu (C6). 1.22 overlay route reaches legal screen + 'Sony Computer Entertainment presents'.
+User definition 2026-11-25: reaching the menu was only step 1. M1 DONE only when main menu is complete and correct: intro
+sequence plays, menu controllable, no graphics errors, no text errors. M2 afterwards: first race.
+STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headless) run with persistent save + pad input.
+
+## M1 checklist (open until verified; Arbeit47 inventory)
+- [ ] T1 raw message ID in popup (GT003_GET_FIRST_CAR0) instead of text
+- [ ] T2 garbled glyphs in some frames (credit dialog, menu header)
+- [ ] G1 menu tiles black (only dealer tile drawn)
+- [ ] I1 opening movie plays (535 MB .pam skipped by host cap; cellPamf 0 streams)
+- [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
+- [ ] C1 pad controls menu (popup X, cursor, dealer enter/back)
+- [ ] L1 live non-headless run, persistent save, real pad input
 
 ## Method
 Overlay `work/gt6_vol_a32` (scripts/make-vol-overlay.py), env `GT6_VOL_ROOT`; `PPU_ONECORE=1` default; probe.ps1 gives empty hdd1.
@@ -42,14 +53,9 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   stubs.cpp gt6_pfs_key_layer). Dumps of DB0106 + menudb pass sqlite integrity_check. Runtime: queries on DB0106 still
   rc=11 (CORRUPT); xRead C1FC3C only ever reads off=0 (page 1), cache stable -> likely xFileSize reports old/small size.
 
-- (Arbeit45) FIXED f8ef048: xFileSize C1F848 -> stream stat ABD328 gave 1.00 TOC size (16041984 vs 16602112); hook
   gt6_pfs_fstat_fix. Probe a45fix2: no rc=11, no toInt.
 
-- (Arbeit45) FIXED b219eca: port cache-fill hook clobbered cr7 -> grim007.db buffer freed, ptr=1 -> rc=26. Gone.
-- (Arbeit45) Overlay work/gt6_vol_a45 (a40t + skipopening): readable credit dialogs -> GT Mode loading. Opening .pam (535 MB)
   is skipped by host override cap and cellPamf shows 0 streams (video not working).
-- (Arbeit45) Debug prints [A2x] in gen 013/014/015/022 gated by GT6_A27 (backup work/_bk_a45/a27); GT6_PFS_TRACE slows load.
-- (Arbeit46) FIXED faa32e5: GT Mode reload loop = car DB SQLITE_CORRUPT in lockBtree (dbSize 15666 < header 16213):
   PFS slot (16, LRU) evicted -> xFileSize fell back to 1.00 TOC size. Size table per FileObject now. Run a46fix: 0 errors.
 - (Arbeit46) Next crash a46fix: host stack overflow 0xC00000FD in SQLite on a guest ctx fiber (4 MB) -> HOST_STACK 32 MB.
 - (Arbeit46) Legacy sqlite step returns rc=1; real code = Vdbe+0x5C, message +0x38. sqlite3CorruptError = BD532C (r3=line).
@@ -58,8 +64,7 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-1) Defects on the menu: tiles black, popup shows message ID instead of text, some frames garbled glyphs.
-   Then input: X on popup -> car dealer. Overlay patches (skip tutorial/opening, video) remain workarounds.
+Work the M1 checklist, order T1 -> G1 -> T2 -> C1 -> I1 -> I2 -> L1.
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
