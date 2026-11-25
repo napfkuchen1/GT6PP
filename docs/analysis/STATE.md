@@ -19,9 +19,14 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit35) Shared PDIPFS junction: parallel runs both wrote K/CQ.fdup* -> 2x AV at 85 s. probe.ps1 now copies PDIPFS per run (CQ moved to ARCHIV).
 - (Arbeit35) After SAVE complete: black frame, no further opens/loads for 60 s (frame 15000, 1 draw op). Oracle opens PDIPFS/59/FI (film) here.
 
+- (Arbeit35) New (a35wd run1, PS3_WD_AT): heap AB-BA deadlock at ~200 s, AdjustScreen never loads. tid1 operator new B0CCAC: alloc B0C524
+  fails -> B08498 holds lock 17B4C08 -> B0921C -> B1A0F4/B04CD8 wants 17B4BD8; tid30 per-frame AE73BC -> B04CD8 holds BD8, wants C08.
+- (Arbeit35) a35wd run2: flip stall at 156 s, purecall storm lr=2CD5F4 + linear read faults 0x100x0000 upward (runaway walk).
+
 ## Next step
-Find what the script/tid30 waits for after SAVE complete: PS3_WD_AT dump at stall, [null-call] AD23EC (tid30/27, opd 0x2200208x) check;
-LEDGER l17-27 (spinner, 59/FI trigger). Pad run: -Env GT6_VOL_ROOT=work/gt6_vol_a35;A29_JMP=1 -PadScript "180:0x4000 200:0x4000 220:0x4000" -Seconds 300.
+1) Why does B0C524 fail on tid1 (script VM alloc)? Log heap r30 + size at B0CCFC (r3==0); compare heap sizes / sys_memory
+user size with PS3 (213 MB). OOM is the deadlock trigger. 2) After SAVE complete: what waits (WD dump after save, 59/FI film;
+LEDGER l17-27). Pad run: -Env GT6_VOL_ROOT=work/gt6_vol_a35;A29_JMP=1 -PadScript "180:0x4000 200:0x4000 220:0x4000" -Seconds 300.
 
 ## Refuted / symptom (do not repeat)
 Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

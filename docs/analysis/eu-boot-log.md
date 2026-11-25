@@ -637,3 +637,12 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit30) KEY: deadlock in compressed-stream pipe P=0177CE00: tid1 AAC4C4 waits; tid9 AC78F4 (push input) waits event P+1BF8; tid5 inflate AC7A4C->AC79C4 waits P+1B98; AC74FC (signals 1B98, waits 1B68) never called.
 - (Arbeit30) Next: find AC74FC caller chain (wrapper tail-calls at AC75C0; vtable) = who should provide output buffer (tid1 or tid9, "loadHeaderOnly"); check lwcond HLE order (sysPrxForUser.c l733) / Windows spurious wake: AE27AC does not recheck flag 0x29.
 - (Arbeit30) AC75B0 (sets P+0x1c28=1, tail-call AC74FC) is vtable-only; snapshot has 1c28=1 (also set by thread AC7CE8 at AC7D7C). Hooks: tools/trace_enter.py (A22EN, binary carries them; gen 023 restored, bk work/_bk_a30).
+
+
+## Arbeit35 (2026-11-25) guard persisted, ColorBegin bypass, AdjustScreen/AutoSave reached
+- Overlay: make-vol-overlay.py gt6_vol_a32 gt6_vol_a32 gt6_vol_a35, then tools/patch_adc_colorbegin.py (line 277 reads -> INT_CONST 0 + NOP).
+- Runs: a35cb (2) AdjustScreenRoot loaded both; frame 6000 dialog with OK button (glyphs clipped). a35pad (230 s): AdjustScreen frame, German text.
+- a35pad2 (2): both AV at 85 s writing shared PDIPFS/K/CQ.fdup* (crash handler log_host_fault faulted too, no host trace).
+- a35pad3 (2): one run X@220 s -> AutoSave2/AutoSave GAME6 -> SAVE complete, then black frame 15000, no further opens.
+- a35wd (2, PS3_WD_AT=262,285): run1 heap deadlock tid1/tid30 (locks 17B4BD8/17B4C08); run2 STALLED@156 s.
+- B0921C(time): stores time at 17B4C70; B1A0F4 (lock all heaps) only if delta < 100000 us. B04CD8 locks BD8, walks heaps +0x44, B04CB0(heap)->B08728.
