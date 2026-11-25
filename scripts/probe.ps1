@@ -15,6 +15,7 @@
 # -StopOn   : regex, early kill when it appears in the log. With -Frame: early kill once capture frames exist + pad done + -Expect met.
 # -Seconds  : 0 (default) = derive from -PadScript (last key + 60) else 220
 # -KeepDb   : keep the persistent userdb in the per-run hdd0 copy (default: fresh db). Shared work\gt6_hdd0 is never modified.
+# -SaveSrc  : folder whose subfolders are copied to <rundir>\gamedata\...\savedata (saves are per run, never shared)
 # -Boot     : orig|noadj|notut - which boot.adc variant is installed (from work\ARCHIV\boot.adc.*); omitted = keep current.
 #             The active variant is always detected by hash, printed and written to <rundir>\boot.txt.
 param(
@@ -28,6 +29,7 @@ param(
     [string]$PadScript = "",
     [int]$Frame = 0,
     [switch]$KeepDb,
+    [string]$SaveSrc = "",     # savedata dir(s) to seed the per-run gamedata with; empty = first boot
     [string]$Hdd0Src = "",
     [long]$Affinity = 0,       # >0: host CPU mask for gt6.exe (race experiments)
     [ValidateSet("", "orig", "noadj", "notut")][string]$Boot = ""
@@ -178,6 +180,13 @@ try {
         $env:GT6_HDD0 = $hd
         # per-run empty cache partition: a stale game024.db from an earlier run changes the boot
         if (-not $pairs.Contains("GT6_HDD1")) { $h1 = Join-Path $dir "hdd1"; New-Item -ItemType Directory -Force -Path $h1 | Out-Null; $env:GT6_HDD1 = $h1 }
+        # per-run savedata: a shared ./gamedata save from an earlier run skips first-boot screens (AdjustScreen)
+        if (-not $pairs.Contains("PS3_GAMEDATA_ROOT")) {
+            $gd = Join-Path $dir "gamedata"; $sd = Join-Path $gd "dev_hdd0\home\00000001\savedata"
+            New-Item -ItemType Directory -Force -Path $sd | Out-Null
+            if ($SaveSrc) { Get-ChildItem $SaveSrc -Directory | Copy-Item -Destination $sd -Recurse -Force }
+            $env:PS3_GAMEDATA_ROOT = $gd
+        }
         Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.FullName, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
         $proc = Start-Process -FilePath $Exe.FullName -ArgumentList @($Elf) -WorkingDirectory $Root `
             -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
@@ -188,7 +197,7 @@ try {
     }
 } finally {
     foreach ($k in $pairs.Keys) { Remove-Item "Env:$k" -ErrorAction SilentlyContinue }
-    Remove-Item Env:RSX_CAP, Env:RSX_CAP_DIR, Env:PS3_HEADLESS, Env:GT6_HDD0, Env:GT6_HDD1 -ErrorAction SilentlyContinue
+    Remove-Item Env:RSX_CAP, Env:RSX_CAP_DIR, Env:PS3_HEADLESS, Env:GT6_HDD0, Env:GT6_HDD1, Env:PS3_GAMEDATA_ROOT -ErrorAction SilentlyContinue
 }
 Write-Host "Started $Parallel run(s), waiting up to ${Seconds}s ..."
 $t0 = Get-Date; $deadline = $t0.AddSeconds($Seconds)

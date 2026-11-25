@@ -30,6 +30,9 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit36) SettingProject stall: tid1 takes the script task meant for tid30 (A27T after tid31 post) and waits in A0498C
   (sync wait, 88F2B4 loop) inside its own main tick (correlation). PPU_PRIO_MAP=1 (a36pm, 2 runs) no fix, tid30 case stalls too.
 
+- (Arbeit37) "AdjustScreen 0/14" was no code regression: pad run pad3_2 saved to shared ./gamedata (11:32); later boots had a save.
+  Fix: probe.ps1 sets PS3_GAMEDATA_ROOT per run (-SaveSrc seeds it); that save is in work/ARCHIV/savedata_a35pad3_20261125_1132.
+
 ## Next step
 1) Main heap 017B4C78 full or corrupt? a36ch_2: 12-byte allocs fail on tid30 (chain AE74D0 AD3F30 AD42D0 6166C0 7B5248). Find heap
 init (size, free counter), log free bytes over time + count AD4294 calls: monotonic growth = queue/leak (consumer tid1 blocked),
