@@ -16,6 +16,9 @@ Baseline probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; never mix `
 - (Arbeit32) -Affinity 5 (2 CPUs) still stalls. PPU_WWATCH=0x6FFFF610 silent; SPU_DMA_WATCH output unrelated (range check suspect). Next: find the lock around that map (race vs corruption).
 - (Arbeit32) PPU_RESV_OFF=1: 4/4 stall or flip freeze (worse than default, 2x2 runs a32resv*) -> atomics/reservation semantics implicated; check them first.
 - (Arbeit32) PPU_RESV_STORE=1 (plain stores break reservations), 4 runs a32rs*: 2 reach 96/102 loads + survive 100 s (3 savedata loads = boot restarts, last PresentsRootSCEE), 2 stall.
+- (Arbeit33) SOLVED boot race: 2x3 runs each, default 0/6 stable, PPU_RESV_STORE=1 (now covering guest stores) 1/6, 1 host core 6/6 to PresentsRootSCEE.
+- (Arbeit33) PPU_ONECORE=1 (default in gt6 main.cpp, patch gt6-a33) pins only guest PPU threads: 6/6 Presents, no map stall, ~35 fps; tools boot-batch.ps1/boot-outcome.py.
+- (Arbeit33) New blocker (2 of 6 + 1 stall): 0xC00000FD, endless recursion in allocator tree func_00C59350 (tid14 prio 224) = remaining corruption; test PPU_PRIO_MAP=1.
 
 ## Next step
 (Arbeit32) Fix the boot race/corruption: first compare PPU_RESV_STORE=1 vs default (>=4 runs each); then audit PPU atomics/locks (lifted lwarx/stwcx + ppu_stwcx32 vs plain stores, ldarx, sys_lwmutex/lwcond recursion, static-init guards).

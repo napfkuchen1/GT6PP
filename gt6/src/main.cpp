@@ -836,6 +836,9 @@ int main(int argc, char* argv[])
         if (!keep || strcmp(keep, "1") != 0)
             ppu_register_function(0x00C68B8C, gt6_purecall);
     }
+    /* GT6 boot races (script std::map, allocator tree) need guest PPU threads on
+     * one host core (runtime patch gt6-a33). PPU_ONECORE=0 restores free scheduling. */
+    if (!getenv("PPU_ONECORE")) _putenv("PPU_ONECORE=1");
     ppu_install_thread_trampoline();
     gt6_spu_register_all();   /* after the ELF load: fingerprints the loaded image */
     gt6_spu_register_pm_clean();  /* raw WWS PM at 0x013FFE00 (image id 5) */

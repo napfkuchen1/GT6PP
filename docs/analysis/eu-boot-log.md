@@ -462,3 +462,8 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 - (Arbeit32) probe.ps1 now gives each run an empty /dev_hdd1 (GT6_HDD1); ctxwatch.py reads own transcript (CLAUDE_CODE_SESSION_ID).
 - (Arbeit32) Runs are nondeterministic (same binary/env): Presents frozen (frame 8000), stall at setting.mproject, abort 'map/set<T> too long', purecall (guarded, run survives).
 - (Arbeit32) Stall = tid1 loops forever in a script-engine std::map walk (func_006D2EA8/6D2BC0, null node, HOTREAD8 0x21). Same module (6Dxxxx) in 'too long' stack -> container corruption.
+
+## Arbeit33 (2026-11-25) boot race measurements
+- PPU_RESV_STORE was a no-op for guest stores (hook only in HLE ppu_memory.h; inline stores bypass). Fixed in patch gt6-a33.
+- 100 s runs probe_a33ab*: base 3 map stalls/aborts + 3 aborts/AV; resv 5 stalls, 1 Presents; affinity 1 (whole process) 6/6 Presents at ~5 fps.
+- 150 s probe_a33pin* (PPU_ONECORE=1): 3 alive at 150 s, 1 STALLED@85, 2 exit 0xC00000FD (85 s, 151 s); host stack repeats func_00C59350+0x518/0x743.
