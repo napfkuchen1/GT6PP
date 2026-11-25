@@ -18,10 +18,8 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   garbage; B0C524 args are align,size) -> endless retry. Hook now prints call chain. Deadlock guard tools/guard_heaplock.py (post-lift).
   Fix: probe.ps1 sets PS3_GAMEDATA_ROOT per run (-SaveSrc seeds it); that save is in work/ARCHIV/savedata_a35pad3_20261125_1132. Verified a37sv + a37ps: 4/4 AdjustScreen.
 
-- (Arbeit37) a37wd (WD 225/240): tid30 sits in list notify AD4294 (called 6166A4, list obj+0x2B0; also A7F074). Stalled run: inside
   copy AD3DFC -> new AE73BC (alloc retry); saved run: AD4294 walk/free, tid1 waits 6171D0 -> AE27AC. Saved+black: no loads, X no effect.
 
-- (Arbeit38/39) FIXED: heap corruption/OOM. HLE job chain added a data3=0 completion beside the SPU job's reply; sgx sizes came back
   0/shifted -> 16-byte buffer, SPU 16 KB DMA over heap. patches/gt6-a39-jobchain-selfreport.patch (0498bee), a39fix 2/2 sizes stable.
 
 - (Arbeit39) WITH FIX 4/4 (a39g/h, pad X every 25 s 220..395): language select -> AdjustScreen -> dialog -> AutoSave2 -> SAVE complete.

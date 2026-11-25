@@ -764,3 +764,8 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - GT6_A44GUEST experiment: guest path decrypts but reads the 1.00 volume (K/RE). Fix: run AC874C on host bytes.
 - a44key: DB0106 page 1 ok, queries succeed on other handles; a44dump: both dumps integrity_check ok.
 - a44ver2: buffer 81AE0000 unchanged 120 s; a44xr6: no xRead with off != 0 and no xRead error on DB0106, yet rc=11.
+
+
+## STATE trim 2026-11-25
+- (Arbeit37) a37wd (WD 225/240): tid30 sits in list notify AD4294 (called 6166A4, list obj+0x2B0; also A7F074). Stalled run: inside
+- (Arbeit38/39) FIXED: heap corruption/OOM. HLE job chain added a data3=0 completion beside the SPU job's reply; sgx sizes came back
