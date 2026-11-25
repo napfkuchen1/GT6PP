@@ -26,6 +26,7 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - (A41) Guest file sizes come from the 1.00 GT.VOL TOC: overlay files were truncated (SPECDB 16041984/16602112, adc, DE.rt2) -> nil queries, '(nil).toInt'. Fix eb71225 (stat 0xAADA6C wrapper). CarName.dat still short.
 - (A42) SPECDB is SQLite (prepare 0xC063D4, step 0xC065F4, magic check fail label 0xBE9C10); DB0106/menudb reach SQLite still encrypted -> rc=26 -> nil queries. Evidence probe_a42sql, a42pg2.
 - (A43) SQLite DBs are opened with a script-supplied key: FileObject+0x9C (AAC2A8); host open override ignores it, so DB bytes stay encrypted. Evidence probe_a43bt/a43nocf, gdis AAA738/AAC2A8.
+- Stream read job AAB258 clamps to FileObject+0xC8 (1.00 TOC size); fixed d4e1f9a (port_hooks part5), evidence a48rtv trace.
 
 ## 4. Refuted/symptom (do NOT repeat)
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
