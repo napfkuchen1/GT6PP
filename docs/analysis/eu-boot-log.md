@@ -740,3 +740,8 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - probe_a42dev: host-file device vt 0x15DB8E8, read 0xAAF694 (filter stream+0x48 vtbl+0x10, else raw vtbl+0x9C = 0xABE5A4).
 - REFUTED: deferring to the +0x48 filter: all filtered streams -> boot stalls at fonts (a42dec); DB only (a42dec3): DB0106 has no filter.
   Patch kept in work/ARCHIV/a42_filter_patch (not applied). Size write at FileObject+0xC8 irrelevant (0 at open).
+
+
+## STATE trim 2026-11-25
+- (Arbeit35) New (a35wd run1, PS3_WD_AT): heap AB-BA deadlock at ~200 s, AdjustScreen never loads. tid1 operator new B0CCAC: alloc B0C524
+- (Arbeit35) a35wd run2: flip stall at 156 s, purecall storm lr=2CD5F4 + linear read faults 0x100x0000 upward (runaway walk).

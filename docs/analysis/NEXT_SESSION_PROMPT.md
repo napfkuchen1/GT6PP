@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit eb71225 fix: report served overlay file size in guest stat (SPECDB, scripts, rte; PROGRESS: 2026-11-25 | 94b5218 | vol | ok ok FAIL FAIL ok FAIL - | probe_a40tut_20261125_142341_2 | non-black=81%
-Next step: Rerun probe_a41full with -Frame 13000 and GT6_A40VM=390 (overlay a40t): find site of remaining 10x '(nil).toInt' after fix eb71225; if still getGTModeFirstCarPP l376 check SPECDB query + CarName.dat short read (97984/103008), else disassemble new site
-Do not repeat: SPECDB/adc truncation fixed (eb71225); do not re-trace sizes except CarName
+State: last commit 99352d0 fix: probe.ps1 derives -Frame from RSX_CAP so captures are not dropped b; PROGRESS: 2026-11-25 | 58d9306 | vol | ok ok FAIL FAIL ok FAIL - | probe_a42full_20261125_153650_1 | non-black=71%
+Next step: Find the missing SPECDB decrypt: DB0106 reaches SQLite raw (rc=26 NOTADB). Disassemble loader 0x59F4A0/0x5A2928 and SQLite VFS xRead; compare full-read buffer with [A42N] page1. If a flag/size from our host open skips decrypt, fix that; if SPU/crypto job, trace it
+Do not repeat: stream+0x48 filter defer refuted (DB0106 has none, boot stalls); size at FileObject+0xC8; toInt site (confirmed getGTModeFirstCarPP l376)
 Still running: nothing
-Read: STATE.md; eu-boot-log.md Arbeit41
+Read: STATE.md; eu-boot-log.md Arbeit42
