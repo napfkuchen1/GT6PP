@@ -429,6 +429,31 @@ static int gt6_pfs_resolve(const char* rel, char* host, size_t cap,
     return 1;
 }
 
+/* Served size per host FileObject.  Slots are evicted (LRU) while the guest
+ * still holds the file open, and xFileSize must keep returning the served size
+ * (the guest TOC still has the 1.00 size). */
+static struct { uint32_t file, size; } g_pfs_sizes[1024];
+static unsigned g_pfs_sizes_next;
+
+static void gt6_pfs_size_set(uint32_t file, uint32_t size)
+{
+    if (!file) return;
+    for (unsigned i = 0; i < 1024u; i++)
+        if (g_pfs_sizes[i].file == file) { g_pfs_sizes[i].size = size; return; }
+    if (!size) return;
+    const unsigned i = g_pfs_sizes_next++ % 1024u;
+    g_pfs_sizes[i].file = file;
+    g_pfs_sizes[i].size = size;
+}
+
+static uint32_t gt6_pfs_size_get(uint32_t file)
+{
+    if (!file) return 0;
+    for (unsigned i = 0; i < 1024u; i++)
+        if (g_pfs_sizes[i].file == file) return g_pfs_sizes[i].size;
+    return 0;
+}
+
 static void gt6_pfs_slot_clear(Gt6PfsSlot* s)
 {
     if (!s) return;
@@ -515,6 +540,7 @@ static int gt6_pfs_install(const char* rel, uint32_t reader, uint32_t file)
     s->stamp  = ++g_pfs_stamp;
     s->data   = buf;
     snprintf(s->path, sizeof s->path, "%s", resolved);
+    gt6_pfs_size_set(file, (uint32_t)n);
 
     if (gt6_pfs_trace()) gt6_pfs_trace_toc(resolved);
 
@@ -699,6 +725,7 @@ extern "C" void gt6_pfs_host_open_prepare(uint32_t path_ea, uint32_t file_ea)
     /* A re-used FileObject must never inherit the previous file's bytes. */
     Gt6PfsSlot* old = gt6_pfs_find_file(file_ea);
     if (old) gt6_pfs_slot_clear(old);
+    gt6_pfs_size_set(file_ea, 0);
 
     char path[GT6_PFS_PATH_MAX];
     if (!gt6_read_guest_cstr(path_ea, path, sizeof path)) return;
@@ -729,8 +756,11 @@ extern "C" void gt6_pfs_host_open_commit(uint32_t file_ea, uint32_t ret_ea)
     if (ret_ea != file_ea) {
         if (ret_ea < 0x00010000u || ret_ea >= 0xFFFFFFF0u) {
             gt6_pfs_slot_clear(s);
+            gt6_pfs_size_set(file_ea, 0);
             return;
         }
+        gt6_pfs_size_set(file_ea, 0);
+        gt6_pfs_size_set(ret_ea, s->size);
         s->file = ret_ea;
         file = ret_ea;
     }
@@ -746,13 +776,13 @@ extern "C" void gt6_pfs_host_open_commit(uint32_t file_ea, uint32_t ret_ea)
 extern "C" void gt6_pfs_fstat_fix(uint32_t stream_ea, uint32_t out_ea)
 {
     if (gt6_pfs_disabled() || !stream_ea || !out_ea) return;
-    Gt6PfsSlot* s = gt6_pfs_find_file(vm_read32((uint64_t)stream_ea + 0x44u));
-    if (!s || !s->data) return;
+    const uint32_t size = gt6_pfs_size_get(vm_read32((uint64_t)stream_ea + 0x44u));
+    if (!size) return;
     const uint64_t old = ((uint64_t)vm_read32((uint64_t)out_ea + 0x10u) << 32) | vm_read32((uint64_t)out_ea + 0x14u);
-    if (old == (uint64_t)s->size) return;
-    vm_write64((uint64_t)out_ea + 0x10u, (uint64_t)s->size);
-    if (gt6_pfs_trace() || getenv("GT6_A42SQL"))
-        fprintf(stderr, "[fstatfix] %s size %llu -> %u\n", s->path, (unsigned long long)old, s->size);
+    if (old == (uint64_t)size) return;
+    vm_write64((uint64_t)out_ea + 0x10u, (uint64_t)size);
+    if (gt6_pfs_trace())
+        fprintf(stderr, "[fstatfix] size %llu -> %u\n", (unsigned long long)old, size);
 }
 
 /* Called after the guest file stat (1.22 0xAADA6C): r3 = out struct
