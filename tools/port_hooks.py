@@ -22,6 +22,7 @@ GUARD = ("        if (!gt6_guest_file_vtable_valid((uint32_t)ctx->gpr[3])) {\n"
          "            ctx->gpr[3] = 0;\n            return;\n        }\n")
 GUARDED = ("00AAA4B0", "00AAA530", "00AAF354")  # 9F3EB0, 9F3F2C, 9F7FF0
 OPEN = "00AB080C"  # 9F8E40
+STAT = "00AADA6C"  # guest file stat: report overlay file sizes
 n = 0
 done = set()
 for p in sorted(root.glob("ppu_recomp_*.cpp")):
@@ -45,9 +46,20 @@ for p in sorted(root.glob("ppu_recomp_*.cpp")):
               f"    gt6_orig_func_{OPEN}(ctx);\n"
               "    gt6_pfs_host_open_commit(_file, (uint32_t)ctx->gpr[3]);\n}\n")
         done.add(OPEN)
+    define = f"void func_{STAT}(ppu_context* ctx) {{"
+    if define in s and f"gt6_orig_func_{STAT}" not in s:
+        s = s.replace(define, f"void gt6_orig_func_{STAT}(ppu_context* ctx) {{", 1)
+        s += ("\n/* Stat wrapper: r3 out struct, r4 path. */\n"
+              'extern "C" void gt6_pfs_stat_fix(uint32_t out_ea, uint32_t path_ea);\n'
+              f"void func_{STAT}(ppu_context* ctx)\n{{\n"
+              "    const uint32_t _out = (uint32_t)ctx->gpr[3];\n    const uint32_t _path = (uint32_t)ctx->gpr[4];\n"
+              f"    gt6_orig_func_{STAT}(ctx);\n    DRAIN_TRAMPOLINE(ctx);\n"
+              "    gt6_pfs_stat_fix(_out, _path);\n}\n")
+    if f"gt6_orig_func_{STAT}" in s:
+        done.add(STAT)
     if s != o:
         p.write_text(s, encoding="latin-1"); n += 1
-want = set(STREAM) | set(GUARDED) | {OPEN}
+want = set(STREAM) | set(GUARDED) | {OPEN, STAT}
 print("files patched", n, "hooks present", len(done & want), "/", len(want), "missing", sorted(want - done))
 
 # ---- part 2: script hooks + menu pump (1.00 origin in comments; fuzzy map 2026-11-23) ----

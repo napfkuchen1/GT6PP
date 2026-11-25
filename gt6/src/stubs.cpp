@@ -736,6 +736,38 @@ extern "C" void gt6_pfs_host_open_commit(uint32_t file_ea, uint32_t ret_ea)
     vm_write64((uint64_t)file + 0xC0u, (uint64_t)s->size);
 }
 
+/* Called after the guest file stat (1.22 0xAADA6C): r3 = out struct
+ * { u32 status; ...; u64 size @+0x10 }, r4 = guest path.  The guest takes the
+ * size from the 1.00 volume TOC, so files served from the 1.22 overlay were
+ * truncated (SPECDB, CarName, rtext, fonts).  Report the served file's size. */
+extern "C" void gt6_pfs_stat_fix(uint32_t out_ea, uint32_t path_ea)
+{
+    if (gt6_pfs_disabled() || !out_ea) return;
+    if (vm_read32((uint64_t)out_ea) != 0) return;
+
+    char path[GT6_PFS_PATH_MAX];
+    char rel[GT6_PFS_PATH_MAX];
+    if (!gt6_read_guest_cstr(path_ea, path, sizeof path)) return;
+    if (!gt6_pfs_relpath(path, rel, sizeof rel)) return;
+    if (gt6_script_path_matches(rel)) return;
+
+    char host[GT6_PFS_HOST_MAX];
+    char resolved[GT6_PFS_PATH_MAX];
+    if (!gt6_pfs_resolve(rel, host, sizeof host, resolved, sizeof resolved)) return;
+    FILE* f = fopen(host, "rb");
+    if (!f) return;
+    long n = fseek(f, 0, SEEK_END) == 0 ? ftell(f) : -1;
+    fclose(f);
+    if (n <= 0 || (uint64_t)n > (uint64_t)gt6_pfs_max_bytes()) return;
+
+    const uint64_t old = ((uint64_t)vm_read32((uint64_t)out_ea + 0x10u) << 32) | vm_read32((uint64_t)out_ea + 0x14u);
+    if (old == (uint64_t)n) return;
+    vm_write64((uint64_t)out_ea + 0x10u, (uint64_t)n);
+    if (gt6_pfs_trace())
+        fprintf(stderr, "[statfix] %s size %llu -> %ld\n", resolved,
+                (unsigned long long)old, n);
+}
+
 /* Called at the top of 0x9F4AA0.  r4 points at the {buf,len} request the
  * device read would consume. */
 extern "C" int gt6_pfs_stream_read_override(ppu_context* ctx)
