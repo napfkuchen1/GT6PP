@@ -22,6 +22,7 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - Probe saves are per run (PS3_GAMEDATA_ROOT, 5c85812); a shared ./gamedata save hides AdjustScreen. Evidence: probe_a37sv_20261125_121629_*.
 - (Arbeit38) A35OOM list notify: listener list at 6FFFE9xx corrupted; SPU job 16 KB DMA at ea 6FFFE8F0 overlaps it (SPU_DMA_RANGE, PPU_WVAL=0x6FFFE8F0). Evidence: eu-boot-log Arbeit38.
 - (A39) Heap corruption/OOM ROOT CAUSE: HLE job chain pushed a synthetic data3=0 event besides the SPU job's own reply (soc-job, queue 4) -> sgx module sizes 0/shifted -> 16-byte buffer, SPU 16 KB DMA over heap. Fix patches/gt6-a39-jobchain-selfreport.patch; socisynth attr102=0x14860 (a39fix 2/2).
+- (A39) With the job chain fix the first-boot flow completes 4/4+: AdjustScreen -> voucher dialog -> SAVE complete (a39g/h, X every 25 s 220..395).
 
 ## 4. Refuted/symptom (do NOT repeat)
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.

@@ -692,3 +692,10 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a39ev/a39rx: attributes are returned in data3 of the SPU's own event (src FFFFFFFF53505501); cellSpurs.c jc_signal_done added a second data3=0 event per job. Values 0 / 0x400 depended on arrival order.
 - Fix (runtime): chain whose job self-reports gets no synthetic completion (GT6_JC_SYNTH=1 restores). a39fix 2/2: attr102=14860 attr104=B4D0, socedmix 8A20/2000, buffers 600B4000/600CA000.
 - Hooks: GT6_A39SZ (gen 028 CB3BB4/CB3CF0/receive, backup work/_bk_a39), GT6_A39EV (cellSpurs.c).
+
+- (Arbeit39 cont.) a39f/g/h/s (2 runs each): pad X 220..395 s -> AdjustScreen -> voucher dialog -> AutoSave2 -> SAVE complete; black afterwards,
+  flips continue (a39h 11016/6685 after save). RSX_CAP=start:count:stride used for frames. probe.ps1 caps -Parallel at 2.
+- snap_walk bt (snapshots work/snap_a39black_{1,2}): tid1 7A0AC0>617218 (MGOM.start wait), MGOM obj 6FF36000 state 3, 616C80 ticking on tid30.
+  A27T task 403D1910 ret=2 until 397 s, state 3 after save; no 737C60 polls afterwards; A29 throw hooks silent.
+- LoadModule PAMF/DMUX logged right before SAVE (a39s_1 run.log 54827/54828); no cellPamf/Vdec call and no .pam open logged afterwards.
+- boot.adc flow via tools/adch_disasm.py (needs python -X utf8): boot_sequence_gt6.ad lines 46-93, MovieRoot.ad play_movie lines 82-108.
