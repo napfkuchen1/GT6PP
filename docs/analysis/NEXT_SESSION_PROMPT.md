@@ -1,6 +1,6 @@
 Goal: M1: complete, correct main menu (intro plays, controllable, no gfx/text errors, live run + pad); then M2 first race.
-State: last commit a181bdd docs: handover goal M1 definition and checklist; PROGRESS: 2026-11-25 | 4da0de7 | vol | ok ok FAIL FAIL ok FAIL - | probe_a46menu_20261125_191732_1 | non-black=81%
-Next step: T1: DE.rt2 read truncated (383244/580744, confirmed). Find size source: log r3/r4 in AAE51C (work/_a47/opensize_hook.patch), vt+0x48 at A01A40; 90 s probe -StopOn rt2read (rt2 log: work/_a47/rt2_probe_and_infohook.patch). Fix -> verify popup text, then G1
-Do not repeat: info getter AAC240 hook (0 calls); DB size fixes; fiber stack
+State: last commit d4e1f9a fix: use served overlay size in stream read job, map overlay files, gate; PROGRESS: 2026-11-25 | f9e62b7 | vol | FAIL - - - - - - | probe_a48menu3_20261125_234453_1 | non-black=13%
+Next step: S1: SPU stall img=5 pc=0x07C44 polls ea=0x03000530 (guard halts after 30 s): find PPU writer offline, SPU_DMA_REPEAT_LOG=20; then popup text + G1 tiles recapture; I1 movie without skipopening
+Do not repeat: DE.rt2 truncation (fixed d4e1f9a, verified); info-getter/AAE51C hooks
 Still running: nothing
-Read: STATE.md; eu-boot-log.md Arbeit47
+Read: STATE.md; eu-boot-log.md Arbeit48

@@ -9,8 +9,7 @@ sequence plays, menu controllable, no graphics errors, no text errors. M2 afterw
 STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headless) run with persistent save + pad input.
 
 ## M1 checklist (open until verified; Arbeit47 inventory)
-- [ ] T1 raw message ID in popup (GT003_GET_FIRST_CAR0): rtext/common/DE.rt2 read is 383244 (1.00 size) of 580744;
-      Tutorial page at 0x7F3C4 is cut off (cause confirmed, fix open)
+- [ ] T1 raw message ID in popup: read truncation fixed d4e1f9a (DE.rt2 580744 verified by trace); popup frame not yet seen
 - [ ] T2 garbled glyphs in some frames (credit dialog, menu header)
 - [ ] G1 menu tiles black (only dealer tile drawn)
 - [ ] I1 opening movie plays (535 MB .pam skipped by host cap; cellPamf 0 streams)
@@ -56,13 +55,10 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-T1: find who fills second FileObject+0xC8 (u64, = 383244) between host_open_commit and the read (zero at commit; read job
-chain AAF7A0<-AAFD6C<-AAFA14<-AAF560<-AF0C2C, lr AAB32C). Info getter AAC240 never runs before it (tried, 0 calls).
-Lead: AAE51C(path,r4) stores r4 at FileObject+0xC8 (AAE57C), sole caller A01A4C (check r4 source);
-AAAB40 stores the read result at +0xC8. Wrapper on AAE51C printed nothing (work/_a47/opensize_hook.patch):
-log r3/r4 unconditionally; if never called, find the size source from the read job's creator. Probe 90 s, -StopOn rt2read
-(patch work/_a47/rt2_probe_and_infohook.patch). Then G1 -> T2 -> C1 -> I1 -> I2 -> L1. G1: locked tiles may be correct
-for a new save (tutorial first car); verify after X on popup. I1: movies are encrypted, 535 MB > 64 MB host cap.
+S1: SPU stall (2/3 runs, 214 s / 335 s): img=5 pc=0x07C44 polls ea=0x03000530 >30 s, guard halts, flips stop.
+Offline: disassemble img 5 around 0x7C44 and find the PPU writer of 0x03000530; knob SPU_DMA_REPEAT_LOG=20. Unknown if
+caused by full-size reads (not seen in older runs). Then verify popup text (RSX_CAP=7000:50:300) + G1 tiles: home/*.img
+now load; recapture, old black tiles may be fixed. I1: 535 MB movie now mapped; retest without skipopening overlay.
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

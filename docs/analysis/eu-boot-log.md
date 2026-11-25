@@ -829,3 +829,13 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   copy AD3DFC -> new AE73BC (alloc retry); saved run: AD4294 walk/free, tid1 waits 6171D0 -> AE27AC. Saved+black: no loads, X no effect.
 
   0/shifted -> 16-byte buffer, SPU 16 KB DMA over heap. patches/gt6-a39-jobchain-selfreport.patch (0498bee), a39fix 2/2 sizes stable.
+
+## Arbeit48 (2026-11-25) truncated reads fixed, pad focus gate
+- Cause: stream read job AAB258 clamps length to FileObject+0xC8 (u64, 1.00 TOC size) at AAB280. Fix d4e1f9a:
+  gt6_pfs_size_fix before the load (port_hooks.py part5). a48rtv trace: DE.rt2 383244 -> 580744, hostov n=580744.
+- Overlay files now mapped (no 64 MB cap), 512 slots (evicted stream fell back to the 1.00 volume).
+- a48menu2 (560 s): home menu loads all piece/gt6/home/*.img (never loaded before), tutorial dialog gpb, attract demo
+  d024/d015, ends on GT loading screen (course c052). User pressed physical pad buttons during a run.
+- a48menu and a48menu3: "[spu-dma] img=5 pc=0x07C44: 256 identical transfers to ea=0x03000530 -- halting the SPU"
+  (STALLED @214 s / @335 s; 2 of 3 runs). Guard fires after SPU_DMA_REPEAT_SECS=30 s of polling; flips stop with it.
+- cellPad XInput: inactive window reads neutral pad (patches/gt6-a48-pad-focus.patch, PAD_BACKGROUND=1 off).
