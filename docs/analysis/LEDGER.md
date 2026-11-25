@@ -17,6 +17,8 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - Spinner stall on 1.22: 37 threads parked (pc 0xB03BAC lwcond wrapper), no spin, 30 PDIPFS opens, no PDIPFS/59/FI.
 - SELF decrypt: EMAIN 1.22 = NPDRM (self_type 8, license 3); rpcs3 --decrypt alone fails.
 - Hooks Stream/FileDevice/Host-Open on 1.22 (fuzzy map, match 0.84-0.97) alone: frame 4200 black, no PDIPFS/59 (probe hk122, 2026-11-23).
+- 1.22 data via GT6_VOL_ROOT overlay (scripts/make-vol-overlay.py) boots to legal/"SCE presents"; needs /STACK:64M. __cxa_pure_virtual = 0xC68B8C (OPD 0x163C3E0, guarded in main.cpp). Evidence: probe_a32see_20261125_095738_1.
+
 ## 4. Refuted/symptom (do NOT repeat)
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
 - Sysmodule load list and fresh savedata (PS3_GAMEDATA_ROOT): no divergence from the oracle.

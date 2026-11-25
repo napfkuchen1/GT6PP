@@ -440,3 +440,12 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 - (Arbeit22) realloc fail cause: malloc (heap 17B4C78) hands out 0x7FFFE000.. (win2 base 0x60000000 + id FFFF) but B09520 ptr-lookup (id=(ptr>>13)&0xFFFF) returns -0xA3 (table valid ids 0..7FFF only). Allocs via sc330 mmapper_allocate_address (256MB@0x10000000-align, 512MB). Check our mmapper addresses.
 - (Arbeit22) FIX FOUND: sc330 window2 (512MB) landed at 0x70000000 (sys_vm reserved skip) -> not 512MB aligned. mapper_address now aligns >=512MB windows to size (0x60000000). Result: lwm 17E8888 no longer stuck, 5700 flips, 54 file opens, ProgressDialog gpb. Patch: patches/gt6-mmapper-512m-align.patch.txt (third_party is gitignored).
 - (Arbeit22) Next: run default env (GT6_PUMP_ITERS default) + 220s probe with fix; check main menu/frame capture; if pump still hacks main, set PUMP_ITERS=0 default. Do not repeat: heap/lwm 17E8888 chain closed.
+
+## Arbeit32 (2026-11-25) 1.22 data overlay measurements
+- Overlay: update 12381 files linked, base 24285 linked, 8306 shadowed; main.adc sha256 1ce3993c...a69b; VER_INFO 20150915-114939.
+- Env: GT6_VOL_ROOT=work/gt6_vol_a32;A29_JMP=1, no -Boot. Frame 3000 legal screen, frame 6000/8000 'Sony Computer Entertainment presents'.
+- Runs: 094802 pure call at 48 s (1DA43C); 095327 'map/set too long' at 2 s; 095405_1 stall 58 loads; 095405_2 2 purecalls, survived 150 s;
+  095738 Presents at 129 s (85 loads); 100013 stall, tid1 chain 6D2EA8<-5F3C88<-78E3F4<-EF2834<-5EFA60 (PS3_WD_AT=60);
+  100207 (affinity 5) one stall, one progressing; 100449_1 'map/set too long' at 51 s.
+- Presents script: projects/gt6/boot/presents_sequence_common.ad: changeImage(path); Thread::Sleep(sec); SCEE table common/JP/scei 2.0, scee/notice 1.0.
+- Other noise: shared_ptr release AD23EC calls garbage vtables on objects at 0x6FFFF5E0..6FFFF640 (tid27/30), r2/r12 garbage.

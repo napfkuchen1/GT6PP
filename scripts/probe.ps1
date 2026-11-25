@@ -29,6 +29,7 @@ param(
     [int]$Frame = 0,
     [switch]$KeepDb,
     [string]$Hdd0Src = "",
+    [long]$Affinity = 0,       # >0: host CPU mask for gt6.exe (race experiments)
     [ValidateSet("", "orig", "noadj", "notut")][string]$Boot = ""
 )
 $ErrorActionPreference = "Stop"
@@ -180,6 +181,7 @@ try {
         Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.FullName, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
         $proc = Start-Process -FilePath $Exe.FullName -ArgumentList @($Elf) -WorkingDirectory $Root `
             -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+        if ($Affinity -gt 0) { $proc.ProcessorAffinity = [IntPtr]$Affinity }
         $null = $proc.Handle   # cache the handle, otherwise ExitCode is empty after exit
         $runs += [pscustomobject]@{ I = $i; Dir = $dir; Log = $log; Proc = $proc }
         Start-Sleep -Seconds 2
