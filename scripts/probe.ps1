@@ -165,6 +165,8 @@ $free = (Get-PSDrive C).Free / 1GB
 if ($free -lt 100) { Write-Host ("ABORT: C: only {0:N0} GB free (<100 GB)" -f $free); exit 2 }
 if ($Parallel -gt 2) { Write-Host "Parallel capped to 2"; $Parallel = 2 }
 # --- launch ----------------------------------------------------------------
+# RSX_CAP given via -Env without -Frame: derive the frame, otherwise PS3_HEADLESS silently drops all captures
+if ($Frame -le 0 -and $pairs.Contains("RSX_CAP")) { $Frame = [int](($pairs["RSX_CAP"] -split ":")[0]) }
 foreach ($k in $pairs.Keys) { Set-Item "Env:$k" $pairs[$k] }
 if ($Frame -le 0) { $env:PS3_HEADLESS = "1" } else { Remove-Item Env:PS3_HEADLESS -ErrorAction SilentlyContinue }
 $runs = @()

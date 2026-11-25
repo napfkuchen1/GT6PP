@@ -24,6 +24,7 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - (A39) Heap corruption/OOM ROOT CAUSE: HLE job chain pushed a synthetic data3=0 event besides the SPU job's own reply (soc-job, queue 4) -> sgx module sizes 0/shifted -> 16-byte buffer, SPU 16 KB DMA over heap. Fix patches/gt6-a39-jobchain-selfreport.patch; socisynth attr102=0x14860 (a39fix 2/2).
 - (A39) With the job chain fix the first-boot flow completes 4/4+: AdjustScreen -> voucher dialog -> SAVE complete (a39g/h, X every 25 s 220..395).
 - (A41) Guest file sizes come from the 1.00 GT.VOL TOC: overlay files were truncated (SPECDB 16041984/16602112, adc, DE.rt2) -> nil queries, '(nil).toInt'. Fix eb71225 (stat 0xAADA6C wrapper). CarName.dat still short.
+- (A42) SPECDB is SQLite (prepare 0xC063D4, step 0xC065F4, magic check fail label 0xBE9C10); DB0106/menudb reach SQLite still encrypted -> rc=26 -> nil queries. Evidence probe_a42sql, a42pg2.
 
 ## 4. Refuted/symptom (do NOT repeat)
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.

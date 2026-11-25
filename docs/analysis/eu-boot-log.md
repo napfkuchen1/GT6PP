@@ -732,3 +732,11 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 ## STATE trim 2026-11-25
 - (Arbeit35) Shared PDIPFS junction: parallel runs both wrote K/CQ.fdup* -> 2x AV at 85 s. probe.ps1 now copies PDIPFS per run (CQ moved to ARCHIV).
 - (Arbeit35) After SAVE complete: black frame, no further opens/loads for 60 s (frame 15000, 1 draw op). Oracle opens PDIPFS/59/FI (film) here.
+
+## Arbeit42 (2026-11-25) SPECDB reaches SQLite undecrypted
+- probe_a42full: toInt 16x, still gtmode.adc getGTModeFirstCarPP l376; 17 frames captured after probe.ps1 fix.
+- probe_a42sql (GT6_A42SQL=1, env-gated hooks in gen 026, bk work/_bk_a42, binary carries them): all SPECDB prepares rc=26, step rc=21.
+- probe_a42pg2: page1 at 0xBE9C10 for DB0106/menudb = raw file header 0E 94 7D BF.
+- probe_a42dev: host-file device vt 0x15DB8E8, read 0xAAF694 (filter stream+0x48 vtbl+0x10, else raw vtbl+0x9C = 0xABE5A4).
+- REFUTED: deferring to the +0x48 filter: all filtered streams -> boot stalls at fonts (a42dec); DB only (a42dec3): DB0106 has no filter.
+  Patch kept in work/ARCHIV/a42_filter_patch (not applied). Size write at FileObject+0xC8 irrelevant (0 at open).
