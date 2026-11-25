@@ -745,3 +745,9 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 ## STATE trim 2026-11-25
 - (Arbeit35) New (a35wd run1, PS3_WD_AT): heap AB-BA deadlock at ~200 s, AdjustScreen never loads. tid1 operator new B0CCAC: alloc B0C524
 - (Arbeit35) a35wd run2: flip stall at 156 s, purecall storm lr=2CD5F4 + linear read faults 0x100x0000 upward (runaway walk).
+
+## Arbeit43 (2026-11-25) SPECDB key path
+- probe_a43bt (GT6_A43BT=1): full DB0106 read comes from the p4 cache-fill hook inside xOpen C1FE74 (lr C20374), after AE6C34.
+- probe_a43nocf (GT6_NO_CACHEFILL=1): page1 all zeros (VMPageFile pager B07748 relies on page faults), 70x rc=26. Hook stays needed.
+- Static: 9ED798 bc8e6c stores key {1,str,len} -> xOpen -> 109DC08 -> AAA738 -> AAC2A8: FileObject+0x90..0x98, ptr at +0x9C.
+  Position keystream identical in DB0105/DB0106 (first bytes 0E947DBF). Reader of +0x9C at AAF74C. Not yet decrypted.

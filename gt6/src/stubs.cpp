@@ -795,6 +795,16 @@ extern "C" int gt6_pfs_stream_read_override(ppu_context* ctx)
                 (unsigned)stream, (unsigned)file, (unsigned)n,
                 s->pos, s->size, s->path);
 
+    if (getenv("GT6_A43BT") && n > 0x100000u) {
+        fprintf(stderr, "[A43BT] out=%08X n=%u %s lr=%08X chain:", (unsigned)out, (unsigned)n, s->path, (unsigned)ctx->lr);
+        uint32_t sp = (uint32_t)ctx->gpr[1];
+        for (int k = 0; k < 16 && sp > 0x10000u; k++) {
+            sp = vm_read32((uint64_t)sp + 4u);
+            if (sp <= 0x10000u) break;
+            fprintf(stderr, " %08X", (unsigned)vm_read32((uint64_t)sp + 20u));
+        }
+        fputc(10, stderr);
+    }
     if (out == 0) return 0;   /* never write through a null guest buffer */
     if (n == 0 || s->pos >= s->size) {
         ctx->gpr[3] = 0;
