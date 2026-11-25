@@ -1,0 +1,17 @@
+diff --git a/libs/input/cellPad.c b/libs/input/cellPad.c
+index c265d5a5..95ba91ae 100644
+--- a/libs/input/cellPad.c
++++ b/libs/input/cellPad.c
+@@ -440,6 +440,12 @@ static void pad_poll_xinput(void)
+ 
+         s_host_state[i].connected = 1;
+         XINPUT_GAMEPAD* gp = &state.Gamepad;
++        /* XInput delivers input to every process: an inactive window reads a
++         * neutral pad (still connected). PAD_BACKGROUND=1 restores the old way.
++         * Scripted input (PAD_SCRIPT, PAD_FILE) is applied later, unaffected. */
++        static int background = -1;
++        if (background < 0) background = getenv("PAD_BACKGROUND") ? 1 : 0;
++        if (!background && !pad_host_window_focused()) memset(gp, 0, sizeof(*gp));
+ 
+         /* Map XInput buttons to PS3 CELL_PAD_CTRL_* */
+         u16 btns = 0;

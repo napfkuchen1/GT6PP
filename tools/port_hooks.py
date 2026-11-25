@@ -167,3 +167,21 @@ for p in sorted(root.glob("ppu_recomp_*.cpp")):
     if "<stdlib.h>" not in s: s = s.replace(INC, INC + "#include <stdlib.h>\n", 1)
     p.write_text(s, encoding="latin-1"); n4 += 1
 print("part4 patched", n4)
+
+# ---- part 5: stream read job file size (1.22 func_00AAB258 loads FileObject+0xC8 = 1.00 TOC size) ----
+LOAD5 = "        ctx->gpr[26] = vm_read64(ctx->gpr[30] + 0xC8);\n"
+DECL5 = 'extern "C" void gt6_pfs_size_fix(uint32_t file_ea);\n'
+CALL5 = "        gt6_pfs_size_fix((uint32_t)ctx->gpr[30]);\n"
+n5 = 0
+for p in sorted(root.glob("ppu_recomp_*.cpp")):
+    s = p.read_text(encoding="latin-1")
+    a = s.find("ctx->lr = 0x00AAB32C;")
+    if a < 0: continue
+    i = s.rfind(LOAD5, 0, a)
+    if i < 0: continue
+    if not s[:i].endswith(CALL5):
+        s = s[:i] + CALL5 + s[i:]
+        if DECL5 not in s: s = s.replace(INC, INC + DECL5, 1)
+        p.write_text(s, encoding="latin-1")
+    n5 += 1
+print("part5 hooks present", n5, "/ 1")

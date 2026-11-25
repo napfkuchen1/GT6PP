@@ -40,6 +40,14 @@
 #include <thread>
 #include <stdlib.h>
 #include <string.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <io.h>
 
 extern "C" {
 void     vm_write8(uint64_t addr, uint8_t val);
@@ -150,20 +158,19 @@ static void gt6_script_unload(void)
  * Environment:
  *   GT6_PFS_OVERRIDE=0     disable this override
  *   GT6_PFS_TRACE=1        log every open/read/seek
- *   GT6_PFS_MAX_MB=<n>     per-file cap in MiB (default 64)
+ *   GT6_PFS_MAX_MB=<n>     per-file cap in MiB (default 4095; files are mapped)
  *   GT6_VOL_ROOT=<dir>     extracted tree (default work/gt6_vol)
  *   GT6_PFS_KEYMAP=<file>  key map (default work/gt6_pfs_keymap.tsv)
  * ---------------------------------------------------------------------- */
 extern "C" uint8_t* vm_base;
 
 enum {
-    /* Eight PFS streams were enough before; the font preload opens about
-     * a dozen host FileObjects (menu_imagefont.bin plus the .vec faces),
-     * so keep headroom for both key spaces. */
-    GT6_PFS_SLOTS      = 16,
+    /* An evicted stream falls through to the guest device (1.00 volume), so
+     * keep far more slots than files can be open; mapped files are cheap. */
+    GT6_PFS_SLOTS      = 512,
     GT6_PFS_PATH_MAX   = 256,
     GT6_PFS_HOST_MAX   = 512,
-    GT6_PFS_DEFAULT_MB = 64
+    GT6_PFS_DEFAULT_MB = 4095   /* u32 stream sizes */
 };
 
 struct Gt6PfsSlot {
@@ -202,7 +209,7 @@ static size_t gt6_pfs_max_bytes(void)
         const char* e = getenv("GT6_PFS_MAX_MB");
         long mb = (e && *e) ? strtol(e, NULL, 0) : GT6_PFS_DEFAULT_MB;
         if (mb < 1) mb = 1;
-        if (mb > 1024) mb = 1024;
+        if (mb > 4095) mb = 4095;
         cap = (size_t)mb * 1024u * 1024u;
     }
     return cap;
@@ -457,7 +464,7 @@ static uint32_t gt6_pfs_size_get(uint32_t file)
 static void gt6_pfs_slot_clear(Gt6PfsSlot* s)
 {
     if (!s) return;
-    if (s->data) free(s->data);
+    if (s->data) UnmapViewOfFile(s->data);
     memset(s, 0, sizeof *s);
 }
 
@@ -522,15 +529,13 @@ static int gt6_pfs_install(const char* rel, uint32_t reader, uint32_t file)
                     resolved, n, gt6_pfs_max_bytes());
         return 0;
     }
-    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return 0; }
-
-    unsigned char* buf = (unsigned char*)malloc((size_t)n);
-    if (!buf || fread(buf, 1, (size_t)n, f) != (size_t)n) {
-        free(buf);
-        fclose(f);
-        return 0;
-    }
+    /* Map instead of reading: movies and course data are hundreds of MB.
+     * The view keeps the file alive after both handles are closed. */
+    HANDLE map = CreateFileMappingA((HANDLE)_get_osfhandle(_fileno(f)), NULL, PAGE_READONLY, 0, 0, NULL);
+    unsigned char* buf = map ? (unsigned char*)MapViewOfFile(map, FILE_MAP_READ, 0, 0, 0) : NULL;
+    if (map) CloseHandle(map);
     fclose(f);
+    if (!buf) return 0;
 
     Gt6PfsSlot* s = gt6_pfs_slot_for(reader, file);
     s->reader = reader;
@@ -783,6 +788,22 @@ extern "C" void gt6_pfs_fstat_fix(uint32_t stream_ea, uint32_t out_ea)
     vm_write64((uint64_t)out_ea + 0x10u, (uint64_t)size);
     if (gt6_pfs_trace())
         fprintf(stderr, "[fstatfix] size %llu -> %u\n", (unsigned long long)old, size);
+}
+
+/* Stream read job (1.22 0xAAB258) clamps every request to FileObject+0xC8,
+ * the file size from the 1.00 volume TOC, so overlay files that grew in 1.22
+ * were read truncated (rtext, SPECDB, textures).  Publish the served size
+ * right before the guest loads it. */
+extern "C" void gt6_pfs_size_fix(uint32_t file_ea)
+{
+    if (gt6_pfs_disabled()) return;
+    const uint32_t size = gt6_pfs_size_get(file_ea);
+    if (!size) return;
+    const uint64_t old = ((uint64_t)vm_read32((uint64_t)file_ea + 0xC8u) << 32) | vm_read32((uint64_t)file_ea + 0xCCu);
+    if (old == (uint64_t)size) return;
+    vm_write64((uint64_t)file_ea + 0xC8u, (uint64_t)size);
+    if (gt6_pfs_trace())
+        fprintf(stderr, "[sizefix] file=0x%08X size %llu -> %u\n", (unsigned)file_ea, (unsigned long long)old, size);
 }
 
 /* Called after the guest file stat (1.22 0xAADA6C): r3 = out struct
