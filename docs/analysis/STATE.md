@@ -18,7 +18,7 @@ Baseline probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; never mix `
 - (Arbeit32) PPU_RESV_STORE=1 (plain stores break reservations), 4 runs a32rs*: 2 reach 96/102 loads + survive 100 s (3 savedata loads = boot restarts, last PresentsRootSCEE), 2 stall.
 
 ## Next step
-(Arbeit32) Fix the boot race/corruption: audit PPU atomics/locks (lifted lwarx/stwcx + ppu_stwcx32 vs plain stores, ldarx, sys_lwmutex/lwcond recursion, static-init guards).
+(Arbeit32) Fix the boot race/corruption: first compare PPU_RESV_STORE=1 vs default (>=4 runs each); then audit PPU atomics/locks (lifted lwarx/stwcx + ppu_stwcx32 vs plain stores, ldarx, sys_lwmutex/lwcond recursion, static-init guards).
 Test: runs a32 env, count stall (hot>0 on 6D2BC0) / "too long" / purecall over >=4 runs; baseline (default) about 3 of 9 reach Presents-or-later without stall/abort.
 
 ## Refuted / symptom (do not repeat)
