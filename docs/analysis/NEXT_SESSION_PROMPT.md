@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 61bb488 docs: handover; PROGRESS: 2026-11-25 | 61bb488 | vol | ok ok FAIL FAIL ok FAIL - | probe_a34cap_20261125_110401_2 | non-black=5%
-Next step: 1) Who zeroes vector 6FFFE910 (obj 619E0000+0x3C55C, entries NULL in CD2ABC): static: push/clear sites (caller 920720, 9206A8); run GT6_GUARD=6fffe910:6fffe910; check heap overlap/alias of 6FFFxxxx. Persist guard [A34G] (gen 023 AE6388) via post-lift or fix cause. 2) Script blocker: main.adc GameItem.ad l275 (nil).ColorBegin on every Presents run: bypass = new overlay with COPY of main.adc (break hardlink), JUMP_IF_FALSE(0x0F) at file 0xEB893 -> JUMP(0x0D), target 48; then look for next error / find why SPECDB AVATAR_* row is missing.
-Do not repeat: 0xC00000FD = fflush symptom (root: TOC wipe by AE6388, solved by guard); PPU_RESV_STORE/PRIO_MAP; PS3_WD for the legal screen hang before fixing ColorBegin.
+State: last commit d54015c docs: handover findings (heap deadlock after allocation failure); PROGRESS: 2026-11-25 | a080c1b | vol | ok ok FAIL FAIL ok FAIL - | probe_a35wd_20261125_113422_1 | non-black=5%
+Next step: 1) Heap deadlock: repeat a35 pad runs until [A35OOM] fires (heap/size/caller), find why alloc fails. 2) Post-SAVE black screen: WD dump after 'SAVE complete'. 3) SettingProjectComponent stall (most common now): PS3_WD_AT=150, read tid1/tid30 chains.
+Do not repeat: ColorBegin/PDIPFS AV fixed (STATE Arbeit35); run only -Parallel with probe.ps1 PDIPFS copy.
 Still running: nothing
-Read: STATE.md Arbeit34 lines; eu-boot-log.md Arbeit34; scripts/probe.ps1 (line ranges)
+Read: STATE.md Arbeit35 lines; eu-boot-log.md Arbeit35
