@@ -751,3 +751,9 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - probe_a43nocf (GT6_NO_CACHEFILL=1): page1 all zeros (VMPageFile pager B07748 relies on page faults), 70x rc=26. Hook stays needed.
 - Static: 9ED798 bc8e6c stores key {1,str,len} -> xOpen -> 109DC08 -> AAA738 -> AAC2A8: FileObject+0x90..0x98, ptr at +0x9C.
   Position keystream identical in DB0105/DB0106 (first bytes 0E947DBF). Reader of +0x9C at AAF74C. Not yet decrypted.
+
+
+## STATE trim 2026-11-25
+- (Arbeit35) a35oom (2 runs, hook [A35OOM] in gen 024 B0CCAC, bk work/_bk_a35, binary carries it): 0 OOM, both stop at
+- (Arbeit36) OOM cause seen (a36hl_2): operator new retry loop AE73BC (callers via AE752C/40/54) asks ~161 MB (size 099F6844 =
+- (Arbeit37) "AdjustScreen 0/14" was no code regression: pad run pad3_2 saved to shared ./gamedata (11:32); later boots had a save.
