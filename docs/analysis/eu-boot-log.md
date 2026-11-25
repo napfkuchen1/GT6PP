@@ -776,3 +776,12 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a45full: after credit dialogs opening movie tv_10006 .pam -> black. a45op (gt6_vol_a45): GT Mode loading, rc=26 gone.
 - a45gm/a45snap: 31k flips headless, gtmode.adc/gtmode_pack/mproject reloaded 38x; snap work/snap_a45gm_540: tid1 in 617218.
 - a45vm (GT6_A40VM=400): cycle 494411-494788 ms runs GTModeRoot/GTTopRoot/TopNews/CarDealerRoot, ends at l376 after SELECT PP.
+
+
+## STATE trim 2026-11-25
+- (Arbeit39) WITH FIX 4/4 (a39g/h, pad X every 25 s 220..395): language select -> AdjustScreen -> dialog -> AutoSave2 -> SAVE complete.
+- (Arbeit39) After save: black 4/4 for 100-190 s. a39s snapshots work/snap_a39black_{1,2}: tid1 in MGOM.start wait (6171D0, obj 6FF36000),
+- (Arbeit39) Static boot flow (boot_sequence_gt6.ad in boot.adc): AdjustScreen -> applySaveData -> voucher dialog -> BackupSave ->
+- (Arbeit40) Post-save black = intro tutorial race (start_project_gt6 -> executeEvent), VM stops at 399.7 s after its save; movie skip no help.
+- (Arbeit40) MILESTONE: overlay work/gt6_vol_a40t (tools/patch_adc_skiptutorial.py) 2/2: credit dialogs, then GT Mode loading screen (GT logo)
+- (Arbeit41) FIXED eb71225: guest stat took sizes from the 1.00 TOC -> overlay files truncated (SPECDB, adc, DE.rt2). Run a41full: 26298 flips

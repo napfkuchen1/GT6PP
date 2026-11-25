@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 6393d62 fix: apply the guest key cipher to host-served keyed files (car database; PROGRESS: 2026-11-25 | 58d9306 | vol | ok ok FAIL FAIL ok FAIL - | probe_a42full_20261125_153650_1 | non-black=71%
-Next step: Find xFileSize of SQLite VFS (xOpen C1FE74; xRead C1FC3C, xFileControl C1F9B8, xClose ~C1F8B0): log its result for DB0106 vs 16602112; if smaller, fix the size source. Verify 90 s probe GT6_VOL_ROOT=work/gt6_vol_a40t;GT6_A42SQL=1: no rc=11 on DB0106.
-Do not repeat: key decrypt itself (dumps integrity ok); cache buffer corruption (stable 120 s); guest-path read (1.00 volume)
+State: last commit 2385ea9 docs: Arbeit45 results; PROGRESS: 2026-11-25 | b219eca | vol | ok FAIL - - - - - | probe_a45gm_20261125_174602_1 | non-black=0%
+Next step: GT Mode reload loop: run GT6_VOL_ROOT=work/gt6_vol_a45;GT6_A42SQL=1 (no PFS trace, pad X 220..395, 480 s); find why step of 'SELECT PP FROM GENERIC_CAR' returns rc=1 (xRead off!=0 / key layer / bound ID); if IO error fix reader, if ID nil check first-car state (tutorial skip).
+Do not repeat: xFileSize/size fixes (f8ef048), grim007 (b219eca), GT6_PFS_TRACE long runs (too slow)
 Still running: nothing
-Read: STATE.md; eu-boot-log.md Arbeit44
+Read: STATE.md; eu-boot-log.md Arbeit45

@@ -22,22 +22,16 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 
   0/shifted -> 16-byte buffer, SPU 16 KB DMA over heap. patches/gt6-a39-jobchain-selfreport.patch (0498bee), a39fix 2/2 sizes stable.
 
-- (Arbeit39) WITH FIX 4/4 (a39g/h, pad X every 25 s 220..395): language select -> AdjustScreen -> dialog -> AutoSave2 -> SAVE complete.
   probe.ps1 early-kill bug fixed ($last unset with explicit -Seconds). Frames: RSX_CAP=start:count:stride.
-- (Arbeit39) After save: black 4/4 for 100-190 s. a39s snapshots work/snap_a39black_{1,2}: tid1 in MGOM.start wait (6171D0, obj 6FF36000),
   tid30 loop 616C80 keeps ticking 3 slots; script task 403D1910 reaches state 3 (done), no further task polls, no throw (A29 hooks), no file opens.
   Tool: `snap_walk.py <dir> bt` (guest call chains).
 
-- (Arbeit39) Static boot flow (boot_sequence_gt6.ad in boot.adc): AdjustScreen -> applySaveData -> voucher dialog -> BackupSave ->
   unless skipOpening: MovieRoot.open, loop until isFinished -> start_project_gt6. play_movie: t_movie 'OPENING' -> /movies/<f>.pam,
   pdistd.Exist (else end_movie) -> Tv2.decodeContentsKey -> load. No .pam open / cellVdec call logged: black = likely stuck there.
 
-- (Arbeit40) Post-save black = intro tutorial race (start_project_gt6 -> executeEvent), VM stops at 399.7 s after its save; movie skip no help.
   Trace tool: GT6_A40VM=<sec>, tools/a40_vm_hook.inc, scripts/adc_trace_match.py.
-- (Arbeit40) MILESTONE: overlay work/gt6_vol_a40t (tools/patch_adc_skiptutorial.py) 2/2: credit dialogs, then GT Mode loading screen (GT logo)
   to 460 s. GTModeRoot script error "(nil).toInt" (GroupData, SPECDB-like query) on tid1.
 
-- (Arbeit41) FIXED eb71225: guest stat took sizes from the 1.00 TOC -> overlay files truncated (SPECDB, adc, DE.rt2). Run a41full: 26298 flips
   (before 15477), but '(nil).toInt' still 10x, no frames captured (needs -Frame). CarName.dat still read 97984/103008.
 
 - (Arbeit42) ROOT of (nil).toInt: SPECDB (specdb/GT6/DB0106.dat) prepare returns SQLite rc=26 NOTADB; page 1 handed to SQLite is the
