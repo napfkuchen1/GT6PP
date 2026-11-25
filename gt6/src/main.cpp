@@ -737,6 +737,14 @@ int main(int argc, char* argv[])
      * here, and main() commits it below. Must be set before any guest code. */
     ppu_hle_inject_base = GT6_GCM_CTRL_BASE;
 
+#ifdef _WIN32
+    /* GT6 parks the RSX on a self-JUMP and patches it later; under host load
+     * the patch can take longer than the runtime's 50 ms grace. The resync
+     * then skips the label release an SPU job polls (img 5, 0x03000530) and
+     * the SPU repeat guard halts it. Wait longer; the env var still wins. */
+    if (!getenv("GCM_PARK_GRACE_MS")) _putenv_s("GCM_PARK_GRACE_MS", "5000");
+#endif
+
     if (int32_t rc = vm_init()) {
         fprintf(stderr, "[GT6] ERROR: VM init failed (0x%08X)\n", (unsigned)rc);
         return EXIT_FAILURE;

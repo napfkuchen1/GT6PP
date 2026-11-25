@@ -1,0 +1,52 @@
+diff --git a/libs/video/rsx_d3d12_backend.c b/libs/video/rsx_d3d12_backend.c
+index 241dd9a4..793d6ed0 100644
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -1708,6 +1708,25 @@ static void rsx_capture_frame(u32 fi, u32 ndraws, u32 capidx)
+                                 (r->tex[u].fmt & 0x20) ? "LN" : "SZ",
+                                 (r->tex[u].fmt & 0x40) ? ",NR" : "",
+                                 r->tex[u].w, r->tex[u].h, r->tex[u].ctrl1 & 0xFFFF);
++                /* RSX_CAP_VHASH=1: hash of the decoded vertices (attr0) per draw,
++                 * so two frames of a static scene can be compared. */
++                if (!r->is_clear && s_d3d.vp_vb_mapped && getenv("RSX_CAP_VHASH")) {
++                    const u32 par = (u32)(s_d3d.vp_parity ^ 1);
++                    const u8* vb = (const u8*)s_d3d.vp_vb_mapped + (u64)par * MAX_VERTICES * 256u
++                                 + r->vb_byte_offset;
++                    const u32* ib = r->indexed ? (const u32*)s_d3d.vp_ib_mapped
++                                 + (u64)par * VP_MAX_INDICES + r->ib_first : NULL;
++                    const u32 n = r->indexed ? r->index_count : r->vertex_count;
++                    u32 h = 2166136261u;
++                    float first[4] = {0, 0, 0, 0};
++                    for (u32 i = 0; i < n; i++) {
++                        u32 w[4]; memcpy(w, vb + (size_t)(ib ? ib[i] : i) * 256u, sizeof w);
++                        if (!i) memcpy(first, w, sizeof first);
++                        for (int k = 0; k < 4; k++) { h ^= w[k]; h *= 16777619u; }
++                    }
++                    fprintf(mf, "      vh=%08X idx=%d v0=%.2f,%.2f,%.2f,%.2f\n", h, r->indexed,
++                            first[0], first[1], first[2], first[3]);
++                }
+             }
+         }
+         /* Per-draw VP constant banks for the first few offscreen-RT geometry
+@@ -5022,6 +5041,21 @@ static void render_frame(void)
+                 if (crt >= 0) {
+                     dr->tex_rt[_u] = crt;
+                     dr->tex_ds[_u] = ds;
++                    /* Unnormalized coordinates are texels of the surface, so
++                     * they scale by the host copy's size. The guest may declare
++                     * a smaller view of it (GT6: 1440x1080 of 1536x1408);
++                     * 1/declared stretched the lookup and shredded all text. */
++                    if (dr->tex[_u].fmt & 0x40) {
++                        dr->tex[_u].w = s_d3d.off_rt[crt].w;
++                        dr->tex[_u].h = s_d3d.off_rt[crt].h;
++                        if (_u < 4 && s_d3d.vp_fpcb_mapped && dr->cb_slot < MAX_DRAWS &&
++                            dr->tex[_u].w && dr->tex[_u].h) {
++                            float* ts = (float*)((char*)s_d3d.vp_fpcb_mapped
++                                + ((u64)s_d3d.vp_parity * MAX_DRAWS + dr->cb_slot) * VP_FPCB_STRIDE);
++                            ts[_u*4+0] = 1.0f / (float)dr->tex[_u].w;
++                            ts[_u*4+1] = 1.0f / (float)dr->tex[_u].h;
++                        }
++                    }
+                     /* The copy holds real A,R,G,B (A = depth high byte, B =
+                      * stencil), so the guest's crossbar applies as for any
+                      * A8R8G8B8 texture (GT6 text reads it through 0xAAFF). */

@@ -1,6 +1,6 @@
 # GT6PP EU - STATE (entry point, keep under ~5 KB)
 
-State: 2026-11-25. Branch `eu-first-build`, main checkout. Disc EU `BCES01893`. Line: game 1.22 + ps3recomp v0.20.
+State: 2026-11-26. Branch `eu-first-build`, main checkout. Disc EU `BCES01893`. Line: game 1.22 + ps3recomp v0.20.
 Rules: `CLAUDE.md`. Facts: `LEDGER.md` (grep). Checkpoints/runs: `PROGRESS.md`. History: `eu-boot-log.md` (grep). One line per finding.
 
 ## Goal
@@ -10,7 +10,7 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 
 ## M1 checklist (open until verified; Arbeit47 inventory)
 - [ ] T1 raw message ID in popup: read truncation fixed d4e1f9a (DE.rt2 580744 verified by trace); popup frame not yet seen
-- [ ] T2 garbled glyphs in some frames (credit dialog, menu header)
+- [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
 - [ ] G1 menu tiles black (only dealer tile drawn)
 - [ ] I1 opening movie plays (535 MB .pam skipped by host cap; cellPamf 0 streams)
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
@@ -55,10 +55,9 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-S1: SPU stall (2/3 runs, 214 s / 335 s): img=5 pc=0x07C44 polls ea=0x03000530 >30 s, guard halts, flips stop.
-Offline: disassemble img 5 around 0x7C44 and find the PPU writer of 0x03000530; knob SPU_DMA_REPEAT_LOG=20. Unknown if
-caused by full-size reads (not seen in older runs). Then verify popup text (RSX_CAP=7000:50:300) + G1 tiles: home/*.img
-now load; recapture, old black tiles may be fixed. I1: 535 MB movie now mapped; retest without skipopening overlay.
+S1 fixed (A49): FIFO park resync (50 ms) dropped label 0x53 release -> SPU img 5 halt; main.cpp GCM_PARK_GRACE_MS=5000,
+4/4 runs 402 s no stall. Next: long menu run (more X presses, 600 s, capture late) to verify popup text (T1) + G1 tiles;
+then I1 movie without skipopening overlay.
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

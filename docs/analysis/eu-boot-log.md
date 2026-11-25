@@ -839,3 +839,13 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a48menu and a48menu3: "[spu-dma] img=5 pc=0x07C44: 256 identical transfers to ea=0x03000530 -- halting the SPU"
   (STALLED @214 s / @335 s; 2 of 3 runs). Guard fires after SPU_DMA_REPEAT_SECS=30 s of polling; flips stop with it.
 - cellPad XInput: inactive window reads neutral pad (patches/gt6-a48-pad-focus.patch, PAD_BACKGROUND=1 off).
+
+## Arbeit49 (2026-11-26) SPU stall and shredded text
+- S1 cause: halted runs (a48menu, a48menu3) = the only 2 of 19 runs with "[cellGcmSys] FIFO resync (jump-park)".
+  Walker waited 50 ms on a self-JUMP park, skipped to put; label 0x53 (ea 0x03000530) that SPU img 5 polls was
+  not released. Fix: gt6 main.cpp defaults GCM_PARK_GRACE_MS=5000. a49park (env, 2x 402 s): 0 resync, 0 halt.
+- T2: static dialog, 3 guest buffers; vertex hashes equal on consecutive frames (RSX_CAP_VHASH=1), 1 of 3 clean.
+  Correlation 10/10: clean = DS-as-texture 0x01500000 declared 1536x1408, shredded = declared 1440x1080 while the
+  host copy stays 1536x1408 (UV scale 1/declared). GCM_SEMA_ACQUIRE=1 no effect (a49sema).
+  Fix: rsx_d3d12_backend.c RT pre-pass scales unnormalized DS-copy units by host size
+  (patches/gt6-a49-ds-texscale.patch).
