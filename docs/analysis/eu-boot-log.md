@@ -699,3 +699,23 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   A27T task 403D1910 ret=2 until 397 s, state 3 after save; no 737C60 polls afterwards; A29 throw hooks silent.
 - LoadModule PAMF/DMUX logged right before SAVE (a39s_1 run.log 54827/54828); no cellPamf/Vdec call and no .pam open logged afterwards.
 - boot.adc flow via tools/adch_disasm.py (needs python -X utf8): boot_sequence_gt6.ad lines 46-93, MovieRoot.ad play_movie lines 82-108.
+
+## Arbeit40 (2026-11-25) post-save black screen = intro tutorial race
+- a40skip (2, overlay work/gt6_vol_a40, tools/patch_adc_skipopening.py): MovieRoot skipped, still black after SAVE. Movie is not the blocker.
+- Script trace GT6_A40VM=<sec> (tools/a40_vm_hook.inc, gen 023 AA41FC dispatch: ctx r10=record, r8=task, handler table 0x15DA1F8, byte0=ADCH opcode,
+  low 24 bits=line; backup work/_bk_a40; current binary carries it). Matcher scripts/adc_trace_match.py. Runs probe_a40vm_20261125_141405_{1,2}.
+- Trace: voucher dialog open 247 s..398 s; then display_sequence ends, start_project_gt6 runs lines 108-117 at 398.4-398.8 s: ReadFile
+  tutorial.xml, create_player, GameParameterUtil.executeEvent (intro tutorial race). Race code saves (SaveDataUtil _save ->
+  createSaveDataEveryWhere), last script record 399.679 s, then no script instruction at all. "SAVE complete" is that save.
+- a40tut (2, overlay work/gt6_vol_a40t, tools/patch_adc_skiptutorial.py, ins 28 -> JUMP_IF_TRUE 84): NO black screen. Present/credit dialogs
+  render (German, 1.000.000 / 100.000 credits), then GT logo loading screen to 460 s (probe_a40tut_20261125_142341_{1,2}, sheet.png).
+  Script errors on tid1 in GTModeRoot: "nil object cannot be used in '(nil).toInt'" ([A29E] line=48, GTModeRoot::GroupData, near
+  SELECT ModelName, Logo, Name ... query).
+
+
+## STATE trim 2026-11-25
+- (Arbeit32) Fixes: /STACK:64M; purecall guard (C68B8C logs, returns 0); stale 11-22 savedata moved to ARCHIV (caused DISKFULL).
+- (Arbeit33) Boot race solved by pinning guest PPU threads to 1 host core (PPU_ONECORE=1): 6/6 reach PresentsRootSCEE.
+- (Arbeit34) 0xC00000FD = fflush(NULL) symptom; root: AE6388 (from CD2ABC, vector 6FFFE910 with 2 NULL entries) wipes NULL page..TOC.
+- (Arbeit35) AE6388 guard persisted (tools/guard_ringzero.py in post-lift). ColorBegin bypass: tools/patch_adc_colorbegin.py, overlay work/gt6_vol_a35.
+- (Arbeit35) MILESTONE (probe_a35pad_..112132_2, pad3_..112834_2): AdjustScreen renders (German); X at 220 s -> AutoSave2 -> SAVE complete.
