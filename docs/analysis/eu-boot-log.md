@@ -646,3 +646,13 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a35pad3 (2): one run X@220 s -> AutoSave2/AutoSave GAME6 -> SAVE complete, then black frame 15000, no further opens.
 - a35wd (2, PS3_WD_AT=262,285): run1 heap deadlock tid1/tid30 (locks 17B4BD8/17B4C08); run2 STALLED@156 s.
 - B0921C(time): stores time at 17B4C70; B1A0F4 (lock all heaps) only if delta < 100000 us. B04CD8 locks BD8, walks heaps +0x44, B04CB0(heap)->B08728.
+
+## Arbeit36 (2026-11-25) allocation failure source, heap lock guard, setting-project stall
+- a36oom (2, PS3_WD_AT=240,285): run1 STALLED@73s (read fault 0xFFFF0000 after PDIPFS/K/SD, HOTREAD lr=6D2C6C); run2 SettingProject stall. 0 OOM.
+- Static: heap AB-BA = B04CD8 (lock 17B4BD8, per heap 17B4C08 via B08728) vs operator-new failure path B0CCAC->B08498 (holds C08)->B0921C->B04CD8.
+  tools/guard_heaplock.py: B04CD8 takes C08 first (1 ms timeout, else skip, [A36HL]). Runs a36hl/a36pm: no regression seen, guard never contended.
+- a36hl_2: [A35OOM] 40x caller=00AE74D0 heap=017B4C78 r4=0x10 r5=099F6844. B0C524(heap,align,size): align 16, size ~161 MB. AE73BC is the retry-until-success
+  operator new loop (entries AE752C/AE7540/AE7554). Then AV guest_fn 00B5E450 on tid3 at flips 163. Hook now prints tid + 8 return addresses.
+- SettingProject stall (a36oom_2 WD): tid1 chain A2FFCC..68FF84->66E6AC->A86118->A2F290..->A0498C->88F2B4 (wait while status==-1, 1 ms), both samples.
+  After tid31 task post (A27T lr=01062478) tid1 (not tid30) took the next task in most stalled runs; good runs mostly tid30 (correlation only).
+- a36pm (2, PPU_PRIO_MAP=1): both reach 300 s at ~52 fps, no AdjustScreenRoot (one with tid30 taking the task: polls forever). PRIO_MAP does not fix it.

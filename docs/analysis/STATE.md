@@ -25,6 +25,11 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit35) a35oom (2 runs, hook [A35OOM] in gen 024 B0CCAC, bk work/_bk_a35, binary carries it): 0 OOM, both stop at
   SettingProjectComponent.gpb, ~37 fps (older mode, Arbeit33). OOM cause still unmeasured. Repeat batch until the deadlock hits.
 
+- (Arbeit36) OOM cause seen (a36hl_2): operator new retry loop AE73BC (callers via AE752C/40/54) asks ~161 MB (size 099F6844 =
+  garbage; B0C524 args are align,size) -> endless retry. Hook now prints call chain. Deadlock guard tools/guard_heaplock.py (post-lift).
+- (Arbeit36) SettingProject stall: tid1 takes the script task meant for tid30 (A27T after tid31 post) and waits in A0498C
+  (sync wait, 88F2B4 loop) inside its own main tick (correlation). PPU_PRIO_MAP=1 (a36pm, 2 runs) no fix, tid30 case stalls too.
+
 ## Next step
 1) Why does B0C524 fail on tid1 (script VM alloc)? Log heap r30 + size at B0CCFC (r3==0); compare heap sizes / sys_memory
 user size with PS3 (213 MB). OOM is the deadlock trigger. 2) After SAVE complete: what waits (WD dump after save, 59/FI film;
