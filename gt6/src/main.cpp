@@ -55,6 +55,20 @@ ps3_module_registry g_ps3_module_registry = {};
 extern "C" {
 void ppu_register_function(uint64_t addr, void (*fn)(ppu_context*));
 void ppu_recomp_register(void);           /* installs function_table[] */
+
+/* Guest __cxa_pure_virtual (0xC68B8C, OPD 0x163C3E0) aborts the title. Seen on
+ * teardown races (virtual call on an object that is already destructed) during
+ * the 1.22 boot. Log the call and return 0 instead; GT6_PURECALL_ABORT=1 keeps
+ * the original behaviour. */
+static void gt6_purecall(ppu_context* ctx)
+{
+    static long hits = 0;
+    long n = InterlockedIncrement(&hits);
+    if (n <= 32 || (n % 10000) == 0)
+        fprintf(stderr, "[purecall] #%ld lr=0x%08X r3=0x%08X tid=%lu -> return 0\n",
+                n, (uint32_t)ctx->lr, (uint32_t)ctx->gpr[3], GetCurrentThreadId());
+    ctx->gpr[3] = 0;
+}
 void ppu_install_thread_trampoline(void);
 void ppu_hle_register_all(void);          /* generated: src/gen/ppu_hle_nids.cpp */
 void gt6_hle_overrides(void);             /* src/stubs.cpp: game-specific HLE fixes */
@@ -765,7 +779,9 @@ int main(int argc, char* argv[])
         gt6_add_mapping("/dev_hdd0/game/BCUS98296/", hdd0_game_override);
         gt6_add_mapping("/app_home/",                "work/gt6_app_home");
         gt6_add_mapping("/dev_hdd0/",                hdd0_root);
-        gt6_add_mapping("/dev_hdd1/",                "work/gt6_hdd1");
+        /* GT6_HDD1 (optional): same for the cache partition (stale databases). */
+        const char* hdd1_env = getenv("GT6_HDD1");
+        gt6_add_mapping("/dev_hdd1/", (hdd1_env && *hdd1_env) ? hdd1_env : "work/gt6_hdd1");
         gt6_add_mapping("/dev_usb000/",              "work/gt6_usb");
         /* Update overlays, once a PDIPFS dump is present. */
         gt6_add_mapping("PDIPFS/",                   "work/gt6_pdipfs");
@@ -777,7 +793,8 @@ int main(int argc, char* argv[])
         {
             static char hdd0_abs[512], hdd1_abs[512];
             gt6_abs_path(hdd0_abs, sizeof hdd0_abs, hdd0_root);
-            gt6_abs_path(hdd1_abs, sizeof hdd1_abs, "work/gt6_hdd1");
+            gt6_abs_path(hdd1_abs, sizeof hdd1_abs,
+                         (hdd1_env && *hdd1_env) ? hdd1_env : "work/gt6_hdd1");
             _putenv_s("PS3_HDD0_ROOT", hdd0_abs);
             _putenv_s("PS3_HDD1_ROOT", hdd1_abs);
         }
@@ -814,6 +831,11 @@ int main(int argc, char* argv[])
     printf("[HLE] ps3recomp NID registry: %u handlers\n", ps3_hle_count());
 
     ppu_recomp_register();
+    {
+        const char* keep = getenv("GT6_PURECALL_ABORT");
+        if (!keep || strcmp(keep, "1") != 0)
+            ppu_register_function(0x00C68B8C, gt6_purecall);
+    }
     ppu_install_thread_trampoline();
     gt6_spu_register_all();   /* after the ELF load: fingerprints the loaded image */
     gt6_spu_register_pm_clean();  /* raw WWS PM at 0x013FFE00 (image id 5) */

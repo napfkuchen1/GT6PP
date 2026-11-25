@@ -16,6 +16,8 @@ Baseline probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; never mix `
 - (Arbeit32) 1.22 boot overflowed the 1 MiB host stack (0xC00000FD) -> /STACK:0x4000000. Then legal screen at frame 3000 (probe_a32vol_20261125_093727_1).
 - (Arbeit32) Stale 11-22 savedata -> DISKFULL 0x1a (=SQLITE_NOTADB, GameRecord.ad:178, /dev_hdd1 game024.db). Saves moved to work/ARCHIV -> frame 6000 'SCE presents' (probe_a32nosave_..094437_1).
 - (Arbeit32) Open: one empty-savedata run aborted at ~4 s (probe_a32nosave_..094416_1, abort 0xC6A09C, after NetStartDialog unload); next run passed. /dev_hdd1 + savedata are shared between runs.
+- (Arbeit32) Both early aborts = __cxa_pure_virtual 0xC68B8C (callers 2CD5F4, 1DA43C dtor): teardown race, 48 s abort at PresentsRootSCEE load. Guard gt6_purecall logs + returns 0.
+- (Arbeit32) probe.ps1 now gives each run an empty /dev_hdd1 (GT6_HDD1); ctxwatch.py reads own transcript (CLAUDE_CODE_SESSION_ID).
 - Binary still carries diagnostics (022/023 generated are clean, diagnostics in work/_bk_*): run `scripts\build-all.ps1` before a baseline.
 
 - MAIN LOOP 146E8: task AFDFC0 = boot check (strcmp BCES01893), legitimate, 0 iterations. Details in eu-boot-log.md.

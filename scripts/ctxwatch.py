@@ -7,6 +7,7 @@ import glob, json, os, sys
 FIX = 90000  # measured start context (tools+system+CLAUDE.md), fallback only
 a = sys.argv[1:]
 limit = int(a[a.index("--limit") + 1]) if "--limit" in a else 210000
+own = os.environ.get("CLAUDE_CODE_SESSION_ID", "")  # calling session, exact transcript
 sess = a[a.index("--session") + 1] if "--session" in a else ""
 d = os.path.join(os.path.expanduser("~"), ".claude", "projects", "C--Users-user-Downloads-Games-GT6-ClaudeCode-GT6PP")
 fs = [f for f in glob.glob(os.path.join(d, "*.jsonl")) if os.path.basename(f).startswith(sess)]
@@ -17,10 +18,11 @@ def is_worker(p):
     # Match both the English and the legacy German work-session marker (older spawn prompts)
     try:
         t = open(p, errors="ignore").read(20000)
-        return "You are the work session" in t or "Du bist die Arbeitssession" in t
+        return "You are the work session" in t or "You are the working session" in t or "Du bist die Arbeitssession" in t
     except OSError:
         return False
-f = next((p for p in fs if is_worker(p)), fs[0])  # prefer the work session, not the supervisor
+mine = next((p for p in fs if own and os.path.basename(p) == own + ".jsonl"), None)
+f = mine or next((p for p in fs if is_worker(p)), fs[0])  # else prefer a work session, not the supervisor
 def txt(o):
     if isinstance(o, str): return len(o)
     if isinstance(o, list): return sum(txt(x) for x in o)
