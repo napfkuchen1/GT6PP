@@ -449,3 +449,16 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
   100207 (affinity 5) one stall, one progressing; 100449_1 'map/set too long' at 51 s.
 - Presents script: projects/gt6/boot/presents_sequence_common.ad: changeImage(path); Thread::Sleep(sec); SCEE table common/JP/scei 2.0, scee/notice 1.0.
 - Other noise: shared_ptr release AD23EC calls garbage vtables on objects at 0x6FFFF5E0..6FFFF640 (tid27/30), r2/r12 garbage.
+
+
+## STATE trim 2026-11-25
+- Binary still carries diagnostics (022/023 generated are clean, diagnostics in work/_bk_*): run `scripts\build-all.ps1` before a baseline.
+- MAIN LOOP 146E8: task AFDFC0 = boot check (strcmp BCES01893), legitimate, 0 iterations. Details in eu-boot-log.md.
+- GAME LOOP 1.22 = 0x616C80 (1.00: 568800), thread entry 6170AC, tick 68FF84, running (tid1/tid30); details in eu-boot-log.md.
+- (Arbeit32) 1.22 data route works: overlay work/gt6_vol_a32 (scripts/make-vol-overlay.py), env GT6_VOL_ROOT, no -Boot, no A22_BLOCK. MMuseum2 NameError gone. Arbeit31 PFS-deadlock line dropped.
+- (Arbeit32) 1.22 boot overflowed the 1 MiB host stack (0xC00000FD) -> /STACK:0x4000000. Then legal screen at frame 3000 (probe_a32vol_20261125_093727_1).
+- (Arbeit32) Stale 11-22 savedata -> DISKFULL 0x1a (=SQLITE_NOTADB, GameRecord.ad:178, /dev_hdd1 game024.db). Saves moved to work/ARCHIV -> frame 6000 'SCE presents' (probe_a32nosave_..094437_1).
+- (Arbeit32) Both early aborts = __cxa_pure_virtual 0xC68B8C (callers 2CD5F4, 1DA43C dtor): teardown race, 48 s abort at PresentsRootSCEE load. Guard gt6_purecall logs + returns 0.
+- (Arbeit32) probe.ps1 now gives each run an empty /dev_hdd1 (GT6_HDD1); ctxwatch.py reads own transcript (CLAUDE_CODE_SESSION_ID).
+- (Arbeit32) Runs are nondeterministic (same binary/env): Presents frozen (frame 8000), stall at setting.mproject, abort 'map/set<T> too long', purecall (guarded, run survives).
+- (Arbeit32) Stall = tid1 loops forever in a script-engine std::map walk (func_006D2EA8/6D2BC0, null node, HOTREAD8 0x21). Same module (6Dxxxx) in 'too long' stack -> container corruption.

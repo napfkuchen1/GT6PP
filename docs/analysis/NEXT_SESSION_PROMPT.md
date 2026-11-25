@@ -1,6 +1,6 @@
-Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 886ec9f docs: handover; Arbeit32 running: 1.22 tree extracted by disc owner to work/gt6_vol_122+ (boot.adc 158255 B, scripts/gt6/main.adc 988307 B, sha256 1CE3993C...A69B).
-Next step: Overlay 1.22 tree on a COPY of work/gt6_vol (hardlinks/junctions; never modify gt6_vol or gt6_vol_122+), GT6_VOL_ROOT=copy, boot via probe.ps1 without 1.00 boot.adc patches. If no MMuseum2 NameError -> follow next blocker to menu; if route fails -> guest PFS deadlock line (STATE Arbeit30).
-Do not repeat: never run GTToolsSharp/PDTools; 1.00 scripts mismatch 1.22 ELF; A22 Save/Term/NP/Quit chains refuted
+Goal: Main menu (C6), EU 1.22 data overlay work/gt6_vol_a32 (env GT6_VOL_ROOT + A29_JMP=1, no -Boot).
+State: last commit f04215a docs: Arbeit32 handover findings (1.22 overlay boots to presents, boot r; PROGRESS: 2026-11-25 | 4093277 | vol | ok FAIL - - - - - | probe_a32see_20261125_095738_1 | non-black=1%
+Next step: Boot race: ABA suspect. Run >=4x (probe -Parallel 2 twice, 100 s) with PPU_RESV_STORE=1 vs default, count stall (HOTREAD 6D2BC0)/too long/purecall. If STORE clearly better: make it default and find non-vm_write writers (SPU DMA, HLE, atomics); else audit ldarx/lwmutex. Also: why savedata loads 3x (boot restarts before/after Presents).
+Do not repeat: -Affinity 5 (still stalls); PPU_RESV_OFF (worse); PPU_WWATCH 0x6FFFF610 silent; Arbeit31 guest PFS line dropped.
 Still running: nothing
-Read: STATE.md (Arbeit29/30 lines at end)
+Read: STATE.md (Arbeit32 lines); eu-boot-log.md 'Arbeit32'
