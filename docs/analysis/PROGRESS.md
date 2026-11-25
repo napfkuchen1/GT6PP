@@ -85,3 +85,4 @@ Oracle RPCS3 (game 1.22) reaches C6. Our 1.22 runs: so far all FAIL at C1.
 2026-11-25 | f8ef048 | vol | ok ok FAIL FAIL ok FAIL - | probe_a45op_20261125_172634_1 | non-black=81%
 2026-11-25 | b219eca | vol | ok FAIL - - - - - | probe_a45fast_20261125_173520_1 | non-black=0%
 2026-11-25 | b219eca | vol | ok FAIL - - - - - | probe_a45gm_20261125_174602_1 | non-black=0%
+2026-11-25 | faa32e5 | vol | ok ok FAIL FAIL ok FAIL - | probe_a46stk_20261125_190740_1 | non-black=81%

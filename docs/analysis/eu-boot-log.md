@@ -785,3 +785,10 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit40) Post-save black = intro tutorial race (start_project_gt6 -> executeEvent), VM stops at 399.7 s after its save; movie skip no help.
 - (Arbeit40) MILESTONE: overlay work/gt6_vol_a40t (tools/patch_adc_skiptutorial.py) 2/2: credit dialogs, then GT Mode loading screen (GT logo)
 - (Arbeit41) FIXED eb71225: guest stat took sizes from the 1.00 TOC -> overlay files truncated (SPECDB, adc, DE.rt2). Run a41full: 26298 flips
+
+
+## Arbeit46 (2026-11-25) GT Mode reload loop
+- a46err: failing car queries have Vdbe rc=11 "database disk image is malformed"; a46buf: cached DB buffer unchanged (0 diff pages).
+- a46c/a46f: corrupt from lockBtree BE9B40 (hdr pages 16213, pager dbSize 15666); xFileSize alternated 16602112 / 16041984.
+- Cause: gt6_pfs_fstat_fix needed the PFS slot (16 slots LRU). Fix faa32e5: size table per FileObject.
+- a46fix: no corrupt, gtmode files loaded once; exit 0xC00000FD at 538 s (fiber host stack 4 MB, xRead under SQLite step).

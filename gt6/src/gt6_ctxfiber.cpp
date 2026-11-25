@@ -34,7 +34,8 @@ extern void (*g_ppu_thread_entry_trampoline)(ppu_context*);
 
 namespace {
 
-constexpr unsigned HOST_STACK = 4u * 1024u * 1024u;
+// Lifted frames are large; SQLite under script code overflowed 4 MB (reserve only).
+constexpr unsigned HOST_STACK = 32u * 1024u * 1024u;
 constexpr uint32_t STACK_PAD  = 0x100;
 
 struct CFiber {

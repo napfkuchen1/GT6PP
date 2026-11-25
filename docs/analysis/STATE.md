@@ -52,13 +52,14 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit45) Overlay work/gt6_vol_a45 (a40t + skipopening): readable credit dialogs -> GT Mode loading. Opening .pam (535 MB)
   is skipped by host override cap and cellPamf shows 0 streams (video not working).
 - (Arbeit45) Debug prints [A2x] in gen 013/014/015/022 gated by GT6_A27 (backup work/_bk_a45/a27); GT6_PFS_TRACE slows load.
-- (Arbeit45) NOW: GT Mode reload loop (gtmode.mproject ~38x, ~0.4 s/cycle in a45vm). CarDealerRoot got_first_car ->
-  getGTModeFirstCarPP l376 is last op; 'SELECT PP FROM GENERIC_CAR WHERE ID=?' step returns rc=1 (9x in a45op).
+- (Arbeit46) FIXED faa32e5: GT Mode reload loop = car DB SQLITE_CORRUPT in lockBtree (dbSize 15666 < header 16213):
+  PFS slot (16, LRU) evicted -> xFileSize fell back to 1.00 TOC size. Size table per FileObject now. Run a46fix: 0 errors.
+- (Arbeit46) Next crash a46fix: host stack overflow 0xC00000FD in SQLite on a guest ctx fiber (4 MB) -> HOST_STACK 32 MB.
+- (Arbeit46) Legacy sqlite step returns rc=1; real code = Vdbe+0x5C, message +0x38. sqlite3CorruptError = BD532C (r3=line).
 
 ## Next step
-1) Why step rc=1 on SELECT PP (DB0106)? Run GT6_A42SQL=1 (no PFS trace), get errmsg/reset code; check xRead C1FC3C /
-   ABD3D0 for off!=0 on DB0106 (key layer offset, short read) and bound ID (nil without first car?). Snapshot of loop:
-   work/snap_a45gm_540.
+1) Check probe a46stk (stack fix): crash gone? frames at 12000+. Then follow the next blocker after GT Mode load
+   (frame capture, pad X 440..530); loganalyze.py + script errors first.
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
