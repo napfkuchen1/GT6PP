@@ -19,6 +19,7 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - Hooks Stream/FileDevice/Host-Open on 1.22 (fuzzy map, match 0.84-0.97) alone: frame 4200 black, no PDIPFS/59 (probe hk122, 2026-11-23).
 - 1.22 data via GT6_VOL_ROOT overlay (scripts/make-vol-overlay.py) boots to legal/"SCE presents"; needs /STACK:64M. __cxa_pure_virtual = 0xC68B8C (OPD 0x163C3E0, guarded in main.cpp). Evidence: probe_a32see_20261125_095738_1.
 
+- Probe saves are per run (PS3_GAMEDATA_ROOT, 5c85812); a shared ./gamedata save hides AdjustScreen. Evidence: probe_a37sv_20261125_121629_*.
 ## 4. Refuted/symptom (do NOT repeat)
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
 - Sysmodule load list and fresh savedata (PS3_GAMEDATA_ROOT): no divergence from the oracle.
