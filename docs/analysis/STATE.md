@@ -31,8 +31,9 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   (sync wait, 88F2B4 loop) inside its own main tick (correlation). PPU_PRIO_MAP=1 (a36pm, 2 runs) no fix, tid30 case stalls too.
 
 ## Next step
-1) Why does B0C524 fail on tid1 (script VM alloc)? Log heap r30 + size at B0CCFC (r3==0); compare heap sizes / sys_memory
-user size with PS3 (213 MB). OOM is the deadlock trigger. 2) After SAVE complete: what waits (WD dump after save, 59/FI film;
+1) Main heap 017B4C78 full or corrupt? a36ch_2: 12-byte allocs fail on tid30 (chain AE74D0 AD3F30 AD42D0 6166C0 7B5248). Find heap
+init (size, free counter), log free bytes over time + count AD4294 calls: monotonic growth = queue/leak (consumer tid1 blocked),
+sudden failure = corruption/garbage size. Static first. 2) After SAVE complete: what waits (WD dump after save, 59/FI film;
 LEDGER l17-27). Pad run: -Env GT6_VOL_ROOT=work/gt6_vol_a35;A29_JMP=1 -PadScript "180:0x4000 200:0x4000 220:0x4000" -Seconds 300.
 
 ## Refuted / symptom (do not repeat)

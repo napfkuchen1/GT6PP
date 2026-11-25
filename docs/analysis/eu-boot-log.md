@@ -656,3 +656,7 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - SettingProject stall (a36oom_2 WD): tid1 chain A2FFCC..68FF84->66E6AC->A86118->A2F290..->A0498C->88F2B4 (wait while status==-1, 1 ms), both samples.
   After tid31 task post (A27T lr=01062478) tid1 (not tid30) took the next task in most stalled runs; good runs mostly tid30 (correlation only).
 - a36pm (2, PPU_PRIO_MAP=1): both reach 300 s at ~52 fps, no AdjustScreenRoot (one with tid30 taking the task: polls forever). PRIO_MAP does not fix it.
+- a36ch (2, no WD): run1 silent stall at SettingProject (0 OOM). run2: [A35OOM] 12x tid30 heap=017B4C78 align=0x10 size=0xC chain AE74D0 AD3F30 AD42D0
+  6166C0 7B5248 892C20 8933A4 892988 (6166A4: AD4294(obj+0x2B0) = small node alloc); [A36HL] skipped 7 walks (tid1 and tid30), flips continue to 300 s.
+  So the main heap is exhausted or its free list is corrupt: even 12 bytes fail. a36hl_2 asked 161 MB (garbage size).
+- Heap query wrappers on 017B4C78 (candidates for free-size logging): B0A3B4 (caller 9FE274), B0A6AC (9FE1EC, 9FE2E4); B0BC70 many callers.
