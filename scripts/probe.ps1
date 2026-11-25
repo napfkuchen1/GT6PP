@@ -143,7 +143,7 @@ function New-RunHdd0([string]$Src, [string]$Dst) {
     }
     Get-ChildItem (Join-Path $Src $usr) -Force | ForEach-Object {
         $t = Join-Path $Dst "$usr\$($_.Name)"
-        if ($_.PSIsContainer -and $_.Name -in @("db","replay","savedata")) { Copy-Item $_.FullName $t -Recurse -Force }
+        if ($_.PSIsContainer -and $_.Name -in @("db","replay","savedata","PDIPFS")) { Copy-Item $_.FullName $t -Recurse -Force }
         elseif ($_.PSIsContainer) { cmd /c mklink /J "$t" "$($_.FullName)" | Out-Null }
         else { Copy-Item $_.FullName $t -Force }
     }

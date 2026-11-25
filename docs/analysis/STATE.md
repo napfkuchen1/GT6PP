@@ -14,13 +14,14 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit32) Fixes: /STACK:64M; purecall guard (C68B8C logs, returns 0); stale 11-22 savedata moved to ARCHIV (caused DISKFULL).
 - (Arbeit33) Boot race solved by pinning guest PPU threads to 1 host core (PPU_ONECORE=1): 6/6 reach PresentsRootSCEE.
 - (Arbeit34) 0xC00000FD = fflush(NULL) symptom; root: AE6388 (from CD2ABC, vector 6FFFE910 with 2 NULL entries) wipes NULL page..TOC.
-- (Arbeit34) Guard [A34G] only in gt6/generated ppu_recomp_023.cpp (clean: work/_bk_a34/ppu_recomp_023_pre.cpp); not persisted.
-- (Arbeit34) CD2ABC: lock 1713700 (920458/920480), CD255C, loop; guard run2 still stalls (hot=19443) -> other corruption remains.
-- (Arbeit34) Script blocker on every Presents run: main.adc GameItem.ad l275 (nil).ColorBegin (SPECDB AVATAR_* row missing) kills boot script.
+- (Arbeit35) AE6388 guard persisted (tools/guard_ringzero.py in post-lift). ColorBegin bypass: tools/patch_adc_colorbegin.py, overlay work/gt6_vol_a35.
+- (Arbeit35) MILESTONE (probe_a35pad_..112132_2, pad3_..112834_2): AdjustScreen renders (German); X at 220 s -> AutoSave2 -> SAVE complete.
+- (Arbeit35) Shared PDIPFS junction: parallel runs both wrote K/CQ.fdup* -> 2x AV at 85 s. probe.ps1 now copies PDIPFS per run (CQ moved to ARCHIV).
+- (Arbeit35) After SAVE complete: black frame, no further opens/loads for 60 s (frame 15000, 1 draw op). Oracle opens PDIPFS/59/FI (film) here.
 
 ## Next step
-1) Persist AE6388 guard via tracked post-lift patch. 2) Bypass ColorBegin: new overlay with COPY of main.adc (break hardlink),
-JUMP_IF_FALSE(0x0F) at file 0xEB893 -> JUMP(0x0D), target 48; find next error / why SPECDB AVATAR_* row is missing.
+Find what the script/tid30 waits for after SAVE complete: PS3_WD_AT dump at stall, [null-call] AD23EC (tid30/27, opd 0x2200208x) check;
+LEDGER l17-27 (spinner, 59/FI trigger). Pad run: -Env GT6_VOL_ROOT=work/gt6_vol_a35;A29_JMP=1 -PadScript "180:0x4000 200:0x4000 220:0x4000" -Seconds 300.
 
 ## Refuted / symptom (do not repeat)
 Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
