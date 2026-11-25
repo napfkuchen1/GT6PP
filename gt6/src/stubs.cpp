@@ -740,6 +740,21 @@ extern "C" void gt6_pfs_host_open_commit(uint32_t file_ea, uint32_t ret_ea)
     vm_write64((uint64_t)file + 0xC0u, (uint64_t)s->size);
 }
 
+/* Called after the device stat of an open stream (1.22 0xABD328): r4 = stream
+ * (FileObject at +0x44), r5 = out struct with u64 size @+0x10.  Same 1.00 TOC
+ * size problem as the path stat below; SQLite's xFileSize goes through here. */
+extern "C" void gt6_pfs_fstat_fix(uint32_t stream_ea, uint32_t out_ea)
+{
+    if (gt6_pfs_disabled() || !stream_ea || !out_ea) return;
+    Gt6PfsSlot* s = gt6_pfs_find_file(vm_read32((uint64_t)stream_ea + 0x44u));
+    if (!s || !s->data) return;
+    const uint64_t old = ((uint64_t)vm_read32((uint64_t)out_ea + 0x10u) << 32) | vm_read32((uint64_t)out_ea + 0x14u);
+    if (old == (uint64_t)s->size) return;
+    vm_write64((uint64_t)out_ea + 0x10u, (uint64_t)s->size);
+    if (gt6_pfs_trace() || getenv("GT6_A42SQL"))
+        fprintf(stderr, "[fstatfix] %s size %llu -> %u\n", s->path, (unsigned long long)old, s->size);
+}
+
 /* Called after the guest file stat (1.22 0xAADA6C): r3 = out struct
  * { u32 status; ...; u64 size @+0x10 }, r4 = guest path.  The guest takes the
  * size from the 1.00 volume TOC, so files served from the 1.22 overlay were
