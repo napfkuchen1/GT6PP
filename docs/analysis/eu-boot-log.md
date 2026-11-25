@@ -851,3 +851,9 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   (patches/gt6-a49-ds-texscale.patch).
 - a49menu (2x 540 s, default park grace, same pad): GT Mode home at flip ~23000 both runs, 0 resync/halt; popup real
   text (T1). Frame work/_a49/menu_home_a49.png: only dealer tile lit, three stacked notification banners.
+
+## Arbeit50 (2026-11-26) pad in menu, movie path
+- a50pad (2x 720 s, X 560/580/600, right/left, X 650, circle 685): popups advance with X, X on dealer tile starts the
+  dealer loading screen; loading still shown at 720 s (~100 s+). Frames work/_a50/sheet_pad*.png.
+- cellPamf HLE read a wrong header layout (0 streams); rewritten (patches/gt6-a50-pamf-header.patch).
+- cellDmux v020 is a stub (no PES parsing); cellVdec needs PS3RECOMP_FFMPEG_RUNTIME + FFmpeg headers.

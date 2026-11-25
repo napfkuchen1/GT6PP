@@ -12,9 +12,9 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
 - [ ] G1 only dealer tile drawn, rest dark: maybe tutorial dimming; check after popup close; stacked banner x3 too
-- [ ] I1 opening movie plays (535 MB .pam skipped by host cap; cellPamf 0 streams)
+- [ ] I1 opening movie: cellPamf layout fixed (A50, patches/gt6-a50-pamf-header.patch, not run); cellDmux is a stub, no FFmpeg headers
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
-- [ ] C1 pad controls menu (popup X, cursor, dealer enter/back)
+- [ ] C1 pad controls menu: popup X + dealer enter OK (a50pad 2/2); dealer screen/back/cursor unverified (loading >100 s)
 - [ ] L1 live non-headless run, persistent save, real pad input
 
 ## Method
@@ -55,9 +55,9 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-S1 + T2 fixed (A49, commit 99db830); 6/6 long runs no stall; a49menu 2/2 reach Zuhause (flip ~23000, 540 s).
-Next: same run with more X presses after 470 s (popup close, dealer enter/back, cursor) -Seconds 700, capture late
-(RSX_CAP=23000:40:301): C1 + G1 + stacked banner. Then I1 movie without skipopening overlay (gt6_vol_a45 skips).
+a50deal (2x 900 s, X 560..620, PS3_WD_AT=780,880): does the dealer load finish? If not: WD stacks / tid1 chain, file opens.
+Then I1: real MPEG-PS demux in cellDmux.c + FFmpeg headers (avcodec-63/avutil-61, DLLs in tools/RPCS3), run without
+skipopening; check served .pam size (old run passed 1.00 size 351096832). Notes: side-session note arbeit50-movie.md.
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
