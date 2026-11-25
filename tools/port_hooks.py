@@ -138,6 +138,9 @@ print("part3 hooks present", sorted(done3), "/ init,flush")
 FN4 = "void func_00C1FE74(ppu_context* ctx)"
 CALL4 = "ctx->lr = 0x00C2036C; func_00AE6C34(ctx); DRAIN_TRAMPOLINE(ctx);"
 BR4 = "if ((!((ctx->cr >> 1) & 1))) goto loc_00C20488;"
+# The calls clobber volatile cr fields; the anchor branch still needs the AE6C34 compare (cr7), so save/restore cr.
+CRSAVE = "        { const auto _cr = ctx->cr;\n"
+CRREST = "        ctx->cr = _cr; }\n"
 FILL4 = ("        if (!getenv(\"GT6_NO_CACHEFILL\")) { uint32_t _o=(uint32_t)ctx->gpr[31]; uint32_t _b=vm_read32(_o+0x28); uint32_t _s=vm_read32(_o+0x30);\n"
          "          if(_b && _s){\n"
          "            ctx->gpr[3]=_o; ctx->gpr[4]=0; ctx->lr=0x00C20374; func_00C1F604(ctx); DRAIN_TRAMPOLINE(ctx);\n"
@@ -150,10 +153,16 @@ for p in sorted(root.glob("ppu_recomp_*.cpp")):
     if a < 0: continue
     e = s.find("\nvoid func_", a + 20); e = len(s) if e < 0 else e
     body = s[a:e]
-    if "GT6_NO_CACHEFILL" in body: print("part4 already"); continue
+    if "GT6_NO_CACHEFILL" in body:
+        if "_cr = ctx->cr" in body: print("part4 already"); continue
+        c = body.find(CALL4); f = body.find("if (!getenv(\"GT6_NO_CACHEFILL", c); b = body.find(BR4, c)
+        if not 0 <= f < b: print("part4 upgrade anchors missing"); continue
+        nb = body[:f] + CRSAVE.lstrip() + "        " + body[f:b].rstrip() + "\n" + CRREST + "        " + body[b:]
+        s = s[:a] + nb + s[e:]
+        p.write_text(s, encoding="latin-1"); n4 += 1; continue
     c = body.find(CALL4); b = body.find(BR4, c) if c >= 0 else -1
     if b < 0: print("part4 anchors missing"); continue
-    nb = body[:b] + FILL4.lstrip() + "        " + body[b:]
+    nb = body[:b] + CRSAVE.lstrip() + FILL4 + CRREST + "        " + body[b:]
     s = s[:a] + nb + s[e:]
     if "<stdlib.h>" not in s: s = s.replace(INC, INC + "#include <stdlib.h>\n", 1)
     p.write_text(s, encoding="latin-1"); n4 += 1
