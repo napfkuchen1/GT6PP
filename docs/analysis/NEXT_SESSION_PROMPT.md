@@ -1,6 +1,6 @@
-Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 2385ea9 docs: Arbeit45 results; PROGRESS: 2026-11-25 | b219eca | vol | ok FAIL - - - - - | probe_a45gm_20261125_174602_1 | non-black=0%
-Next step: GT Mode reload loop: run GT6_VOL_ROOT=work/gt6_vol_a45;GT6_A42SQL=1 (no PFS trace, pad X 220..395, 480 s); find why step of 'SELECT PP FROM GENERIC_CAR' returns rc=1 (xRead off!=0 / key layer / bound ID); if IO error fix reader, if ID nil check first-car state (tutorial skip).
-Do not repeat: xFileSize/size fixes (f8ef048), grim007 (b219eca), GT6_PFS_TRACE long runs (too slow)
+Goal: Stabilize the main menu (GT Mode home) reached in Arbeit46.
+State: last commit 4da0de7 fix: 32 MB host stack for guest context fibers (GT Mode menu renders), A; PROGRESS: 2026-11-25 | 4da0de7 | vol | ok ok FAIL FAIL ok FAIL - | probe_a46menu_20261125_191732_1 | non-black=81%
+Next step: Main menu reached (a46menu, work/_a46/main_menu_home.png). Next if requested: fix black tiles + message ID in popup (GT003_GET_FIRST_CAR0), then X on popup -> car dealer; if black tiles persist after 300 s idle, check texture/file loads in the log
+Do not repeat: DB size/corrupt fixes (f8ef048, faa32e5), fiber stack (4da0de7)
 Still running: nothing
-Read: STATE.md; eu-boot-log.md Arbeit45
+Read: STATE.md; eu-boot-log.md Arbeit46

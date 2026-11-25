@@ -792,3 +792,10 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a46c/a46f: corrupt from lockBtree BE9B40 (hdr pages 16213, pager dbSize 15666); xFileSize alternated 16602112 / 16041984.
 - Cause: gt6_pfs_fstat_fix needed the PFS slot (16 slots LRU). Fix faa32e5: size table per FileObject.
 - a46fix: no corrupt, gtmode files loaded once; exit 0xC00000FD at 538 s (fiber host stack 4 MB, xRead under SQLite step).
+- a46stk: stack fix, no crash in 560 s, GT Mode home visible. a46menu (no X after 395): home menu "Zuhause" captured.
+
+
+## STATE trim 2026-11-25
+- (Arbeit42) ROOT of (nil).toInt: SPECDB (specdb/GT6/DB0106.dat) prepare returns SQLite rc=26 NOTADB; page 1 handed to SQLite is the
+- (Arbeit43) DB key found: script open passes key string; aac2a8 stores {1,str,len} at FileObject+0x90, ptr +0x9C. Host open override
+- (Arbeit44) FIXED keyed open: host bytes now pass guest key layer 0xAC874C (Salsa20, state [FileObject+0x60]+0x1C;
