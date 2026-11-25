@@ -476,3 +476,20 @@ Next: (1) who calls 9AE5D4 in the script (method name via OPD 0x162D7A0, string 
 - (Arbeit33) SOLVED boot race: 2x3 runs each, default 0/6 stable, PPU_RESV_STORE=1 (now covering guest stores) 1/6, 1 host core 6/6 to PresentsRootSCEE.
 - (Arbeit33) PPU_ONECORE=1 (default in gt6 main.cpp, patch gt6-a33) pins only guest PPU threads: 6/6 Presents, no map stall, ~35 fps; tools boot-batch.ps1/boot-outcome.py.
 - (Arbeit33) New blocker (2 of 6 + 1 stall): 0xC00000FD, endless recursion in allocator tree func_00C59350 (tid14 prio 224) = remaining corruption; test PPU_PRIO_MAP=1.
+
+## Arbeit34 (2026-11-25) abort path + script nil error
+- a34cap (frame 5000, pinned): run1 0xC00000FD@121s on tid1 (8146B8>89D4C8>AF55E0>AD4C14>AF0844>C51C38, r31=0 from -0x7818(r2)); run2 legal screen, one '(nil).ColorBegin'.
+- TOC=01644F38; stdin/out/err slots 163DFEC.. valid in ELF; .got 163CF38..163EB64. pinp2 crash: same abort path on tid15 (printer label tid=14 is stale).
+- '(nil).ColorBegin' present in 16 earlier a32/a33/a34 runs. Guard knob: GT6_GUARD=163d720:163d720.
+- Guard dump: CD2ABC <- 9206A8 <- 9230F4 <- 1F6AD4 <- 1FA204 <- 1FA70C <- 1FA968 <- 8AF7F0 <- 2F53E8 <- 89332C <- 892998 <- 8A7B90; r28/r31=6FFFE900/04, r29=3B948DD3-class garbage; first stores hit NULL+0x38.
+- a34g/a34g2 (4 runs, guard build): all alive at 140-150 s; one hit: obj=2C begin=0 end=0 lr=CD2B2C r27=619E0000 vec=6FFFE910..6FFFE918.
+
+
+## STATE trim 2026-11-25
+- (Arbeit33) 150 s a33pr (4+4): pin 1 stall@83 / 3 alive; PPU_PRIO_MAP=1 1 AV / 3 alive -> no clear gain, stays off. No 0xC00000FD this batch.
+- (Arbeit33) New modes while pinned: 3/8 run 60 fps but stop at SettingProjectComponent.gpb (tid1 monitor wait A4FBE8?); 14/14 pinned runs no map stall.
+- (Arbeit33) CORRECTION: C59350 is fflush, not an allocator tree: r3=0 -> recurses on 3 FILE* at r2-0x6F4C/-0x6F48/-0x6F44; any NULL (or r2=0) = endless recursion -> 0xC00000FD.
+- (Arbeit34) 0xC00000FD is a symptom: operator new (C51C38/C51D64) returns fail/garbage -> abort C52CD4>C52C5C>fflush(NULL); TOC slot 163D720 reads 0 / FILE* gone = guest .got corrupted (or r2 bad).
+- (Arbeit34) KEY script blocker: every Presents-reaching 1.22 run throws '(nil).ColorBegin' (main.adc GameItem.ad l275: SPECDB AVATAR_* row for code missing) right after game024.db open -> boot script dies on legal screen.
+- (Arbeit34) ROOT of 0xC00000FD (GT6_GUARD=163d720:163d720, probe_a34grd_..110635_2): AE6388 (zero 8B items from *(obj+8) to *(obj+0xC)-8) gets garbage obj -> wipes NULL page..TOC.
+- (Arbeit34) Caller CD2ABC loops vector obj(619E0000)+0x3C55C {begin+4,end+8}, AE6388(*it+0x2C); storage ~6FFFE900 = same area as earlier garbage (6FFFF5E0..): suspect heap aliasing/overlap.

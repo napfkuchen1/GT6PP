@@ -14,9 +14,13 @@ Baseline probe: `scripts\probe.ps1 -Name x -Boot notut -Seconds 90`; never mix `
 ## State
 
 
-- (Arbeit33) 150 s a33pr (4+4): pin 1 stall@83 / 3 alive; PPU_PRIO_MAP=1 1 AV / 3 alive -> no clear gain, stays off. No 0xC00000FD this batch.
-- (Arbeit33) New modes while pinned: 3/8 run 60 fps but stop at SettingProjectComponent.gpb (tid1 monitor wait A4FBE8?); 14/14 pinned runs no map stall.
-- (Arbeit33) CORRECTION: C59350 is fflush, not an allocator tree: r3=0 -> recurses on 3 FILE* at r2-0x6F4C/-0x6F48/-0x6F44; any NULL (or r2=0) = endless recursion -> 0xC00000FD.
+
+
+
+- (Arbeit34) CONFIRMED (probe_a34g2_..): guard fired, CD2ABC vector 6FFFE910..6FFFE918 holds 2 NULL entries -> AE6388(0x2C) begin=end=0 = wipe; with guard no TOC wipe. 4 guard runs: 0 x C00000FD.
+- (Arbeit34) Guard [A34G] lives only in gt6/generated ppu_recomp_023.cpp (clean: work/_bk_a34/ppu_recomp_023_pre.cpp); not yet persisted in post-lift.
+
+- (Arbeit34) CD2ABC: lock 1713700 (920458/920480), CD255C, loop; a34g2 run2 still stalls (hot=19443, flips 2159, last UIKit gpb) -> pinning does not cure all container corruption.
 
 ## Next step
 (Arbeit32) Fix the boot race/corruption: first compare PPU_RESV_STORE=1 vs default (>=4 runs each); then audit PPU atomics/locks (lifted lwarx/stwcx + ppu_stwcx32 vs plain stores, ldarx, sys_lwmutex/lwcond recursion, static-init guards).
