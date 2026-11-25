@@ -757,3 +757,10 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit35) a35oom (2 runs, hook [A35OOM] in gen 024 B0CCAC, bk work/_bk_a35, binary carries it): 0 OOM, both stop at
 - (Arbeit36) OOM cause seen (a36hl_2): operator new retry loop AE73BC (callers via AE752C/40/54) asks ~161 MB (size 099F6844 =
 - (Arbeit37) "AdjustScreen 0/14" was no code regression: pad run pad3_2 saved to shared ./gamedata (11:32); later boots had a save.
+
+## Arbeit44 (2026-11-25) keyed database decrypt
+- AAF74C is a vtable slot call, not a reader of FileObject+0x9C. Device vtable 015DB8E8: open ABED90, read ABE5A4,
+  vt+D4 ABCFA0 (cipher setup, ctx = [file+0x60], +4 key), vt+D8 ABD3D0 (volume XOR, then AC874C(key,state,buf,n,off,filt)).
+- GT6_A44GUEST experiment: guest path decrypts but reads the 1.00 volume (K/RE). Fix: run AC874C on host bytes.
+- a44key: DB0106 page 1 ok, queries succeed on other handles; a44dump: both dumps integrity_check ok.
+- a44ver2: buffer 81AE0000 unchanged 120 s; a44xr6: no xRead with off != 0 and no xRead error on DB0106, yet rc=11.

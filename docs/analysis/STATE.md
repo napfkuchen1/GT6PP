@@ -49,10 +49,14 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit43) DB key found: script open passes key string; aac2a8 stores {1,str,len} at FileObject+0x90, ptr +0x9C. Host open override
   ignores it (read at AAF74C). xOpen C1FE74 pager fill AE6C34 leaves zeros (no page fault); p4 hook (port_hooks.py:131) copies raw.
 
+- (Arbeit44) FIXED keyed open: host bytes now pass guest key layer 0xAC874C (Salsa20, state [FileObject+0x60]+0x1C;
+  stubs.cpp gt6_pfs_key_layer). Dumps of DB0106 + menudb pass sqlite integrity_check. Runtime: queries on DB0106 still
+  rc=11 (CORRUPT); xRead C1FC3C only ever reads off=0 (page 1), cache stable -> likely xFileSize reports old/small size.
+
 ## Next step
-1) gdis around AAF720-AAF774 (reader of FileObject+0x9C) + callers: find guest decrypt routine and its args. Then apply it to the
-   override-served bytes when file+0x9C != 0 (gt6/src/stubs.cpp gt6_pfs_stream_read_override). Keep p4 cache fill. Verify with
-   GT6_A42SQL=1: [A42N] page1 = 'SQLite format 3', no rc=26. DB opens at ~4 s: 90 s probe suffices (GT6_A43BT=1 backtrace).
+1) Find the SQLite xFileSize of VFS xOpen C1FE74 (methods near: xRead C1FC3C, xWrite C1FAAC, xClose ~C1F8B0, xFileControl
+   C1F9B8). Log its result for DB0106 vs 16602112 (lockBtree: header pages 16213 > file pages -> rc=11). Fix size source.
+   Verify: GT6_A42SQL=1 90 s, no 'db=.. rc=11'. 2) grim007.db (hdd cache) rc=26: first byte 0, separate, check later.
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

@@ -54,6 +54,10 @@ uint32_t vm_read32(uint64_t addr);
 void func_00616C80(ppu_context* ctx);
 void func_005EBEBC(ppu_context* ctx);
 void func_005FA6C8(ppu_context* ctx);
+void func_00AC874C(ppu_context* ctx);
+extern "C" PPU_THREAD_LOCAL void (*g_trampoline_fn)(void*);
+extern "C" void gt6_pfs_key_layer(ppu_context* ctx, uint32_t stream, uint32_t file,
+                                  uint32_t buf, uint32_t n, uint32_t offset);
 
 /* -------------------------------------------------------------------------
  * Boot-script stream override.
@@ -768,6 +772,46 @@ extern "C" void gt6_pfs_stat_fix(uint32_t out_ea, uint32_t path_ea)
                 (unsigned long long)old, n);
 }
 
+/* Keyed open: the game passes a key string with the open (FileObject+0x9C ->
+ * {type, str, len}). The guest device open turns it into a cipher state at
+ * [FileObject+0x60] (+4 key, +0x1C state), and the device read applies that
+ * layer through 0xAC874C(key, state, buf, n, offset, filtered). Extracted
+ * host files still carry this layer, so run the same guest routine on the
+ * bytes served here. GT6_NO_KEYDEC=1 disables. */
+extern "C" void gt6_pfs_key_layer(ppu_context* ctx, uint32_t stream, uint32_t file,
+                                  uint32_t buf, uint32_t n, uint32_t offset)
+{
+    if (!file || !n || getenv("GT6_NO_KEYDEC")) return;
+    const uint32_t key = vm_read32((uint64_t)file + 0x9Cu);
+    if (key != file + 0x90u) return;
+    const uint32_t c = vm_read32((uint64_t)file + 0x60u);
+    if (!c || vm_read32((uint64_t)c + 4u) != key) return;
+
+    static int logged;
+    if (logged < 8) {
+        logged++;
+        fprintf(stderr, "[keydec] file=0x%08X off=%u n=%u\n", (unsigned)file, (unsigned)offset, (unsigned)n);
+    }
+    ppu_context saved = *ctx;
+    ctx->gpr[3] = key;
+    ctx->gpr[4] = c + 0x1Cu;
+    ctx->gpr[5] = buf;
+    ctx->gpr[6] = n;
+    ctx->gpr[7] = offset;
+    ctx->gpr[8] = vm_read32((uint64_t)stream + 0x48u) != 0u;
+    func_00AC874C(ctx);
+    while (g_trampoline_fn) { void (*tf)(void*) = g_trampoline_fn; g_trampoline_fn = 0; tf(ctx); }
+    *ctx = saved;
+
+    /* GT6_KEYDEC_DUMP=<dir>: write decrypted whole-file reads for offline checks. */
+    const char* dir = getenv("GT6_KEYDEC_DUMP");
+    if (dir && *dir && offset == 0 && n > 4096u && vm_base) {
+        char p[GT6_PFS_HOST_MAX];
+        snprintf(p, sizeof p, "%s/keydec_%u.bin", dir, (unsigned)n);
+        if (FILE* f = fopen(p, "wb")) { fwrite(vm_base + buf, 1, n, f); fclose(f); }
+    }
+}
+
 /* Called at the top of 0x9F4AA0.  r4 points at the {buf,len} request the
  * device read would consume. */
 extern "C" int gt6_pfs_stream_read_override(ppu_context* ctx)
@@ -819,6 +863,7 @@ extern "C" int gt6_pfs_stream_read_override(ppu_context* ctx)
         for (uint32_t i = 0; i < k; i++)
             vm_write8((uint64_t)out + i, s->data[s->pos + i]);
     }
+    gt6_pfs_key_layer(ctx, stream, file, out, k, s->pos);
     s->pos += k;
     ctx->gpr[3] = k;
     return 1;
