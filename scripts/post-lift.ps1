@@ -11,4 +11,5 @@ Push-Location tools
 Pop-Location
 & $P -I tools/guard_conswait.py gt6/generated/ppu_recomp_018.cpp
 & $P -I tools/port_hooks.py gt6/generated
+& $P -I tools/guard_ringzero.py gt6/generated
 # TODO (PORT.md): script hooks (1.00 9BB020/9BB11C/9BAFE0 -> A67E1C/A67F60/A67DC4 unsure), FileDeviceHost flush guard, boot-presents, menu pump
