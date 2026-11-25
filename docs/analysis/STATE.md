@@ -11,8 +11,6 @@ Overlay `work/gt6_vol_a32` (scripts/make-vol-overlay.py), env `GT6_VOL_ROOT`; `P
 Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol or gt6_vol_122+.
 
 ## State
-- (Arbeit35) Shared PDIPFS junction: parallel runs both wrote K/CQ.fdup* -> 2x AV at 85 s. probe.ps1 now copies PDIPFS per run (CQ moved to ARCHIV).
-- (Arbeit35) After SAVE complete: black frame, no further opens/loads for 60 s (frame 15000, 1 draw op). Oracle opens PDIPFS/59/FI (film) here.
 
 - (Arbeit35) New (a35wd run1, PS3_WD_AT): heap AB-BA deadlock at ~200 s, AdjustScreen never loads. tid1 operator new B0CCAC: alloc B0C524
   fails -> B08498 holds lock 17B4C08 -> B0921C -> B1A0F4/B04CD8 wants 17B4BD8; tid30 per-frame AE73BC -> B04CD8 holds BD8, wants C08.
@@ -46,10 +44,13 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit40) MILESTONE: overlay work/gt6_vol_a40t (tools/patch_adc_skiptutorial.py) 2/2: credit dialogs, then GT Mode loading screen (GT logo)
   to 460 s. GTModeRoot script error "(nil).toInt" (GroupData, SPECDB-like query) on tid1.
 
+- (Arbeit41) FIXED eb71225: guest stat took sizes from the 1.00 TOC -> overlay files truncated (SPECDB, adc, DE.rt2). Run a41full: 26298 flips
+  (before 15477), but '(nil).toInt' still 10x, no frames captured (needs -Frame). CarName.dat still read 97984/103008.
+
 ## Next step
-1) Find the (nil).toInt site: adch_disasm.py on GT mode adc (gtmode.adc, GroupData) or GT6_A40VM trace (last tid1 records before [A29E] line=48);
-   identify the query (SELECT ModelName, Logo, Name ...). Fix DB cause (same class as ColorBegin) or patch adc (INT_CONST), overlay a40t.
-2) Later: why do SPECDB queries return nil; why does the tutorial race hang (course load never starts).
+1) Rerun a41full with -Frame 13000 + GT6_A40VM=390: is toInt still getGTModeFirstCarPP l376 (gtmode.adc)? If yes: check SPECDB open/query result
+   and car code (CarName short: find its size path); if new site: disassemble it. Also test whether ColorBegin patch is now unnecessary.
+2) Later: why does the tutorial race hang (course load never starts); retest unpatched boot.adc (it was truncated before).
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

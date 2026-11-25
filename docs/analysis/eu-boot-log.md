@@ -719,3 +719,16 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit34) 0xC00000FD = fflush(NULL) symptom; root: AE6388 (from CD2ABC, vector 6FFFE910 with 2 NULL entries) wipes NULL page..TOC.
 - (Arbeit35) AE6388 guard persisted (tools/guard_ringzero.py in post-lift). ColorBegin bypass: tools/patch_adc_colorbegin.py, overlay work/gt6_vol_a35.
 - (Arbeit35) MILESTONE (probe_a35pad_..112132_2, pad3_..112834_2): AdjustScreen renders (German); X at 220 s -> AutoSave2 -> SAVE complete.
+
+## Arbeit41 (2026-11-25) truncated files: guest sizes came from the 1.00 volume TOC
+- (nil).toInt site: gtmode.adc getGTModeFirstCarPP l376 (SELECT PP FROM GENERIC_CAR WHERE ID=?) returned nil.
+- GT6_PFS_TRACE=1 (probe_a41db_20261125_143428_1): DB0106.dat read n=16041984 of 16602112; also rtext/common/DE.rt2 383244/580744,
+  CarName 97984/103008, fonts, sound lib. SPECDB truncated explains this and the older (nil).ColorBegin.
+- Size source: guest stat 0xAADA6C (host open 0xAB080C, FileObject+0xB8 struct, size +0x10, filled from guest TOC).
+  Fix eb71225: wrapper + gt6_pfs_stat_fix reports overlay size (probe_a41fix_20261125_144112_1: boot.adc, dialog.adc, setting.adc,
+  ui_kit.adc, DE.rt2, DB0106.dat sizes corrected; DB read now 16602112). CarName.dat still read with 97984 (other size path, open).
+
+
+## STATE trim 2026-11-25
+- (Arbeit35) Shared PDIPFS junction: parallel runs both wrote K/CQ.fdup* -> 2x AV at 85 s. probe.ps1 now copies PDIPFS per run (CQ moved to ARCHIV).
+- (Arbeit35) After SAVE complete: black frame, no further opens/loads for 60 s (frame 15000, 1 draw op). Oracle opens PDIPFS/59/FI (film) here.
