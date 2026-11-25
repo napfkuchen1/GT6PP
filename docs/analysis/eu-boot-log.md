@@ -660,3 +660,17 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   6166C0 7B5248 892C20 8933A4 892988 (6166A4: AD4294(obj+0x2B0) = small node alloc); [A36HL] skipped 7 walks (tid1 and tid30), flips continue to 300 s.
   So the main heap is exhausted or its free list is corrupt: even 12 bytes fail. a36hl_2 asked 161 MB (garbage size).
 - Heap query wrappers on 017B4C78 (candidates for free-size logging): B0A3B4 (caller 9FE274), B0A6AC (9FE1EC, 9FE2E4); B0BC70 many callers.
+
+## Arbeit37 (2026-11-25) shared savedata found, post-save
+- Shared ./gamedata/dev_hdd0 savedata (written 11:32 by probe_a35pad3_..112834_2) was loaded by all 14 later runs: no AdjustScreen.
+  probe.ps1 now sets PS3_GAMEDATA_ROOT=<rundir>/gamedata (-SaveSrc seeds it). Old save: work/ARCHIV/savedata_a35pad3_20261125_1132.
+- a37sv (2 runs, fresh save, frame-6000 early kill at ~178 s): both AdjustScreenRoot at some point (monitor). Run 2: AutoSave2 +
+  SAVE complete with NO pad press (script keys start at 180 s), then flips continue, no LoadModule/new screen, capture black.
+- a37sv run 1: stays at SettingProjectComponent (legal screen at frame 6000); 12x [A35OOM] tid30 heap 017B4C78 align 0x10 size 0xC
+  right after the SettingProject load (chain AE74D0 AD3F30 AD42D0 6166C0 7B5248 892C20).
+- a37ps (2, WD 270,310, frame 13500): run1 STALLED@95s after AdjustScreenRoot with 12x A35OOM; run2 SAVE complete, no loads after icon
+  files (last: credit images, tutorial.xml, GameParameterUtilImpl.adc before save), X at 200-240 s ignored, black frame; ended before WD.
+- a37wd (2, WD 225,240): run1 (stall, 5 OOM) tid30 AE73BC<AD3DFC+0x134<AD4294<6166A4<7B51B8<892BF8; tid1 AE27AC<AE2844<6171D0<7A0A54.
+  run2 (saved) tid30 AD4294+0x78/+0xB0<1FA968<7B51B8; tid1 same 6171D0 wait; tid31 AE27AC<106264C<AF0B94.
+- AD4294: if AEFEC4()==0: AD3DFC copies list to temp (12-byte nodes via AE7554), vcall+0x14 per item, frees nodes (B0BC70).
+

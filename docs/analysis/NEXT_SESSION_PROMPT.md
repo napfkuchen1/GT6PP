@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 3af844d fix: heap lock order guard (B04CD8) and allocation-failure findings; PROGRESS: 2026-11-25 | a080c1b | vol | ok ok FAIL FAIL ok FAIL - | probe_a35wd_20261125_113422_1 | non-black=5%
-Next step: Main heap 017B4C78 full or corrupt? (a36ch_2: 12-byte allocs fail on tid30). Static: free-size query B0A3B4/B0A6AC (callers 9FE1EC/9FE274), log free bytes + count AD4294; monotonic growth = leak/queue (tid1 blocked in A0498C), sudden = corruption/garbage size (a36hl_2 161 MB). Then post-SAVE black screen (WD dump).
-Do not repeat: PPU_PRIO_MAP (no fix for SettingProject stall); heap AB-BA guarded (tools/guard_heaplock.py); probe.ps1 caps -Parallel at 2
-Still running: nothing; gt6.exe carries uncommitted [A35OOM] log hook (gen 024)
-Read: STATE.md Arbeit36 lines; eu-boot-log.md Arbeit36
+State: last commit 5c85812 fix: probe isolates savedata per run (shared save hid first-boot AdjustS; PROGRESS: 2026-11-25 | 5c85812 | vol | ok FAIL - - - - - | probe_a37ps_20261125_121949_2 | non-black=0%
+Next step: Test: list at obj+0x2B0 (notify AD4294, copy AD3DFC) cyclic/corrupt and filling heap 017B4C78? Env-gated hook in AD3DFC: walk source list (next=+0, limit 1000). If cyclic/huge: find list insert/erase writers statically; else sample AD4294 rate on tid30 (1FA968/7B51B8) and what tid1 waits for in 6171D0 (post-save black).
+Do not repeat: AdjustScreen 'regression' was shared savedata (fixed 5c85812, per-run saves); PPU_PRIO_MAP; heap AB-BA guarded; probe -Frame early-kills before late WD
+Still running: nothing; gt6.exe carries uncommitted [A35OOM] log hook (gen 024, bk work/_bk_a35)
+Read: STATE.md Arbeit37 lines; eu-boot-log.md Arbeit37

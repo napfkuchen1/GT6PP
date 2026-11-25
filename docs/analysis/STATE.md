@@ -31,13 +31,15 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   (sync wait, 88F2B4 loop) inside its own main tick (correlation). PPU_PRIO_MAP=1 (a36pm, 2 runs) no fix, tid30 case stalls too.
 
 - (Arbeit37) "AdjustScreen 0/14" was no code regression: pad run pad3_2 saved to shared ./gamedata (11:32); later boots had a save.
-  Fix: probe.ps1 sets PS3_GAMEDATA_ROOT per run (-SaveSrc seeds it); that save is in work/ARCHIV/savedata_a35pad3_20261125_1132.
+  Fix: probe.ps1 sets PS3_GAMEDATA_ROOT per run (-SaveSrc seeds it); that save is in work/ARCHIV/savedata_a35pad3_20261125_1132. Verified a37sv + a37ps: 4/4 AdjustScreen.
+
+- (Arbeit37) a37wd (WD 225/240): tid30 sits in list notify AD4294 (called 6166A4, list obj+0x2B0; also A7F074). Stalled run: inside
+  copy AD3DFC -> new AE73BC (alloc retry); saved run: AD4294 walk/free, tid1 waits 6171D0 -> AE27AC. Saved+black: no loads, X no effect.
 
 ## Next step
-1) Main heap 017B4C78 full or corrupt? a36ch_2: 12-byte allocs fail on tid30 (chain AE74D0 AD3F30 AD42D0 6166C0 7B5248). Find heap
-init (size, free counter), log free bytes over time + count AD4294 calls: monotonic growth = queue/leak (consumer tid1 blocked),
-sudden failure = corruption/garbage size. Static first. 2) After SAVE complete: what waits (WD dump after save, 59/FI film;
-LEDGER l17-27). Pad run: -Env GT6_VOL_ROOT=work/gt6_vol_a35;A29_JMP=1 -PadScript "180:0x4000 200:0x4000 220:0x4000" -Seconds 300.
+1) Test "list at obj+0x2B0 is cyclic/corrupt" (explains full heap 017B4C78): env-gated hook in AD3DFC, walk source list (end node,
+   next=+0, limit 1000), log obj/count once. Cyclic or huge: find insert/erase writers of that list (static). Else: sample AD4294
+   entry rate on tid30 (caller loop 1FA968/7B51B8 spinning?) and check what tid1 6171D0 waits for.
 
 ## Refuted / symptom (do not repeat)
 Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
