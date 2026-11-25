@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 0498bee fix: drop duplicate job chain completion that broke sgx buffer sizes (he; PROGRESS: 2026-11-25 | 717ae2d | vol | ok FAIL - - - - - | probe_a38list_20261125_123210_2 | non-black=0%
-Next step: probe.ps1 -Name a39f -Parallel 2 -Seconds 320 -Frame 12000 -PadScript '220:0x4000 245:0x4000 265:0x4000' -Env 'GT6_VOL_ROOT=work/gt6_vol_a35;A29_JMP=1;PS3_VERBOSE=0;GT6_UNBUF=1'. View captured frames: if AdjustScreen renders and X yields no AutoSave2, inspect input/funcStat path; if save completes and black, analyse tid1 wait 6171D0 -> AE27AC.
-Do not repeat: Heap/list corruption fixed (LEDGER A39, 0498bee); do not re-chase SPU DMA/listener list. LEDGER §4 + CLAUDE.md locked chains.
-Still running: nothing (env-gated hooks GT6_A39SZ gen 028, GT6_A39EV cellSpurs.c; backups work/_bk_a39)
-Read: STATE.md (Arbeit39 lines); eu-boot-log.md Arbeit39
+State: last commit ab8c54a fix: probe early-kill timing, add guest backtrace to snap_walk; handover; PROGRESS: 2026-11-25 | 148db74 | vol | ok ok FAIL FAIL ok FAIL - | probe_a39h_20261125_133715_2 | non-black=81%
+Next step: Post-save black: boot script should run MovieRoot (t_movie OPENING -> .pam, Tv2.decodeContentsKey, load; wait isFinished). Find which native is reached (env-gated hook, python -X utf8 tools/adch_disasm.py boot.adc). If load/pamf stubbed or stuck: force end_movie/skipOpening workaround -> next screen; if movie never reached: trace applySaveData/BackupSave step.
+Do not repeat: Heap corruption fixed; save completes 4/4; no script throw; MGOM wait/loop 616C80 is normal ticking
+Still running: nothing
+Read: STATE.md; eu-boot-log.md Arbeit39

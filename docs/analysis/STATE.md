@@ -42,9 +42,13 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   tid30 loop 616C80 keeps ticking 3 slots; script task 403D1910 reaches state 3 (done), no further task polls, no throw (A29 hooks), no file opens.
   Tool: `snap_walk.py <dir> bt` (guest call chains).
 
+- (Arbeit39) Static boot flow (boot_sequence_gt6.ad in boot.adc): AdjustScreen -> applySaveData -> voucher dialog -> BackupSave ->
+  unless skipOpening: MovieRoot.open, loop until isFinished -> start_project_gt6. play_movie: t_movie 'OPENING' -> /movies/<f>.pam,
+  pdistd.Exist (else end_movie) -> Tv2.decodeContentsKey -> load. No .pam open / cellVdec call logged: black = likely stuck there.
+
 ## Next step
-1) Static: boot script (overlay work/gt6_vol_a35, tools/adch_disasm.py, read only): what follows AutoSave? (oracle opens film PDIPFS/59/FI).
-2) Find the native/condition that should start the next page; check HLE stubs it calls.
+1) `adch_disasm.py` with `python -X utf8`; find which step is reached: env-gated hook on native Exist / decodeContentsKey / movie load
+   (names via boot.adc), check .pam open and cellPamf/Dmux stubs. Workaround test: opening_after_autoload=0 path (skipOpening) -> menu?
 
 ## Refuted / symptom (do not repeat)
 Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
