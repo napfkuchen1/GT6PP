@@ -674,3 +674,15 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   run2 (saved) tid30 AD4294+0x78/+0xB0<1FA968<7B51B8; tid1 same 6171D0 wait; tid31 AE27AC<106264C<AF0B94.
 - AD4294: if AEFEC4()==0: AD3DFC copies list to temp (12-byte nodes via AE7554), vcall+0x14 per item, frees nodes (B0BC70).
 
+
+## Arbeit38 (2026-11-25) heap-exhausting list notify: cause = corrupted listener list, suspect SPU 16 KB DMA
+- Hooks (env GT6_A38LIST, gen 023 AD3DFC/AD4390; backups work/_bk_a38, orig + hook1..3 scripts): list *(this+0x2B0) holds 1 listener.
+  Bad runs: first->next = 0 or garbage -> copy loop AD3DFC never reaches the sentinel -> endless 12-byte allocs -> [A35OOM]. Confirmed.
+- Node/sentinel at 6FFFE930..6FFFE96F are overwritten by foreign data: 32 B "7C00../7E00.." (call 1), or pixel-like 0x10..0x13 bytes plus
+  [A34G] AE6388 skip + NULL+0x18 write (after 262k good calls). Same region as the Arbeit34 vector 6FFFE9xx.
+- SPU_DMA_RANGE=6FFFE920-6FFFE980: SPURS job DMAs ea=6FFFE8F0 size=16384 (GET cmd 0x40 and PUT cmd 0x20, ~200/s, 3.2 MB/s).
+- PPU_WVAL=0x6FFFE8F0: pointer returned by allocator CC52B8 (call at CB3BB4 in CB3320, tid1), stored obj+0x84 (017E9854), per frame copied by
+  CB931C to 600A82D4 (job descriptor area 600A8280). Requested size = align16(CB0768(obj80,r26,0,0x104) result) * *(obj+0x20) + 0x10.
+  Neighbours 6FFFE900/920/930 are live objects, so the block looks far smaller than 16 KB (size not yet logged).
+- a38list/a38ww/a38du/a38sp: bad in about 1 of 6-10 runs; good run a38list_1 reached SAVE complete and stayed black (frame 13500).
+- Not SPU-audio-port: runtime port buffers are at VM_AUDIO_BASE 0x58000000.

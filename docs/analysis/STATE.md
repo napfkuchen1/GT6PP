@@ -36,10 +36,14 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit37) a37wd (WD 225/240): tid30 sits in list notify AD4294 (called 6166A4, list obj+0x2B0; also A7F074). Stalled run: inside
   copy AD3DFC -> new AE73BC (alloc retry); saved run: AD4294 walk/free, tid1 waits 6171D0 -> AE27AC. Saved+black: no loads, X no effect.
 
+- (Arbeit38) Heap exhaustion explained: listener list *(this+0x2B0) corrupt (node->next 0/garbage) -> AD3DFC loops allocating. Foreign data at 6FFFE930+.
+- (Arbeit38) SPURS job DMAs 16 KB at ea 6FFFE8F0 over that list; buffer comes from CC52B8 (call CB3BB4 in CB3320, ptr 017E9854). Size unlogged.
+
 ## Next step
-1) Test "list at obj+0x2B0 is cyclic/corrupt" (explains full heap 017B4C78): env-gated hook in AD3DFC, walk source list (end node,
-   next=+0, limit 1000), log obj/count once. Cyclic or huge: find insert/erase writers of that list (static). Else: sample AD4294
-   entry rate on tid30 (caller loop 1FA968/7B51B8 spinning?) and check what tid1 6171D0 waits for.
+1) Log size at CB3BB4 (r3, r29, *(r31+0x20), CB0768 result) env-gated; identify the library of CB3320 and the job that DMAs 16 KB (image id).
+   If block < 16 KB: find why size/count is small (HLE return value, config key) and fix. If block >= 16 KB: DMA is legit; check allocator/free
+   of 6FFFE8F0 (use-after-free) with PPU_WVAL / free hook B0BC70.
+2) Then post-save black screen: tid1 waits 6171D0 -> AE27AC after SAVE complete.
 
 ## Refuted / symptom (do not repeat)
 Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

@@ -1,6 +1,6 @@
 Goal: Main menu (C6), EU 1.22 + ps3recomp v0.20.
-State: last commit 5c85812 fix: probe isolates savedata per run (shared save hid first-boot AdjustS; PROGRESS: 2026-11-25 | 5c85812 | vol | ok FAIL - - - - - | probe_a37ps_20261125_121949_2 | non-black=0%
-Next step: Test: list at obj+0x2B0 (notify AD4294, copy AD3DFC) cyclic/corrupt and filling heap 017B4C78? Env-gated hook in AD3DFC: walk source list (next=+0, limit 1000). If cyclic/huge: find list insert/erase writers statically; else sample AD4294 rate on tid30 (1FA968/7B51B8) and what tid1 waits for in 6171D0 (post-save black).
-Do not repeat: AdjustScreen 'regression' was shared savedata (fixed 5c85812, per-run saves); PPU_PRIO_MAP; heap AB-BA guarded; probe -Frame early-kills before late WD
-Still running: nothing; gt6.exe carries uncommitted [A35OOM] log hook (gen 024, bk work/_bk_a35)
-Read: STATE.md Arbeit37 lines; eu-boot-log.md Arbeit37
+State: last commit 717ae2d docs: handover ledger and progress; PROGRESS: 2026-11-25 | 717ae2d | vol | ok FAIL - - - - - | probe_a38list_20261125_123210_2 | non-black=0%
+Next step: Log buffer size at CB3BB4 (env-gated: r3, r29, *(r31+0x20)) and find the SPU job image doing the 16 KB DMA at ea 6FFFE8F0 (SPU_DMA_RANGE=6FFFE920-6FFFE980). Block < 16 KB: fix size/count source; else check use-after-free of that block.
+Do not repeat: List-corrupt hypothesis is confirmed (a38); not audio port, not pfs override (A38OV saw no hit on list); corruption hits ~1 of 6-10 runs, StopOn A38LIST.*bad=1
+Still running: nothing; gt6.exe carries env-gated hooks GT6_A38LIST/GT6_A38DUMP (gen 023, bk work/_bk_a38) and [A35OOM] (gen 024)
+Read: STATE.md Arbeit38 lines; eu-boot-log.md Arbeit38
