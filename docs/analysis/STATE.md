@@ -36,14 +36,15 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit37) a37wd (WD 225/240): tid30 sits in list notify AD4294 (called 6166A4, list obj+0x2B0; also A7F074). Stalled run: inside
   copy AD3DFC -> new AE73BC (alloc retry); saved run: AD4294 walk/free, tid1 waits 6171D0 -> AE27AC. Saved+black: no loads, X no effect.
 
-- (Arbeit38) Heap exhaustion explained: listener list *(this+0x2B0) corrupt (node->next 0/garbage) -> AD3DFC loops allocating. Foreign data at 6FFFE930+.
-- (Arbeit38) SPURS job DMAs 16 KB at ea 6FFFE8F0 over that list; buffer comes from CC52B8 (call CB3BB4 in CB3320, ptr 017E9854). Size unlogged.
+- (Arbeit38/39) FIXED: heap corruption/OOM. HLE job chain added a data3=0 completion beside the SPU job's reply; sgx sizes came back
+  0/shifted -> 16-byte buffer, SPU 16 KB DMA over heap. patches/gt6-a39-jobchain-selfreport.patch (0498bee), a39fix 2/2 sizes stable.
+
+- (Arbeit39) a39long 131435_1/2 (320 s): oom=0, list bad=0, AdjustScreenRoot loaded, X 220/245/265 s logged but no later load; frame 15000
+  not reached (~13400 flips), save not confirmed. Probe started only 2 of -Parallel 4.
 
 ## Next step
-1) Log size at CB3BB4 (r3, r29, *(r31+0x20), CB0768 result) env-gated; identify the library of CB3320 and the job that DMAs 16 KB (image id).
-   If block < 16 KB: find why size/count is small (HLE return value, config key) and fix. If block >= 16 KB: DMA is legit; check allocator/free
-   of 6FFFE8F0 (use-after-free) with PPU_WVAL / free hook B0BC70.
-2) Then post-save black screen: tid1 waits 6171D0 -> AE27AC after SAVE complete.
+1) Long runs with the fix (probe -Parallel 4 -Seconds 320 -Frame 12000, pad "220:0x4000 245:0x4000" space-separated): look at frames; does AdjustScreen render, does X reach AutoSave2?
+2) Post-save black screen: tid1 waits 6171D0 -> AE27AC after SAVE complete; re-measure, old stalls may be gone with the fix.
 
 ## Refuted / symptom (do not repeat)
 Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
