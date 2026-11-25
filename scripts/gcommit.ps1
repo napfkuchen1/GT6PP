@@ -2,6 +2,7 @@
 # Prueft vor -Push, dass keine verbotenen Autoren/Trailer in fork/eu-first-build..HEAD stehen.
 param([Parameter(Mandatory)][string]$Msg, [switch]$Push)
 $ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 git add -A -- . ":!work" 2>$null
 git -c user.name=napfkuchen1 -c user.email=122364471+napfkuchen1@users.noreply.github.com commit -m $Msg
 if ($Push) {

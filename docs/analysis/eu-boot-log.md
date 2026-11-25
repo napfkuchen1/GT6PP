@@ -686,3 +686,9 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   Neighbours 6FFFE900/920/930 are live objects, so the block looks far smaller than 16 KB (size not yet logged).
 - a38list/a38ww/a38du/a38sp: bad in about 1 of 6-10 runs; good run a38list_1 reached SAVE complete and stayed black (frame 13500).
 - Not SPU-audio-port: runtime port buffers are at VM_AUDIO_BASE 0x58000000.
+
+## Arbeit39 (2026-11-25) list corruption root cause and fix
+- a39sz: CB3BB4 alloc size = align16(attr102(socisynth))*groups+0x10 = 0x10 (attr102=0) -> block 6FFFE8F0; SPU job GET/PUT 16 KB there (read-modify-write over live heap).
+- a39ev/a39rx: attributes are returned in data3 of the SPU's own event (src FFFFFFFF53505501); cellSpurs.c jc_signal_done added a second data3=0 event per job. Values 0 / 0x400 depended on arrival order.
+- Fix (runtime): chain whose job self-reports gets no synthetic completion (GT6_JC_SYNTH=1 restores). a39fix 2/2: attr102=14860 attr104=B4D0, socedmix 8A20/2000, buffers 600B4000/600CA000.
+- Hooks: GT6_A39SZ (gen 028 CB3BB4/CB3CF0/receive, backup work/_bk_a39), GT6_A39EV (cellSpurs.c).

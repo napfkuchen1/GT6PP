@@ -1,0 +1,71 @@
+--- a/libs/spurs/cellSpurs.c	2026-11-25 13:14:05.547423400 +0100
++++ b/libs/spurs/cellSpurs.c	2026-11-25 13:14:05.620336600 +0100
+@@ -2745,6 +2745,7 @@
+     u32 entry_ea;     /* first command word EA */
+     u16 size_desc;
+     u16 max_grab;
++    long self_reports; /* GT6: a job of this chain posts its own SPU event */
+     int run_count;
+     volatile long running;   /* 1 while a host thread walks this chain */
+     /* Where the chain stands between walks (see jc_thread). */
+@@ -2832,6 +2833,7 @@
+             s_jobchains[i].entry_ea  = entry_ea;
+             s_jobchains[i].size_desc = size_desc;
+             s_jobchains[i].max_grab  = max_grab;
++ s_jobchains[i].self_reports = 0;
+             s_jobchains[i].run_count = 0;
+             /* A new chain starts at its entry. The Simpsons Arcade Game creates
+              * its chain again every frame, and each one must run from the top. */
+@@ -3192,6 +3194,7 @@
+     return (u64)(unsigned)v;
+ }
+ 
++extern SPURS_JOB_TLS unsigned g_spurs_job_self_events;   /* lv2_register.c */
+ static void jc_signal_done(u32 jc_ea, int job_index)
+ {
+     /* Carry the job's mailbox answer in the completion event. On hardware the
+@@ -3226,6 +3229,11 @@
+                    jc_ea, job_index, max_grab, (u32)job_index % max_grab);
+         d2 = (u64)((u32)job_index % max_grab);
+     }
++    /* A job that reports itself (sys_spu_thread_send_event from the SPU) is the
++     * only completion on hardware. A second, synthetic one with data3=0 is read
++     * by the PPU as the answer of a later query (GT6 sgx module sizes came back
++     * as 0 -> 16-byte buffer -> SPU DMA over the heap). GT6_JC_SYNTH=1: old. */
++    if (jc && jc->self_reports && !getenv("GT6_JC_SYNTH")) { g_spurs_job_mbox_valid = 0; return; }
+     u64 mbox = 0, d3 = 0;
+     (void)spurs_event_data3_probe();   /* prime d3_probe_valid */
+     /* A PPU-side query submits a job and reads the reply out of the completion
+@@ -3328,7 +3336,9 @@
+         if (cmd != 0 && op == 0) {                    /* JOB */
+             { extern u32 g_spurs_job_ls_handle; g_spurs_job_ls_handle = jc_ea; }
+             int idx = jobs++;
++            unsigned ev0 = g_spurs_job_self_events;
+             jc_run_one_job((u32)(cmd & ~7ull), idx, size_desc);
++            if (g_spurs_job_self_events != ev0) s_jobchains[slot].self_reports = 1;
+             idle = 0;                    /* real work: the chain is healthy */
+             /* Signal per JOB, not per lap. The application waits once for each
+              * unit of work it queued -- this title notified the guard 7 times
+--- a/runtime/syscalls/lv2_register.c	2026-11-25 13:14:05.562452000 +0100
++++ b/runtime/syscalls/lv2_register.c	2026-11-25 13:14:05.577482900 +0100
+@@ -1652,6 +1652,12 @@
+ 
+ /* User-event ports are independent of group lifecycle event connections. */
+ static SRWLOCK s_spu_port_lock = SRWLOCK_INIT;
++/* GT6: events a SPURS job posted itself, per host thread (cellSpurs job chain walker). */
++#if defined(_MSC_VER)
++__declspec(thread) unsigned g_spurs_job_self_events;
++#else
++__thread unsigned g_spurs_job_self_events;
++#endif
+ /* Signalled (with s_spu_port_lock held) whenever a port gets bound, per thread or per group. */
+ static CONDITION_VARIABLE s_spu_port_bound = CONDITION_VARIABLE_INIT;
+ /* How long an SPU's user event waits for its port to be bound before it is answered with ENOTCONN. */
+@@ -1756,6 +1762,7 @@
+             int rc = sys_event_queue_push_by_id(queue, 0xFFFFFFFF53505501ull,
+                 spu->spu_id, ((uint64_t)port << 32) | (value & 0xFFFFFFu), data);
+             result = rc == 0 ? CELL_OK : CELL_EBUSY;
++            if (rc == 0 && !spu->spu_group_id) g_spurs_job_self_events++;
+         }
+     }
+     if (code < 64) spu_channel_write(&spu->ch_in_mbox, result);
