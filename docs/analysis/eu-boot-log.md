@@ -849,3 +849,5 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   host copy stays 1536x1408 (UV scale 1/declared). GCM_SEMA_ACQUIRE=1 no effect (a49sema).
   Fix: rsx_d3d12_backend.c RT pre-pass scales unnormalized DS-copy units by host size
   (patches/gt6-a49-ds-texscale.patch).
+- a49menu (2x 540 s, default park grace, same pad): GT Mode home at flip ~23000 both runs, 0 resync/halt; popup real
+  text (T1). Frame work/_a49/menu_home_a49.png: only dealer tile lit, three stacked notification banners.

@@ -9,9 +9,9 @@ sequence plays, menu controllable, no graphics errors, no text errors. M2 afterw
 STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headless) run with persistent save + pad input.
 
 ## M1 checklist (open until verified; Arbeit47 inventory)
-- [ ] T1 raw message ID in popup: read truncation fixed d4e1f9a (DE.rt2 580744 verified by trace); popup frame not yet seen
+- [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
-- [ ] G1 menu tiles black (only dealer tile drawn)
+- [ ] G1 only dealer tile drawn, rest dark: maybe tutorial dimming; check after popup close; stacked banner x3 too
 - [ ] I1 opening movie plays (535 MB .pam skipped by host cap; cellPamf 0 streams)
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
 - [ ] C1 pad controls menu (popup X, cursor, dealer enter/back)
@@ -55,9 +55,9 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-S1 fixed (A49): FIFO park resync (50 ms) dropped label 0x53 release -> SPU img 5 halt; main.cpp GCM_PARK_GRACE_MS=5000,
-4/4 runs 402 s no stall. Next: long menu run (more X presses, 600 s, capture late) to verify popup text (T1) + G1 tiles;
-then I1 movie without skipopening overlay.
+S1 + T2 fixed (A49, commit 99db830); 6/6 long runs no stall; a49menu 2/2 reach Zuhause (flip ~23000, 540 s).
+Next: same run with more X presses after 470 s (popup close, dealer enter/back, cursor) -Seconds 700, capture late
+(RSX_CAP=23000:40:301): C1 + G1 + stacked banner. Then I1 movie without skipopening overlay (gt6_vol_a45 skips).
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

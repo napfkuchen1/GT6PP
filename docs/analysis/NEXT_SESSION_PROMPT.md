@@ -1,6 +1,6 @@
 Goal: M1: complete, correct main menu (intro plays, controllable, no gfx/text errors, live run + pad); then M2 first race.
-State: last commit d4e1f9a fix: use served overlay size in stream read job, map overlay files, gate; PROGRESS: 2026-11-25 | f9e62b7 | vol | FAIL - - - - - - | probe_a48menu3_20261125_234453_1 | non-black=13%
-Next step: S1: SPU stall img=5 pc=0x07C44 polls ea=0x03000530 (guard halts after 30 s): find PPU writer offline, SPU_DMA_REPEAT_LOG=20; then popup text + G1 tiles recapture; I1 movie without skipopening
-Do not repeat: DE.rt2 truncation (fixed d4e1f9a, verified); info-getter/AAE51C hooks
+State: last commit 99db830 fix: wait longer on FIFO parks, scale depth-surface textures by host siz; PROGRESS: 2026-11-26 | 99db830 | vol | ok ok FAIL FAIL ok FAIL - | probe_a49menu_20261126_002007_2 | non-black=81%
+Next step: C1/G1: probe -Parallel 2 -Seconds 700, GT6_VOL_ROOT=work/gt6_vol_a45, same pad + X/dir presses after 470 s, RSX_CAP=23000:40:301; popup close, dealer tile, stacked banner; then I1 movie without skipopening
+Do not repeat: SPU stall img5 (fixed, park grace); shredded text (fixed, ds texscale); GCM_SEMA_ACQUIRE
 Still running: nothing
-Read: STATE.md; eu-boot-log.md Arbeit48
+Read: STATE.md; eu-boot-log.md Arbeit49
