@@ -81,7 +81,14 @@ if ($pairs.Contains("PS3_CALLTRACE") -and -not $pairs.Contains("PS3_CALLTRACE_AF
 }
 
 # --- boot.adc variant (baseline) --------------------------------------------
-$bootFile = Join-Path $Root "work\gt6_vol\projects\gt6\boot\boot.adc"
+# -Env GT6_VOL_ROOT=<dir> selects another tree (e.g. the 1.22 overlay); the 1.00 boot variants never apply to it.
+$defVol = [IO.Path]::GetFullPath((Join-Path $Root "work\gt6_vol"))
+$volRoot = if ($pairs.Contains("GT6_VOL_ROOT")) { $pairs["GT6_VOL_ROOT"] } else { $env:GT6_VOL_ROOT }
+if (-not $volRoot) { $volRoot = $defVol } elseif (-not [IO.Path]::IsPathRooted($volRoot)) { $volRoot = Join-Path $Root $volRoot }
+$volRoot = [IO.Path]::GetFullPath($volRoot).TrimEnd('\', '/')
+$customVol = $volRoot -ne $defVol
+if ($customVol -and $Boot) { throw "-Boot patches the 1.00 boot.adc in work\gt6_vol; do not combine it with GT6_VOL_ROOT." }
+$bootFile = Join-Path $volRoot "projects\gt6\boot\boot.adc"
 $variants = [ordered]@{ orig = "boot.adc.orig"; noadj = "boot.adc.nodlg_noadjust"; notut = "boot.adc.nodlg_noadjust_notut" }
 if (-not (Test-Path $bootFile)) { throw "Missing $bootFile (run scripts\extract-gtvol.ps1)." }
 if ($Boot) {
@@ -98,6 +105,7 @@ if ($Boot) {
 $curHash = (Get-FileHash $bootFile).Hash
 $BootName = "unknown"
 foreach ($k in $variants.Keys) { $f = Join-Path $Root ("work\ARCHIV\" + $variants[$k]); if ((Test-Path $f) -and (Get-FileHash $f).Hash -eq $curHash) { $BootName = $k } }
+if ($customVol) { $BootName = "vol:" + (Split-Path -Leaf $volRoot) }
 Write-Host "BOOT variant: $BootName"
 
 # --- toolchain DLLs --------------------------------------------------------
@@ -170,6 +178,7 @@ try {
         Set-Content (Join-Path $dir "boot.txt") ("boot={0} exe={1} env={2}" -f $BootName, $Exe.FullName, (($pairs.Keys | ForEach-Object { "$_=$($pairs[$_])" }) -join ";"))
         $proc = Start-Process -FilePath $Exe.FullName -ArgumentList @($Elf) -WorkingDirectory $Root `
             -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+        $null = $proc.Handle   # cache the handle, otherwise ExitCode is empty after exit
         $runs += [pscustomobject]@{ I = $i; Dir = $dir; Log = $log; Proc = $proc }
         Start-Sleep -Seconds 2
     }
@@ -213,7 +222,7 @@ while ((Get-Date) -lt $deadline -and ($runs | Where-Object { -not $_.Proc.HasExi
         elseif ($Frame -gt 0 -and $el -gt $padDone) {
             # early kill: all expected outputs exist (capture frames written, pad done, -Expect satisfied)
             $capOk = $true
-            for ($ci = 0; $ci -lt $capCount; $ci++) { if (-not (Test-Path (Join-Path $r.Dir ("frame_{0:D2}ackbuffer.bmp" -f $ci)))) { $capOk = $false } }
+            for ($ci = 0; $ci -lt $capCount; $ci++) { if (-not (Test-Path (Join-Path $r.Dir ("frame_{0:D2}\backbuffer.bmp" -f $ci)))) { $capOk = $false } }
             if ($capOk) {
                 $txt = ""; foreach ($f in @($r.Log, "$($r.Log).err")) { if (Test-Path $f) { $txt += (Get-Content $f -Raw -ErrorAction SilentlyContinue) } }
                 $allx = $true; foreach ($rx in $Expect) { if ($txt -notmatch $rx) { $allx = $false } }
@@ -228,6 +237,7 @@ foreach ($r in $runs) {
     if (-not $r.End) { if ($r.Proc.HasExited) { $r.End = "RUN DONE"; $r.EndT = $el } else { $r.End = "TIMEOUT"; $r.EndT = $Seconds; try { $r.Proc.Kill() } catch {}; & taskkill.exe /F /T /PID $r.Proc.Id 2>&1 | Out-Null } }
     try { [void]$r.Proc.WaitForExit(5000) } catch {}
     $line = if ($r.End -eq "STALLED") { "STALLED@$($r.EndT)s flips=$($r.Flips) (heartbeat unchanged ${FreezeSec}s)" } else { "$($r.End) $($r.EndT)s flips=$($r.Flips)" }
+    try { if ($r.Proc.HasExited) { $line += (" exit=0x{0:X8}" -f $r.Proc.ExitCode) } } catch {}
     Add-Content (Join-Path $r.Dir "boot.txt") $line
     Write-Host ("run {0}: END {1}" -f $r.I, $line)
 }

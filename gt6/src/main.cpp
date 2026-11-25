@@ -440,6 +440,42 @@ static LONG CALLBACK fault_commit(EXCEPTION_POINTERS* ep)
     return EXCEPTION_CONTINUE_EXECUTION;
 }
 
+/* First-chance log for access violations outside the guest window. Faults that
+ * end in ntdll (heap damage, broken unwind) can bypass the unhandled filter;
+ * this still records where they happened. */
+static LONG CALLBACK log_host_fault(EXCEPTION_POINTERS* ep)
+{
+    const EXCEPTION_RECORD* er = ep->ExceptionRecord;
+    if (er->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || er->NumberParameters < 2)
+        return EXCEPTION_CONTINUE_SEARCH;
+    uintptr_t at = (uintptr_t)er->ExceptionInformation[1];
+    if (vm_base && at >= (uintptr_t)vm_base && at < (uintptr_t)vm_base + 0x100000000ull)
+        return EXCEPTION_CONTINUE_SEARCH;
+    static LONG n = 0;
+    if (InterlockedIncrement(&n) > 4) return EXCEPTION_CONTINUE_SEARCH;
+    char* image_base = (char*)GetModuleHandleA(nullptr);
+    HMODULE mod = nullptr;
+    char name[MAX_PATH] = "?";
+    if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                           GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (LPCSTR)er->ExceptionAddress, &mod))
+        GetModuleFileNameA(mod, name, sizeof name);
+    const char* leaf = strrchr(name, '\\');
+    fprintf(stderr, "[hostfault] thread=%lu %s at 0x%llX in %s+0x%llX guest_fn=0x%08X stack:",
+            (unsigned long)GetCurrentThreadId(),
+            er->ExceptionInformation[0] == 1 ? "write" : "read/exec",
+            (unsigned long long)at, leaf ? leaf + 1 : name,
+            (unsigned long long)((char*)er->ExceptionAddress - (char*)mod),
+            ppu_prof_resolve_host(er->ExceptionAddress));
+    void* frames[32];
+    USHORT nf = RtlCaptureStackBackTrace(0, 32, frames, nullptr);
+    for (USHORT f = 0; f < nf; f++)
+        fprintf(stderr, " %llX", (unsigned long long)((char*)frames[f] - image_base));
+    fputc('\n', stderr);
+    fflush(stderr);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
 static LONG CALLBACK report_crash(EXCEPTION_POINTERS* ep)
 {
     const EXCEPTION_RECORD* er = ep->ExceptionRecord;
@@ -457,7 +493,8 @@ static LONG CALLBACK report_crash(EXCEPTION_POINTERS* ep)
         const DWORD host_tid = GetCurrentThreadId();
         uint32_t guest_fn = ppu_prof_resolve_host(er->ExceptionAddress);
         char* image_base = (char*)GetModuleHandleA(nullptr);
-        fprintf(stderr, "[GT6] thread=%lu rip=%p rva=0x%llX guest_fn=0x%08X\n",
+        fprintf(stderr, "[GT6] code=0x%08lX thread=%lu rip=%p rva=0x%llX guest_fn=0x%08X\n",
+                (unsigned long)er->ExceptionCode,
                 (unsigned long)host_tid, er->ExceptionAddress,
                 (unsigned long long)((char*)er->ExceptionAddress - image_base),
                 guest_fn);
@@ -674,6 +711,7 @@ int main(int argc, char* argv[])
     ps3_install_guest_ptr_trap();
     if (!getenv("GT6_NO_FAULT_COMMIT"))
         AddVectoredExceptionHandler(1, fault_commit);
+    AddVectoredExceptionHandler(0, log_host_fault);
     SetUnhandledExceptionFilter(report_crash);
 #endif
 

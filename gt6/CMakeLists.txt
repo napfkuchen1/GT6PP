@@ -121,6 +121,14 @@ if(MINGW)
     target_link_options(gt6 PRIVATE -static)
 endif()
 
+# gt6.map resolves host addresses from [hostfault]/crash lines to symbols.
+# The guest main thread runs on the process main thread. The default 1 MiB host
+# stack overflows (0xC00000FD) in the 1.22 boot script: lifted calls and guest
+# tail calls through ps3_indirect_call_impl nest several hundred host frames.
+if(MSVC)
+    target_link_options(gt6 PRIVATE /MAP /STACK:0x4000000)
+endif()
+
 if(WIN32)
     target_link_libraries(gt6 PRIVATE
         ws2_32 xinput ole32 bcrypt

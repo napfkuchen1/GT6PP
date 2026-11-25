@@ -900,7 +900,13 @@ extern "C" void gt6_script_path_hint(uint32_t reader_ea, uint32_t str_ea)
     if (g_script_active && reader_ea == g_script_reader)
         return;   /* already serving this reader */
 
-    FILE* f = fopen("work/gt6_vol/scripts/gt6/main.adc", "rb");
+    /* Follow GT6_VOL_ROOT so an overlay tree supplies its own main.adc. */
+    const char* vol = gt6_pfs_root();
+    char script_host[GT6_PFS_HOST_MAX];
+    snprintf(script_host, sizeof script_host, "%s/scripts/gt6/main.adc",
+             vol ? vol : "work/gt6_vol");
+
+    FILE* f = fopen(script_host, "rb");
     if (!f) {
         fprintf(stderr, "[GT6] script override: cannot open decrypted main.adc\n");
         return;
