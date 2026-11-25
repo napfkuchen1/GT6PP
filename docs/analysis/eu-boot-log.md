@@ -807,3 +807,14 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - (Arbeit45) Overlay work/gt6_vol_a45 (a40t + skipopening): readable credit dialogs -> GT Mode loading. Opening .pam (535 MB)
 - (Arbeit45) Debug prints [A2x] in gen 013/014/015/022 gated by GT6_A27 (backup work/_bk_a45/a27); GT6_PFS_TRACE slows load.
 - (Arbeit46) FIXED faa32e5: GT Mode reload loop = car DB SQLITE_CORRUPT in lockBtree (dbSize 15666 < header 16213):
+
+
+## Arbeit47 (2026-11-25) M1 inventory, T1 raw message ID
+- GT003_GET_FIRST_CAR0: scripts/gt6/main.adc TutorialUtil.message -> main::manager.translate("Tutorial", key).
+- 1.22 rtext/common/DE.rt2 (RT05, 177 categories) has "Tutorial" (292 entries) at 0x7F3C4; 1.00 file (RT04) is 383244 bytes.
+- a47rt/a47rt2: read request n=383244 pos 0/580744. First open of DE.rt2 gets [statfix] 383244->580744; the second does not.
+- a47rt3/a47rt6/a47rt7: second FileObject+0xCC = 383244 at read, 0 at host_open_commit; stat out struct holds no old size.
+- a47fix2-4: wrapper on info getter AAC240 (forces size words +0x10/+0x18) never called before the read -> not the path.
+- Static: AAE57C 'std r27,0xc8(file)' (r27 = arg r4 of AAE51C, caller A01A4C); AAAB40 'std r3,0xc8(r30)' after read call.
+- A01A1C..A01A4C: size = virtual(obj vt+0x48), passed to AAE51C. a47size: wrapper on AAE51C (work/_a47/opensize_hook.patch)
+  printed nothing before the stop: either never called or r3 is not a C string. Reverted.
