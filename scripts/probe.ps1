@@ -68,9 +68,11 @@ if ($PadScript) {
     $pairs["PAD_SCRIPT"] = $PadScript
     $Expect += "press 0x[0-9A-Fa-f]*[1-9A-Fa-f]"
 }
+$last = 0   # time of the last pad event; needed with explicit -Seconds too (early-kill guard)
+if ($PadScript) { $last = ($PadScript -split "\s+" | Where-Object { $_ } | ForEach-Object { [double](($_ -split ":")[0]) } | Measure-Object -Maximum).Maximum }
 if ($Seconds -le 0) {
     $Seconds = 220
-    if ($PadScript) { $last = ($PadScript -split "\s+" | Where-Object { $_ } | ForEach-Object { [double](($_ -split ":")[0]) } | Measure-Object -Maximum).Maximum; $Seconds = [int]([math]::Ceiling($last) + 60) }
+    if ($PadScript) { $Seconds = [int]([math]::Ceiling($last) + 60) }
     Write-Host "Seconds (derived): $Seconds"
 }
 # earliest time after which a silent log means FROZEN (timed events must be through)

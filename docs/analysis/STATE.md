@@ -27,9 +27,6 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 
 - (Arbeit36) OOM cause seen (a36hl_2): operator new retry loop AE73BC (callers via AE752C/40/54) asks ~161 MB (size 099F6844 =
   garbage; B0C524 args are align,size) -> endless retry. Hook now prints call chain. Deadlock guard tools/guard_heaplock.py (post-lift).
-- (Arbeit36) SettingProject stall: tid1 takes the script task meant for tid30 (A27T after tid31 post) and waits in A0498C
-  (sync wait, 88F2B4 loop) inside its own main tick (correlation). PPU_PRIO_MAP=1 (a36pm, 2 runs) no fix, tid30 case stalls too.
-
 - (Arbeit37) "AdjustScreen 0/14" was no code regression: pad run pad3_2 saved to shared ./gamedata (11:32); later boots had a save.
   Fix: probe.ps1 sets PS3_GAMEDATA_ROOT per run (-SaveSrc seeds it); that save is in work/ARCHIV/savedata_a35pad3_20261125_1132. Verified a37sv + a37ps: 4/4 AdjustScreen.
 
@@ -39,12 +36,15 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
 - (Arbeit38/39) FIXED: heap corruption/OOM. HLE job chain added a data3=0 completion beside the SPU job's reply; sgx sizes came back
   0/shifted -> 16-byte buffer, SPU 16 KB DMA over heap. patches/gt6-a39-jobchain-selfreport.patch (0498bee), a39fix 2/2 sizes stable.
 
-- (Arbeit39) a39long 131435_1/2 (320 s): oom=0, list bad=0, AdjustScreenRoot loaded, X 220/245/265 s logged but no later load; frame 15000
-  not reached (~13400 flips), save not confirmed. Probe started only 2 of -Parallel 4.
+- (Arbeit39) WITH FIX 4/4 (a39g/h, pad X every 25 s 220..395): language select -> AdjustScreen -> dialog -> AutoSave2 -> SAVE complete.
+  probe.ps1 early-kill bug fixed ($last unset with explicit -Seconds). Frames: RSX_CAP=start:count:stride.
+- (Arbeit39) After save: black 4/4 for 100-190 s. a39s snapshots work/snap_a39black_{1,2}: tid1 in MGOM.start wait (6171D0, obj 6FF36000),
+  tid30 loop 616C80 keeps ticking 3 slots; script task 403D1910 reaches state 3 (done), no further task polls, no throw (A29 hooks), no file opens.
+  Tool: `snap_walk.py <dir> bt` (guest call chains).
 
 ## Next step
-1) Long runs with the fix (probe -Parallel 4 -Seconds 320 -Frame 12000, pad "220:0x4000 245:0x4000" space-separated): look at frames; does AdjustScreen render, does X reach AutoSave2?
-2) Post-save black screen: tid1 waits 6171D0 -> AE27AC after SAVE complete; re-measure, old stalls may be gone with the fix.
+1) Static: boot script (overlay work/gt6_vol_a35, tools/adch_disasm.py, read only): what follows AutoSave? (oracle opens film PDIPFS/59/FI).
+2) Find the native/condition that should start the next page; check HLE stubs it calls.
 
 ## Refuted / symptom (do not repeat)
 Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

@@ -15,6 +15,7 @@ Commands (all addresses hex; output is capped, never dumps whole RAM):
   callee <ea>             Hyp. 35 chain: [ea+0x14] -> obj -> vtable -> slot 0x54 -> disassemble
   find32 <val> [max=20]   search main RAM + HLE heap for be32 value (aligned)
   stack <tid> [n=64]      stack words of a thread with annotations
+  bt [tid ...]            guest call chain per thread (backchain walk; all threads if none given)
 Env: SNAP_ELF=<path> overrides work\\bin\\EMAIN.elf
 """
 import os, re, struct, sys, mmap
@@ -231,6 +232,24 @@ def cmd_stack(m, d, tid, n):
         print("sp+%03X %08X  %s" % (4 * i, v or 0, tag(m, v or 0)))
 
 
+def cmd_bt(m, d, tids):
+    """PPC64 backchain walk: caller return address sits at [prev_sp+0x10] (64-bit)."""
+    for line in open(os.path.join(d, "threads.txt")):
+        mt = re.match(r"thread (\d+) lr=([0-9A-F]{8}) .* sp=([0-9A-F]{8}).*hle=(\S+)", line)
+        if not mt or (tids and mt.group(1) not in tids):
+            continue
+        sp, chain = int(mt.group(3), 16), []
+        for _ in range(32):
+            prev = m.u32(sp + 4)
+            if not prev or prev <= sp or prev - sp > 0x100000:
+                break
+            ra = m.u32(prev + 0x14)
+            if ra:
+                chain.append("%X" % ra)
+            sp = prev
+        print("tid %s %s lr=%s: %s" % (mt.group(1), mt.group(4), mt.group(2), " < ".join(chain)))
+
+
 def main():
     if len(sys.argv) < 3:
         print(__doc__)
@@ -246,6 +265,7 @@ def main():
     elif cmd == "dis": cmd_dis(m, h(0), int(a[1]) if len(a) > 1 else 40)
     elif cmd == "callee": cmd_callee(m, h(0))
     elif cmd == "find32": cmd_find32(m, h(0), int(a[1]) if len(a) > 1 else 20)
+    elif cmd == "bt": cmd_bt(m, d, a)
     elif cmd == "stack": cmd_stack(m, d, a[0], int(a[1]) if len(a) > 1 else 64)
     else:
         print(__doc__)
