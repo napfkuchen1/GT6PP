@@ -769,3 +769,10 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 ## STATE trim 2026-11-25
 - (Arbeit37) a37wd (WD 225/240): tid30 sits in list notify AD4294 (called 6166A4, list obj+0x2B0; also A7F074). Stalled run: inside
 - (Arbeit38/39) FIXED: heap corruption/OOM. HLE job chain added a data3=0 completion beside the SPU job's reply; sgx sizes came back
+
+## Arbeit45 (2026-11-25) database sizes, GT Mode load
+- a45sz: xFileSize C1F848 (-> C1F65C -> AAAD1C -> vt+B8 ABD328) returned 16041984 for DB0106 (served 16602112). Fix f8ef048.
+- a45fix2: no rc=11, no toInt. grim007: xOpen buf=1 (null-read in C5A510) from hook part4 clobbering cr; fix b219eca.
+- a45full: after credit dialogs opening movie tv_10006 .pam -> black. a45op (gt6_vol_a45): GT Mode loading, rc=26 gone.
+- a45gm/a45snap: 31k flips headless, gtmode.adc/gtmode_pack/mproject reloaded 38x; snap work/snap_a45gm_540: tid1 in 617218.
+- a45vm (GT6_A40VM=400): cycle 494411-494788 ms runs GTModeRoot/GTTopRoot/TopNews/CarDealerRoot, ends at l376 after SELECT PP.

@@ -51,10 +51,20 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   stubs.cpp gt6_pfs_key_layer). Dumps of DB0106 + menudb pass sqlite integrity_check. Runtime: queries on DB0106 still
   rc=11 (CORRUPT); xRead C1FC3C only ever reads off=0 (page 1), cache stable -> likely xFileSize reports old/small size.
 
+- (Arbeit45) FIXED f8ef048: xFileSize C1F848 -> stream stat ABD328 gave 1.00 TOC size (16041984 vs 16602112); hook
+  gt6_pfs_fstat_fix. Probe a45fix2: no rc=11, no toInt.
+
+- (Arbeit45) FIXED b219eca: port cache-fill hook clobbered cr7 -> grim007.db buffer freed, ptr=1 -> rc=26. Gone.
+- (Arbeit45) Overlay work/gt6_vol_a45 (a40t + skipopening): readable credit dialogs -> GT Mode loading. Opening .pam (535 MB)
+  is skipped by host override cap and cellPamf shows 0 streams (video not working).
+- (Arbeit45) Debug prints [A2x] in gen 013/014/015/022 gated by GT6_A27 (backup work/_bk_a45/a27); GT6_PFS_TRACE slows load.
+- (Arbeit45) NOW: GT Mode reload loop (gtmode.mproject ~38x, ~0.4 s/cycle in a45vm). CarDealerRoot got_first_car ->
+  getGTModeFirstCarPP l376 is last op; 'SELECT PP FROM GENERIC_CAR WHERE ID=?' step returns rc=1 (9x in a45op).
+
 ## Next step
-1) Find the SQLite xFileSize of VFS xOpen C1FE74 (methods near: xRead C1FC3C, xWrite C1FAAC, xClose ~C1F8B0, xFileControl
-   C1F9B8). Log its result for DB0106 vs 16602112 (lockBtree: header pages 16213 > file pages -> rc=11). Fix size source.
-   Verify: GT6_A42SQL=1 90 s, no 'db=.. rc=11'. 2) grim007.db (hdd cache) rc=26: first byte 0, separate, check later.
+1) Why step rc=1 on SELECT PP (DB0106)? Run GT6_A42SQL=1 (no PFS trace), get errmsg/reset code; check xRead C1FC3C /
+   ABD3D0 for off!=0 on DB0106 (key layer offset, short read) and bound ID (nil without first car?). Snapshot of loop:
+   work/snap_a45gm_540.
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
