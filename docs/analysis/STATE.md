@@ -22,7 +22,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [ ] D1 attract demo (autodemo race) loads very slowly, window FPS 0.29 (a53a)
 - [ ] D2 idle demo starts ~10 s after Home; input during the countdown does not cancel it (a53b, a53i): check
 - [ ] S2 boot crash 0xC00000FD, recursive tree walk func_00AE0464 on tid34 (play_a53g_20261126_035132, 1 of 8)
-- [ ] S1 stall (pre-menu and car view): SPU img 5 polls label 0x03000530, FIFO self-JUMP park never patched (a51jt r2, a51new r2)
+- [ ] S1 stall (pre-menu, car view): SPU img 5 polls label 0x53; cause = ignored ACQUIRE (A54), W4 verify over runs
+- [ ] W4 workaround: GCM_SEMA_BLOCK=500-560 (gt6 main.cpp); blocking all ACQUIREs breaks on label 0xFE0
 - [ ] W1 workaround: interpreter bodies spliced into gen 037; confirm with a full re-lift (patches/gt6-a51-jt-loop-base.patch)
 - [ ] W2 workaround: PPU_ONECORE=1 default (one-core pinning); run without it
 - [ ] W3 workaround: GCM_PARK_GRACE_MS=5000 in gt6/src/main.cpp (FIFO self-JUMP resync), see S1
@@ -44,10 +45,11 @@ a53j OK). Idle demo starts ~10 s after Home ("Der Demofilm startet in Kuerze"): 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-C2/S1, deterministic (a53c/j/k): RSX parks on self-JUMP io 0x146A08C = ea 0x6146A08C, resync after 5 s, labels
-0x03000500..55F stay 0, SPU img 5 halts. Words (a53k): 146A080=JUMP 148D834, 084=00041FC0 FFFF, 08C=park.
-First: find who jumps to 146A084 and who should patch 08C / release 0x53 (write watch on 0x6146A08C; log SEMA
-release off 0x530; img 5 job descriptors near 0x6146xxxx in [spu-int] loadJobState; wait value at pc 0x7C44).
+A54 (play_a54pt2/a54fix): SPU img 5 waits label 0x53 == 1 then writes 0; walker ignored the ACQUIRE (wait 0),
+so releases got lost. With GCM_SEMA_BLOCK=500-560: 0 SPU halt (1 run), 1 acquire timeout at t=194 s, car view
+still stops (flip 5416). First next fault: tid30 null reads in C4797C, null call lr C479E8, then park io 1A6A5F0.
+Do: disassemble C4797C/C479E8 and its caller (reservation/buffer-full path near C49034?), find who leaves the
+object NULL. Repro: play.py start --env GCM_PARKTRACE=1; to_home2.sh; dealer.py (~6 min).
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

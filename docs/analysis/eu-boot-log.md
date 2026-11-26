@@ -929,3 +929,11 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a53g: 0xC00000FD at t=137 s, tid34, guest_fn 0xAE0464 (self-recursive), host frame rva 0x9BE9C22 repeating.
 - a53j: repro via focus detection: park io 0x146A08C -> put 0x10090 again, 16 s after FIT RS; [WDDUMP] 03000530 = 0.
 - a53k: stall dump: ea 6146A080 = 2148D834 00041FC0 0000FFFF 2146A08C, then NOPs; 03000500..55F all 0; put 0x12090.
+
+## Arbeit54 (2026-11-26)
+- GCM_PARKTRACE=1 (patches/gt6-a54-park-trace-sema-block.patch): branch/semaphore/SPU PUT rings, dumped at jump-park
+  resync and SPU halt; SPU_HALT_DUMP=<file> saves local store.
+- a54pt, a54pt2: park io 146A08C / D4A08C, labels 500..55F = 0, only the RSX walker writes 0x530 (no PPU store).
+- SPU img 5 pc 7C44: GET 4 bytes ea 03000530, loop at LS 5930..5994 exits on value 1, then PUTs 0.
+- a54fix (GCM_SEMA_BLOCK=500-560, 2000 ms bound): acquire gave up once (t=194 s), no SPU halt; tid30 null call
+  lr C479E8 (guest-fn C4797C null read), then park 1A6A5F0, flips stop at 5416 (car view UI visible, 3D black).
