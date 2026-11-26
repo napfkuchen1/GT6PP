@@ -1,0 +1,283 @@
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -4567,6 +4567,11 @@
+  * render-to-texture pass) must still run -- it is what fills the texture a
+  * later batch samples -- but presenting it would show a half-built frame. */
+ static int s_present_this_frame = 1;
++/* Mid-frame execution of the pending batch for a guest read of a surface:
++ * no present, capture or frame count. s_flush_bb: such a batch drew into the
++ * backbuffer, so the next pass must keep it and it still needs a present.
++ * s_flush_prev: the surfaces it used still count as used in the next pass. */
++static int s_flush_only, s_flush_prev, s_flush_bb;
+ 
+ /* Resolve a DRAW_*_TEX value: a hex raw offset, or the literal "duck" for the
+  * content-identified duck texture. */
+@@ -5253,7 +5258,9 @@
+      * texture can resolve to it below, whatever the op order). Depth surfaces
+      * too, and the colour copy of each one a draw samples: both settle their
+      * size here, before any draw's SRV window points at them. */
+-    for (int _i = 0; _i < MAX_OFF_RTS; _i++) s_d3d.off_rt[_i].used = 0;
++    if (!s_flush_prev)
++        for (int _i = 0; _i < MAX_OFF_RTS; _i++) s_d3d.off_rt[_i].used = 0;
++    s_flush_prev = s_flush_only;
+     for (u32 _d = 0; _d < s_d3d.draw_count && _d < MAX_DRAWS; _d++) {
+         D3D12DrawRecord* dr = &s_d3d.draws[_d];
+         if (dr->is_vp && dr->rt_off)
+@@ -5536,12 +5543,20 @@
+     s_d3d.cmd_list->lpVtbl->OMSetRenderTargets(s_d3d.cmd_list, 1, &rtv_handle, FALSE, &dsv_handle);
+ 
+     /* Clear color and depth */
+-    s_d3d.cmd_list->lpVtbl->ClearRenderTargetView(
+-        s_d3d.cmd_list, rtv_handle, s_d3d.clear_color, 0, NULL);
+-    s_d3d.cmd_list->lpVtbl->ClearDepthStencilView(
+-        s_d3d.cmd_list, dsv_handle,
+-        D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
+-        1.0f, 0, 0, NULL);
++    if (!s_flush_bb) {
++        s_d3d.cmd_list->lpVtbl->ClearRenderTargetView(
++            s_d3d.cmd_list, rtv_handle, s_d3d.clear_color, 0, NULL);
++        s_d3d.cmd_list->lpVtbl->ClearDepthStencilView(
++            s_d3d.cmd_list, dsv_handle,
++            D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
++            1.0f, 0, 0, NULL);
++    }
++    if (s_flush_only) {
++        for (u32 _i = 0; _i < s_d3d.draw_count && _i < MAX_DRAWS; _i++)
++            if (!s_d3d.draws[_i].is_clear && s_d3d.draws[_i].rt_off == 0) { s_flush_bb = 1; break; }
++    } else if (s_present_this_frame) {
++        s_flush_bb = 0;
++    }
+ 
+     /* Set viewport and scissor */
+     D3D12_VIEWPORT viewport = {0, 0, (float)s_d3d.width, (float)s_d3d.height, 0.0f, 1.0f};
+@@ -6244,10 +6259,12 @@
+       if (mind > 0 && s_dbg_last_draws < (u32)mind) goto skip_dump_consider; }
+     if (s_d3d.dump_skip_left > 0 && s_d3d.dump_frames_left > 0) s_d3d.dump_skip_left--;
+ skip_dump_consider: ;
+-    guest_fb_present(fi);
+-    scanout_auto_present(fi);
+-    composite_present(fi);
+-    int dumping = (s_d3d.dump_frames_left > 0 && s_d3d.readback_buf
++    if (!s_flush_only) {
++        guest_fb_present(fi);
++        scanout_auto_present(fi);
++        composite_present(fi);
++    }
++    int dumping = (!s_flush_only && s_d3d.dump_frames_left > 0 && s_d3d.readback_buf
+                    && s_d3d.dump_skip_left == 0);
+     { static int mind2 = -1;
+       if (mind2 < 0) { const char* e = getenv("CELLMARK_DUMP_MINDRAWS");
+@@ -6290,7 +6307,7 @@
+     } else {
+         /* End-of-frame fallback snapshot: used when the frame never contained a
+          * reduced-viewport pass to capture mid-frame. */
+-        screen_copy_capture(fi);
++        if (!s_flush_only) screen_copy_capture(fi);
+         /* Transition render target to PRESENT state */
+         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+@@ -6431,6 +6448,13 @@
+      * manifest) at RSX_CAP=start[:count[:stride]] frame_counts. Runs before the
+      * present transition would matter -- the backbuffer is in PRESENT here and
+      * is restored to PRESENT after each readback. */
++    if (s_flush_only) {
++        rdoc_frame_end();
++        d3d_check_removed("flush");
++        move_to_next_frame();
++        return;
++    }
++
+     { const char* cap = env_str("RSX_CAP", &s_env_rsx_cap);
+       if (cap) {
+         static int s_cap_parsed = 0;
+@@ -6561,7 +6585,7 @@
+      * it would strobe the bare backbuffer clear. Keep accumulating -- the
+      * composite draw that targets the display presents the whole chain, in
+      * order, in one command list. Empty batches still present (boot/idle). */
+-    int flip_has_display = (s_d3d.draw_count == 0);
++    int flip_has_display = (s_d3d.draw_count == 0) || s_flush_bb;
+     for (u32 _i = 0; _i < s_d3d.draw_count && _i < MAX_DRAWS; _i++)
+         if (!s_d3d.draws[_i].is_clear && s_d3d.draws[_i].rt_off == 0) {
+             flip_has_display = 1;
+@@ -6653,7 +6677,7 @@
+      * batch that actually contains DISPLAY draws is a completed frame: a
+      * batch of offscreen pass work (render-to-texture) must keep accumulating
+      * until its composite draw arrives, or the screen strobes intermediates. */
+-    int have_display_draws = 0;
++    int have_display_draws = s_flush_bb;
+     for (u32 i = 0; i < s_d3d.draw_count && i < MAX_DRAWS; i++)
+         if (!s_d3d.draws[i].is_clear && s_d3d.draws[i].rt_off == 0) {
+             have_display_draws = 1;
+@@ -8402,6 +8426,102 @@
+  * Public API
+  * -----------------------------------------------------------------------*/
+ 
++/* A guest-side transfer reads a colour surface that exists only on the GPU
++ * (GT6 copies its showroom 3D surface to main memory with NV3089): run the
++ * pending batch, then store the w x h block at `offset` into `dst` as the
++ * guest's A,R,G,B bytes. Called from the FIFO drain, i.e. the thread that
++ * also renders. */
++static int off_rt_containing(u32 offset, u32 pitch, u32* px, u32* py)
++{
++    int p = -1;
++    for (int i = 0; i < MAX_OFF_RTS; i++) {
++        const OffRT* r = &s_d3d.off_rt[i];
++        if (!r->res || r->pitch != pitch || r->off > offset ||
++            r->dxgi != (u32)DXGI_FORMAT_R8G8B8A8_UNORM) continue;
++        const u32 d = offset - r->off, y = d / pitch, x = (d % pitch) / 4u;
++        if (x >= r->w || y >= r->h) continue;
++        if (p >= 0 && r->off < s_d3d.off_rt[p].off) continue;
++        p = i; *px = x; *py = y;
++    }
++    return p;
++}
++
++static int d3d12_rt_readback(u32 offset, u32 pitch, u32 w, u32 h, u8* dst)
++{
++    static ID3D12Resource* rb = NULL;
++    static u64 rb_size = 0;
++    u32 x = 0, y = 0;
++    if (!s_d3d.initialized || pitch <= 64 || !w || !h || !dst) return 0;
++    if (off_rt_containing(offset, pitch, &x, &y) < 0) return 0;
++    if (s_d3d.draw_count) {
++        s_flush_only = 1;
++        s_present_this_frame = 0;
++        render_frame();
++        s_present_this_frame = 1;
++        s_flush_only = 0;
++    }
++    const int p = off_rt_containing(offset, pitch, &x, &y);
++    if (p < 0) return 0;
++    OffRT* r = &s_d3d.off_rt[p];
++    if (x + w > r->w) w = r->w - x;
++    if (y + h > r->h) h = r->h - y;
++    const u32 rpitch = (w * 4u + 255u) & ~255u;
++    const u64 need = (u64)rpitch * h;
++    wait_for_gpu();
++    if (rb_size < need) {
++        if (rb) { rb->lpVtbl->Release(rb); rb = NULL; rb_size = 0; }
++        D3D12_HEAP_PROPERTIES hp = {0}; hp.Type = D3D12_HEAP_TYPE_READBACK;
++        D3D12_RESOURCE_DESC rd = {0};
++        rd.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
++        rd.Width = need; rd.Height = 1; rd.DepthOrArraySize = 1;
++        rd.MipLevels = 1; rd.SampleDesc.Count = 1;
++        rd.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
++        if (FAILED(s_d3d.device->lpVtbl->CreateCommittedResource(
++                s_d3d.device, &hp, D3D12_HEAP_FLAG_NONE, &rd,
++                D3D12_RESOURCE_STATE_COPY_DEST, NULL,
++                &IID_ID3D12Resource, (void**)&rb)))
++            return 0;
++        rb_size = need;
++    }
++    const u32 fi = s_d3d.frame_index;
++    s_d3d.cmd_allocators[fi]->lpVtbl->Reset(s_d3d.cmd_allocators[fi]);
++    s_d3d.cmd_list->lpVtbl->Reset(s_d3d.cmd_list, s_d3d.cmd_allocators[fi], NULL);
++    dred_list_reset();
++    const D3D12_RESOURCE_STATES prior = r->st;
++    off_rt_transition(p, D3D12_RESOURCE_STATE_COPY_SOURCE);
++    D3D12_TEXTURE_COPY_LOCATION to = {0}, from = {0};
++    to.pResource = rb; to.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
++    to.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
++    to.PlacedFootprint.Footprint.Width = w;
++    to.PlacedFootprint.Footprint.Height = h;
++    to.PlacedFootprint.Footprint.Depth = 1;
++    to.PlacedFootprint.Footprint.RowPitch = rpitch;
++    from.pResource = r->res; from.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
++    D3D12_BOX box = { x, y, 0, x + w, y + h, 1 };
++    dred_copy(__LINE__, &to, &from);
++    s_d3d.cmd_list->lpVtbl->CopyTextureRegion(s_d3d.cmd_list, &to, 0, 0, 0, &from, &box);
++    off_rt_transition(p, prior);
++    s_d3d.cmd_list->lpVtbl->Close(s_d3d.cmd_list);
++    ID3D12CommandList* cl[] = { (ID3D12CommandList*)s_d3d.cmd_list };
++    s_d3d.cmd_queue->lpVtbl->ExecuteCommandLists(s_d3d.cmd_queue, 1, cl);
++    wait_for_gpu();
++    void* mp = NULL; D3D12_RANGE rr = {0, (SIZE_T)need};
++    if (FAILED(rb->lpVtbl->Map(rb, 0, &rr, &mp)) || !mp) return 0;
++    for (u32 row = 0; row < h; row++) {
++        const u8* s = (const u8*)mp + (u64)row * rpitch;
++        u8* d = dst + (u64)row * pitch;
++        for (u32 c = 0; c < w; c++) {
++            u32 v;
++            memcpy(&v, s + c * 4u, 4);
++            v = (v << 8) | (v >> 24);       /* R,G,B,A -> A,R,G,B */
++            memcpy(d + c * 4u, &v, 4);
++        }
++    }
++    D3D12_RANGE wr = {0, 0};
++    rb->lpVtbl->Unmap(rb, 0, &wr);
++    return 1;
++}
++
+ int rsx_d3d12_backend_init(u32 width, u32 height, const char* title)
+ {
+     /* PS3RECOMP_RSX_PRESENT_THREAD has no half here: say so once and present
+@@ -8467,6 +8587,9 @@
+     rsx_set_backend(&s_d3d12_backend);
+ 
+     s_d3d.initialized = 1;
++    { extern void cellGcm_set_rt_readback(int (*)(u32, u32, u32, u32, u8*));
++      const char* e = getenv("NV3089_RB");
++      if (!e || atoi(e)) cellGcm_set_rt_readback(d3d12_rt_readback); }
+     s_d3d.last_fps_time = GetTickCount64();
+ 
+     printf("[D3D12] Backend ready: %ux%u\n", width, height);
+@@ -8557,7 +8680,7 @@
+     { static int gfb = -1;
+       if (gfb < 0) { const char* e = getenv("GCM_GUEST_FB"); gfb = e ? 1 : 0; }
+       if (gfb) has_display = 1; }
+-    if (s_composite_src) has_display = 1;
++    if (s_composite_src || s_flush_bb) has_display = 1;
+     if (has_display && s_d3d.draw_count > 0) s_seen_content = 1;
+     /* The same accounting as d3d12_present: this ticker is the present many
+      * titles reach. A title that renders only to offscreen surfaces had
+@@ -8624,6 +8747,7 @@
+      * it produces was never written and whatever sampled it later read an
+      * empty resource. Only the Present needs onscreen content. */
+     if (s_d3d.initialized && (has_display || s_d3d.draw_count > 0)) {
++        /* (a flushed batch with backbuffer draws arrives here with no records) */
+         { extern void rsx_reset_upload_claims(void);
+           static int remap = -1;
+           if (remap < 0) { const char* e = getenv("TEX_REMAP"); remap = e ? atoi(e) : 0; }
+--- a/libs/video/cellGcmSys.c
++++ b/libs/video/cellGcmSys.c
+@@ -1386,17 +1386,37 @@
+  * engine's surfaces. Around the guest-memory copy below: write the source
+  * rectangle back from any engine surface first, and push the written
+  * rectangle into any engine surface after. 32-bit pixels only. */
++/* Registered by a backend whose surfaces live on the GPU only (D3D12). */
++static int (*s_rt_readback)(u32, u32, u32, u32, u8*);
++void cellGcm_set_rt_readback(int (*fn)(u32, u32, u32, u32, u8*)) { s_rt_readback = fn; }
++
+ static void nv3089_engine_read(u32 in_pitch, u32 out_w, u32 out_h)
+ {
+-    if (!rsx_draw_engine_enabled() || !out_w || !out_h) return;
++    const int engine = rsx_draw_engine_enabled();
++    if ((!engine && !s_rt_readback) || !out_w || !out_h) return;
+     const u32 u0 = s_nv3089.in_uv & 0xFFFF, v0 = s_nv3089.in_uv >> 16;   /* 12.4 */
+     const u32 sx0 = (u32)(nv3089_origin(u0) >> 20), sy0 = (u32)(nv3089_origin(v0) >> 20);
+     const u32 sx1 = (u32)((nv3089_origin(u0) + (u64)(out_w - 1) * s_nv3089.ds_dx) >> 20);
+     const u32 sy1 = (u32)((nv3089_origin(v0) + (u64)(out_h - 1) * s_nv3089.dt_dy) >> 20);
+     if (sx1 < sx0 || sy1 < sy0) return;
+     const u32 loc = (s_nv3089.src_dma != 0xFEED0001u) ? RSX_LOCATION_LOCAL : RSX_LOCATION_MAIN;
+-    rsx_draw_engine_guest_read(loc, s_nv3089.in_off + sy0 * in_pitch + sx0 * 4u, in_pitch,
+-                               sx1 - sx0 + 1u, sy1 - sy0 + 1u);
++    const u32 off = s_nv3089.in_off + sy0 * in_pitch + sx0 * 4u;
++    if (engine) {
++        rsx_draw_engine_guest_read(loc, off, in_pitch, sx1 - sx0 + 1u, sy1 - sy0 + 1u);
++    } else if (loc == RSX_LOCATION_LOCAL) {
++        extern u8* vm_base;
++        const u32 w = sx1 - sx0 + 1u, h = sy1 - sy0 + 1u;
++        const u32 ea = cellGcmResolveLocated(1, off);
++        const u64 len = (u64)(h - 1u) * in_pitch + (u64)w * 4u;
++        if (ea && (u64)ea + len <= (ppu_vm_size ? ppu_vm_size : VM_TOTAL_SIZE)) {
++            const int ok = s_rt_readback(off, in_pitch, w, h, vm_base + ea);
++            static int log = -1, n = 0;
++            if (log < 0) { const char* e = getenv("NV3089_RB_LOG"); log = e ? atoi(e) : 0; }
++            if (ok && n < log) { n++;
++                printf("[NV3089RB] off=0x%08X/%u %ux%u first=%02X%02X%02X%02X\n", off, in_pitch, w, h,
++                       vm_base[ea], vm_base[ea + 1], vm_base[ea + 2], vm_base[ea + 3]); }
++        }
++    }
+ }
+ 
+ static void nv3089_engine_wrote(u32 dst_pitch, u32 x0, u32 y0, u32 x1, u32 y1)

@@ -1,0 +1,18 @@
+--- a/libs/video/rsx_fp_decompiler.c
++++ b/libs/video/rsx_fp_decompiler.c
+@@ -703,11 +703,12 @@
+     out[0] = '\0';
+     int uses_pack = 0;   /* a pack or unpack opcode was decoded: the preamble gets its helpers */
+     out_puts(&o,
+-        "    float4 r[48]; float4 h[48];\n"
++        "    float4 r[64]; float4 h[64];\n"
+         /* Fully initialise both register files: RSX programs routinely read a
+          * register lane before writing it (the hardware reads undefined), but
+-         * HLSL rejects use-before-init (error X4000). Zero everything. */
+-        "    [unroll] for (int _i = 0; _i < 48; _i++) { r[_i] = (float4)0; h[_i] = (float4)0; }\n"
++         * HLSL rejects use-before-init (error X4000). Zero everything.
++         * 64: the register fields are 6 bits wide (GT6 writes H55). */
++        "    [unroll] for (int _i = 0; _i < 64; _i++) { r[_i] = (float4)0; h[_i] = (float4)0; }\n"
+         /* Condition-code registers for exec_if predication / set_cond. Reset
+          * to 0 (NV40 CC power-up state). Dead in non-predicated programs. */
+         "    float4 cc0 = (float4)0; float4 cc1 = (float4)0;\n");

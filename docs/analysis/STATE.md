@@ -18,14 +18,15 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] C2 car view after FIT RS renders, pad works, buy completes (play_a54retire_20261126_052113, work/_a54/car_ret2.png, car_ret4.png, buy1.png, buy7.png)
 - [x] G4 device hung = upload buffer freed while its copy was in the open command list (d3d_retire; same run: 0 DEVICE REMOVED)
 - [x] G6a showroom car is drawn into the offscreen scene surface (A56 views patch; work/play_a56cap_20261126_063223 frame_01/rt_01F00000.bmp)
-- [ ] G6b showroom still black: NV3089 blit reads host RT 0x01F00000/0x01F01000 -> main 0x602A0000, RT never written to guest
-  (play_a56cap_20261126_064234 [NV3089G]); also 022C0000 -> 0x60579000
+- [x] G6b NV3089 reads host RTs back into guest memory (A57 rt-readback patch; work/play_a57cap_20261126_065731
+  run.log [NV3089RB] 444 copies, non-zero pixels)
+- [ ] G6c showroom still black after readback (work/_a57/car.png): who consumes main 0x602A0000/0x60579000?
 - [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
 - [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (same run, car.png)
 - [ ] D4 rest interpreted, car view 5 FPS: image 76 LS 0x108EC/0x7D28/0x8048, image 74 0x54BC, PM 0xA68
   (play_a55lift2_20261126_061944; image 89 entries fixed via EXTRA_FUNCS)
 - [ ] G7 popup bar draws several popups on top of each other (work/_a55/home_after.png): check vs real
-- [ ] G5 FP 0x04D0BC01 rejected, X3504 index out of bounds (play_a54ucq); FP_FAIL_DUMP
+- [x] G5 FP register arrays 48 -> 64 (A57; work/play_a57cap_20261126_070409: 0 PS compile FAIL)
 - [ ] G2 car-name text in dealer list smeared/overbold (work/_a53/dealer_cars_full.png)
 - [ ] G3 dealer tiles: grey backing covers only upper-left part of each tile (same frame)
 - [ ] D1 attract demo (autodemo race) loads very slowly, window FPS 0.29 (a53a)
@@ -51,10 +52,10 @@ sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-M1 next item: G6b. In nv3089_blit (cellGcmSys.c ~1479): source local + inside a D3D12 offscreen RT -> new backend call:
-execute the pending batch without present (see rsx_d3d12_backend_present, s_present_this_frame=0; check backbuffer clear),
-copy the RT region back to guest memory (A,R,G,B bytes), then blit. Repro/capture: work/_a56/repro.sh
-(RSX_CAP_TRIG; work/_a56/man.py, sheet.py). D4: image N = 40 + registry row, scripts/lift-spu-wwsjobs.py.
+M1 next item: G6c. No GPU texture reads 0x602A0000/0x60579000 (frame_01 manifest, play_a57cap_20261126_065731);
+composite op628 samples 0xC36C0000 (declared 1x1) + exposure LUT 0x04BC0C00 (all zero). Find the writer/reader
+of those: SPU job (DMA from 0x602A0000?) or missing M2M/NV3089 path. Repro: work/_a57/repro.sh (6 min).
+D4: image N = 40 + registry row, scripts/lift-spu-wwsjobs.py.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40).
