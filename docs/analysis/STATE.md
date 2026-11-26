@@ -14,17 +14,19 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [ ] G1 only dealer tile drawn: popup says "buy a FIT RS '10 first" (A53), likely locked; confirm after first buy
 - [ ] I1 opening movie: cellPamf layout fixed (A50, patches/gt6-a50-pamf-header.patch, not run); cellDmux is a stub, no FFmpeg headers
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
-- [x] C1 pad menu: popup X, enter dealer (~7 s load), Honda car list (A53 live a53c: work/_a53/dealer_list.png,
-  dealer_honda_cars.png). Old "dealer hang" = idle attract demo (leavedemo) started before cross was pressed.
-- [ ] C2 car view black after FIT RS: GPU hang, D3D12 device removed 0x887A0006 (play_a54dbg run.log 17885), see G4
-- [ ] G4 a car-view draw hangs the GPU (TDR); every later frame black
-- [ ] G5 FP 0x04D0BC01 rejected: X3504 array index out of bounds (play_a54ucq run.log); FP_FAIL_DUMP dumps HLSL
+- [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
+- [x] C2 car view after FIT RS renders, pad works, buy completes (play_a54retire_20261126_052113, work/_a54/car_ret2.png, car_ret4.png, buy1.png, buy7.png)
+- [x] G4 device hung = upload buffer freed while its copy was in the open command list (d3d_retire; same run: 0 DEVICE REMOVED)
+- [ ] G6 showroom: 3D car not drawn, black background (work/_a54/car_ret2.png)
+- [ ] S3 after buy, "Ihr neues Fahrzeug wird geliefert" stays >10 min at ~0.7 FPS (buy7.png, same run)
+- [ ] D3 car view ~0.9 FPS: one thread 100% SPU interpreter (pm_clean image, spu_interp_run_until)
+- [ ] G5 FP 0x04D0BC01 rejected, X3504 index out of bounds (play_a54ucq); FP_FAIL_DUMP
 - [ ] G2 car-name text in dealer list smeared/overbold (work/_a53/dealer_cars_full.png)
 - [ ] G3 dealer tiles: grey backing covers only upper-left part of each tile (same frame)
 - [ ] D1 attract demo (autodemo race) loads very slowly, window FPS 0.29 (a53a)
 - [ ] D2 idle demo starts ~10 s after Home; input during the countdown does not cancel it (a53b, a53i): check
 - [ ] S2 boot crash 0xC00000FD, recursive tree walk func_00AE0464 on tid34 (play_a53g_20261126_035132, 1 of 8)
-- [ ] S1 stall (car view): fixes in for lost ACQUIRE wait, lost user causes (1 slot); verify over runs
+- [ ] S1 car-view stall: ACQUIRE wait + lost user causes fixed; verify over more runs
 - [ ] W4 workaround: GCM_SEMA_BLOCK=500-560 (gt6 main.cpp); blocking all ACQUIREs breaks on label 0xFE0
 - [ ] W1 workaround: interpreter bodies spliced into gen 037; confirm with a full re-lift (patches/gt6-a51-jt-loop-base.patch)
 - [ ] W2 workaround: PPU_ONECORE=1 default (one-core pinning); run without it
@@ -34,9 +36,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 ## Method
 Overlay `work/gt6_vol_a32` (scripts/make-vol-overlay.py), env `GT6_VOL_ROOT`; `PPU_ONECORE=1` default; probe.ps1 gives empty hdd1.
 Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol or gt6_vol_122+.
-Menu questions: scripts/play.py (start, press, wait, shot, status, dump [--snap], quit); work/_a53/to_dealer.sh drives
-boot->dealer in ~175 s. Car repro: start, sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py (focus detect,
-a53j OK). Idle demo starts ~10 s after Home ("Der Demofilm startet in Kuerze"): cross must come before it.
+Menu questions: scripts/play.py (start, press, wait, shot, status, dump [--snap], quit). Car repro: start,
+sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
 
 ## State
 
@@ -47,12 +48,11 @@ a53j OK). Idle demo starts ~10 s after Home ("Der Demofilm startet in Kuerze"): 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-A54b: device removed (DEVICE_HUNG) on the car view in a54fix, a54ucq, a54dbg; debug layer unavailable (no
-Graphics Tools). Do: enable DRED auto breadcrumbs behind env D3D12_DRED (rsx_d3d12_backend.c, before
-D3D12CreateDevice; report in d3d_check_removed), keep per-frame draw records (fp addr, vp hash, count), name the
-hanging draw. If a shader loop: fix the decompiler; else check its draw arguments.
-Repro: play.py start --env GCM_PARKTRACE=1; work/_a53/to_home2.sh; work/_a53/dealer.py (~4 min).
-Host hot threads: python -I scripts/ripsample.py.
+S3/D3: SPU interpreter dominates after the car view (ripsample: spu_step < spu_interp_run_until < pm_clean_spu_func_00001A30).
+Find which LS ranges are interpreted and why no lifted code matches (docs/DIAGNOSTICS.md SPU knobs); lift or
+cache the lookup. Then check the delivery screen ends and G1 (other dealer tiles after first buy).
+Repro: play.py start; sh work/_a53/to_home2.sh; python -I work/_a53/dealer.py; cross, cross (buy, Ja).
+GPU hangs: --env D3D12_DRED=1.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

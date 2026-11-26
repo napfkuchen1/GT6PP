@@ -943,3 +943,12 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   (rejected FP recompiled per draw, now negative-cached), PPU spin func_00B321F0 waiting for RSX.
 - a54dbg: DEVICE REMOVED at present, reason 0x887A0006; no compile FAIL that run (cache not verified);
   9 null calls again. D3D12_DBG=1: debug layer unavailable on this host (0x887A002D).
+
+## Arbeit54 (3): car view fixed, first purchase
+- DRED run play_a54dred2_20261126_051704: breadcrumbs done=1/97, first copy (RT initial upload, 258x529, 677120 B)
+  hung; page fault VA == source buffer VA 0x2A25A0000, listed as freed allocation.
+- Fix: off_rt/off_ds/texture-cache/scanout releases go to a retire list, drained after wait_for_gpu at frame start.
+- play_a54retire_20261126_052113: 1297 s, 0 DEVICE REMOVED, showroom renders (2D only), cursor moves, buy dialog,
+  "Neues Fahrzeug erhalten", 4 SAVE complete. Delivery screen still up at t=1279 s, 0.15-0.9 FPS, 56 null calls
+  (user cause 1 after the 5 s waiter gave up). Runtime edits: patches/gt6-a54-sema-ucmd-devlost.patch.
+

@@ -36,8 +36,11 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - (A54) RSX user commands: one pending slot lost causes (GT6 cause 1 overwritten by 0, 60+ in play_a54ucmd); now a queue; a54ucq: 0 null calls.
 - (A54) tid30 null object C4797C = cellGcmSetUserHandler cause 1 with *0x17E7DF4 == 0 (waiter C451F8 gave up after 5 s): symptom of slow/lost delivery.
 - (A54) Car view black = D3D12 device removed 0x887A0006 (play_a54dbg run.log 17885); 0x887A0005 PSO fails already in a54fix.
+- (A54) Car view device hung (0x887A0006) = upload buffer/target released while the open command list still used it; wait_for_gpu covers submitted work only. Fix d3d_retire, verified play_a54retire_20261126_052113.
+- (A54) D3D12_DRED=1 names a hung GPU command (breadcrumbs, copy source VA, page-fault allocations); works without the debug layer.
 
 ## 4. Refuted/symptom (do NOT repeat)
+- (A54) "A car-view draw/shader loop hangs the GPU": refuted, DRED shows the first copy of the list reading a freed buffer.
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
 - Sysmodule load list and fresh savedata (PS3_GAMEDATA_ROOT): no divergence from the oracle.
 - A53 REFUTED "dealer load hang" (A50-52): that screen was the attract demo (leavedemo.adc/LeaveDemoRoot loaded, 'Der Demofilm startet'), cross came too late. Dealer loads in ~7 s (live a53c, work/_a53/dealer_list.png).
