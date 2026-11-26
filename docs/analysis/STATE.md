@@ -4,7 +4,7 @@ State: 2026-11-26. Branch `eu-first-build`, main checkout. Disc EU `BCES01893`. 
 Rules: `CLAUDE.md`. Facts: `LEDGER.md` (grep). Checkpoints/runs: `PROGRESS.md`. History: `eu-boot-log.md` (grep). One line per finding.
 
 ## Goal
-User definition 2026-11-25: reaching the menu was only step 1. M1 DONE only when main menu is complete and correct: intro
+User 2026-11-25: M1 DONE only when main menu is complete and correct: intro
 sequence plays, menu controllable, no graphics errors, no text errors. M2 afterwards: first race.
 STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headless) run with persistent save + pad input.
 
@@ -17,7 +17,9 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
 - [x] C2 car view after FIT RS renders, pad works, buy completes (play_a54retire_20261126_052113, work/_a54/car_ret2.png, car_ret4.png, buy1.png, buy7.png)
 - [x] G4 device hung = upload buffer freed while its copy was in the open command list (d3d_retire; same run: 0 DEVICE REMOVED)
-- [ ] G6 showroom: 3D car not drawn, black background (work/_a54/car_ret2.png)
+- [x] G6a showroom car is drawn into the offscreen scene surface (A56 views patch; work/play_a56cap_20261126_063223 frame_01/rt_01F00000.bmp)
+- [ ] G6b showroom still black: NV3089 blit reads host RT 0x01F00000/0x01F01000 -> main 0x602A0000, RT never written to guest
+  (play_a56cap_20261126_064234 [NV3089G]); also 022C0000 -> 0x60579000
 - [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
 - [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (same run, car.png)
 - [ ] D4 rest interpreted, car view 5 FPS: image 76 LS 0x108EC/0x7D28/0x8048, image 74 0x54BC, PM 0xA68
@@ -38,24 +40,23 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 
 ## Method
 Overlay `work/gt6_vol_a32` (scripts/make-vol-overlay.py), env `GT6_VOL_ROOT`; `PPU_ONECORE=1` default; probe.ps1 gives empty hdd1.
-Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol or gt6_vol_122+.
+Batch: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol or gt6_vol_122+.
 Menu questions: scripts/play.py (start, press, wait, shot, status, dump [--snap], quit). Car repro: start,
 sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
 
 ## State
 
-- (Arbeit46) Next crash a46fix: host stack overflow 0xC00000FD in SQLite on a guest ctx fiber (4 MB) -> HOST_STACK 32 MB.
-- (Arbeit46) Legacy sqlite step returns rc=1; real code = Vdbe+0x5C, message +0x38. sqlite3CorruptError = BD532C (r3=line).
 
-- (Arbeit46) MAIN MENU REACHED (C6): a46menu GT Mode home "Zuhause", Ver. 1.22, tiles + popup GT003_GET_FIRST_CAR.
+- (Arbeit46) MAIN MENU REACHED (C6): GT Mode home, Ver. 1.22, tiles + popup.
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-M1 next item: G6 (car view black, no 3D car): capture draws in car view, compare with showroom. D4: extend
-EXTRA_FUNCS / try --return-entries in scripts/lift-spu-wwsjobs.py (image N = 40 + registry row). Repro:
-work/_a55/repro.sh; buy: cross (color), down x3, cross, cross. Fresh gt6/generated needs that lift script.
+M1 next item: G6b. In nv3089_blit (cellGcmSys.c ~1479): source local + inside a D3D12 offscreen RT -> new backend call:
+execute the pending batch without present (see rsx_d3d12_backend_present, s_present_this_frame=0; check backbuffer clear),
+copy the RT region back to guest memory (A,R,G,B bytes), then blit. Repro/capture: work/_a56/repro.sh
+(RSX_CAP_TRIG; work/_a56/man.py, sheet.py). D4: image N = 40 + registry row, scripts/lift-spu-wwsjobs.py.
 
 ## Refuted / symptom (do not repeat)
-"Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
-Arbeit22-30 1.00-script/A22_BLOCK task chains (B90, node flush, MMuseum2, PFS pipe): obsolete since 1.22 overlay.
-Script VM addresses 9EEA88/9F0748 are 1.00. Never run GTToolsSharp/PDTools.
+"Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40).
+Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
+Never run GTToolsSharp/PDTools. 1.00-era findings (Arbeit22-30, VM addresses): obsolete, see LEDGER.

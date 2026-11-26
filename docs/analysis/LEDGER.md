@@ -41,9 +41,12 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 
 - A55: car-view/delivery slowness = 56 WWS job modules in the ELF, DMA'd to LS 0x4000 by the PM (image 5), never lifted -> interpreter. Lifted (scripts/lift-spu-wwsjobs.py): FPS 0.9->4.8, delivery ends (play_a55lift_20261126_060612). Header: 4x ila $2, 0x30, text, data, bss.
 - A55: SPU_DUMP_OVL=<dir>,0 maps every GET >=256 B to LS >=0x4000 (patches/gt6-a55-spu-ovl-map-dump.patch).
+- A56: GT6 reads its exposure mip chain and post surfaces as sub-ranges of one linear RT; exact-address matching gave zeros. Fix patches/gt6-a56-rt-views.patch.
+- A56: showroom 3D pass = surface 0x01F00000 1152x648 (car visible there), then NV3089 blit to main 0x602A0000 pitch 4608 (play_a56cap_20261126_064234); host RT is never read back.
 
 ## 4. Refuted/symptom (do NOT repeat)
 - (A54) "A car-view draw/shader loop hangs the GPU": refuted, DRED shows the first copy of the list reading a freed buffer.
+- (A56) "Sub-range RT reads alone make the showroom car visible": refuted, screen unchanged (work/_a56/car_views.png); exposure/LUT still 0.
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
 - Sysmodule load list and fresh savedata (PS3_GAMEDATA_ROOT): no divergence from the oracle.
 - A53 REFUTED "dealer load hang" (A50-52): that screen was the attract demo (leavedemo.adc/LeaveDemoRoot loaded, 'Der Demofilm startet'), cross came too late. Dealer loads in ~7 s (live a53c, work/_a53/dealer_list.png).
