@@ -931,9 +931,15 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a53k: stall dump: ea 6146A080 = 2148D834 00041FC0 0000FFFF 2146A08C, then NOPs; 03000500..55F all 0; put 0x12090.
 
 ## Arbeit54 (2026-11-26)
-- GCM_PARKTRACE=1 (patches/gt6-a54-park-trace-sema-block.patch): branch/semaphore/SPU PUT rings, dumped at jump-park
+- GCM_PARKTRACE=1 (patches/gt6-a54-sema-ucmd-devlost.patch): branch/semaphore/SPU PUT rings, dumped at jump-park
   resync and SPU halt; SPU_HALT_DUMP=<file> saves local store.
 - a54pt, a54pt2: park io 146A08C / D4A08C, labels 500..55F = 0, only the RSX walker writes 0x530 (no PPU store).
 - SPU img 5 pc 7C44: GET 4 bytes ea 03000530, loop at LS 5930..5994 exits on value 1, then PUTs 0.
 - a54fix (GCM_SEMA_BLOCK=500-560, 2000 ms bound): acquire gave up once (t=194 s), no SPU halt; tid30 null call
   lr C479E8 (guest-fn C4797C null read), then park 1A6A5F0, flips stop at 5416 (car view UI visible, 3D black).
+- Acquire timer was not reset on a satisfied wait: a later wait on the same label gave up at once; fixed.
+- a54ucmd: [ucmd] overwrite 1 -> 0 x60 (single user-command slot). Replaced by a 256-entry queue.
+- a54ucq: no overwrite/null call/resync, flips stop 5415, ~30 s per frame; ripsample: one thread 100% D3DCompiler
+  (rejected FP recompiled per draw, now negative-cached), PPU spin func_00B321F0 waiting for RSX.
+- a54dbg: DEVICE REMOVED at present, reason 0x887A0006; no compile FAIL that run (cache not verified);
+  9 null calls again. D3D12_DBG=1: debug layer unavailable on this host (0x887A002D).

@@ -33,6 +33,9 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - A53: car detail stall = [FIFODUMP] self-JUMP park io 0x146A08C -> jump-park resync -> SPU img 5 halts after 30 s polling ea 0x03000530 (play_a53c_20261126_033359 run.log.err 2842..2874).
 - (A54) Label 0x53 handshake: RSX ACQUIRE 0 at segment start, RELEASE 1 at end; SPU img 5 (job code LS 0x5930) waits 1, writes 0. Walker ignored ACQUIRE -> lost release -> SPU halt. Evidence: play_a54pt2_20261126_041937, work/_a54/spu_halt_ls.bin.
 - (A54) PPU wait emitter C3217C: [0x40040100][JUMP][SEMA OFFSET/ACQUIRE]; C3216C writes 0x100 to cancel the wait. Evidence: gdis, [ww] 6146A08C.
+- (A54) RSX user commands: one pending slot lost causes (GT6 cause 1 overwritten by 0, 60+ in play_a54ucmd); now a queue; a54ucq: 0 null calls.
+- (A54) tid30 null object C4797C = cellGcmSetUserHandler cause 1 with *0x17E7DF4 == 0 (waiter C451F8 gave up after 5 s): symptom of slow/lost delivery.
+- (A54) Car view black = D3D12 device removed 0x887A0006 (play_a54dbg run.log 17885); 0x887A0005 PSO fails already in a54fix.
 
 ## 4. Refuted/symptom (do NOT repeat)
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
