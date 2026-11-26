@@ -29,6 +29,7 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - Stream read job AAB258 clamps to FileObject+0xC8 (1.00 TOC size); fixed d4e1f9a (port_hooks part5), evidence a48rtv trace.
 - (A49) SPU img 5 halt on ea 0x03000530 (label 0x53) = jump-park FIFO resync; GCM_PARK_GRACE_MS=5000. Evidence: probe_a49park/a49fix.
 - (A49) Shredded text = depth surface read as texture scaled by declared size, not host copy size. Evidence: probe_a49vh/a49fix.
+- (A50) Pad works in GT Mode home (popups, dealer enter): probe_a50pad_*. PAMF stream headers start at 0x88, 0x30 each (patch gt6-a50-pamf-header).
 
 ## 4. Refuted/symptom (do NOT repeat)
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
