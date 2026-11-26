@@ -20,7 +20,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] G6a showroom car is drawn into the offscreen scene surface (A56 views patch; work/play_a56cap_20261126_063223 frame_01/rt_01F00000.bmp)
 - [x] G6b NV3089 reads host RTs back into guest memory (A57 rt-readback patch; work/play_a57cap_20261126_065731
   run.log [NV3089RB] 444 copies, non-zero pixels)
-- [ ] G6c showroom still black after readback (work/_a57/car.png): who consumes main 0x602A0000/0x60579000?
+- [ ] G6c showroom still black after readback + NV0039 copy (work/_a57/car.png, play_a57cap_20261126_070950):
+  who consumes main 0x602A0000/0x60579000? Home screen not rechecked with the A57 patches
 - [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
 - [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (same run, car.png)
 - [ ] D4 rest interpreted, car view 5 FPS: image 76 LS 0x108EC/0x7D28/0x8048, image 74 0x54BC, PM 0xA68
@@ -42,7 +43,7 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 ## Method
 Overlay `work/gt6_vol_a32` (scripts/make-vol-overlay.py), env `GT6_VOL_ROOT`; `PPU_ONECORE=1` default; probe.ps1 gives empty hdd1.
 Batch: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol or gt6_vol_122+.
-Menu questions: scripts/play.py (start, press, wait, shot, status, dump [--snap], quit). Car repro: start,
+Menu questions: scripts/play.py. Car repro: start,
 sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
 
 ## State
@@ -53,11 +54,11 @@ sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
 
 ## Next step
 M1 next item: G6c. No GPU texture reads 0x602A0000/0x60579000 (frame_01 manifest, play_a57cap_20261126_065731);
-composite op628 samples 0xC36C0000 (declared 1x1) + exposure LUT 0x04BC0C00 (all zero). Find the writer/reader
-of those: SPU job (DMA from 0x602A0000?) or missing M2M/NV3089 path. Repro: work/_a57/repro.sh (6 min).
+composite op628 samples 0xC36C0000 (declared 1x1) + exposure LUT 0x04BC0C00 (all zero). Check SPU DMA GET/PUT on
+those addresses (third_party/ps3recomp-v020/docs/DIAGNOSTICS.md). Repro: work/_a57/repro.sh (6 min, foreground).
 D4: image N = 40 + registry row, scripts/lift-spu-wwsjobs.py.
 
 ## Refuted / symptom (do not repeat)
-"Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40).
+"Dealer load hang" (Arbeit50-52) = attract demo. Post-save movie stall (Arbeit40).
 Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
-Never run GTToolsSharp/PDTools. 1.00-era findings (Arbeit22-30, VM addresses): obsolete, see LEDGER.
+Never run GTToolsSharp/PDTools. 1.00-era findings: obsolete, see LEDGER.
