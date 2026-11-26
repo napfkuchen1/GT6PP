@@ -1,0 +1,28 @@
+diff --git a/runtime/spu/spu_channels.c b/runtime/spu/spu_channels.c
+index 623f285b..e3381c67 100644
+--- a/runtime/spu/spu_channels.c
++++ b/runtime/spu/spu_channels.c
+@@ -2176,6 +2176,23 @@ static void spu_ovl_dump(spu_context* ctx, uint32_t ea, uint32_t lsa, const uint
+     static uint32_t s_seen[256]; static unsigned s_n;
+     static SPU_TLS uint32_t t_src, t_next_ea, t_next_lsa;
+     FILE* f = NULL; char path[512];
++    /* <lsa> 0: map mode. Every distinct (EA, LS, size) GET of 256 bytes or more
++     * that lands at LS 0x4000 or above is listed and its bytes written to
++     * map_<ea>_<lsa>_<size>.bin: for titles whose job bodies have no fixed
++     * load address. */
++    if (!s_lsa) {
++        static uint64_t s_key[2048]; static unsigned s_kn;
++        if (size < 256 || lsa < 0x4000) return;
++        const uint64_t key = (uint64_t)ea << 32 | (uint64_t)(lsa >> 4) << 16 | (size >> 4);
++        for (unsigned i = 0; i < s_kn; i++) if (s_key[i] == key) return;
++        if (s_kn >= 2048) return;
++        s_key[s_kn++] = key;
++        fprintf(stderr, "[spu-ovl-map] img=%d ea=0x%08X lsa=0x%05X size=%u\n", ctx->image_id, ea, lsa, size);
++        snprintf(path, sizeof path, "%s/map_%08X_%05X_%u.bin", s_dir, ea, lsa, size);
++        f = fopen(path, "wb");
++        if (f) { fwrite(ls, 1, size, f); fclose(f); }
++        return;
++    }
+     if (lsa == s_lsa && size >= 256) {
+         for (unsigned i = 0; i < s_n; i++) if (s_seen[i] == ea) { t_src = 0; return; }
+         if (s_n < 256) s_seen[s_n++] = ea;

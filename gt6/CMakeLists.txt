@@ -67,11 +67,16 @@ if(TRUE) # SPU always on
     list(APPEND GT6_SPU_SOURCES
         "${GT6_SPU_GEN}/spu_workloads.c"
         "${GT6_SPU_GEN}/spu_workloads_pm.c"
-        "${GT6_SPU_GEN}/spu_workloads_jobs.c")
+        "${GT6_SPU_GEN}/spu_workloads_jobs.c"
+        "${GT6_SPU_GEN}/spu_workloads_wwsjobs.c")
     file(GLOB GT6_SPU_LIFTED CONFIGURE_DEPENDS
         "${GT6_SPU_LIFT}/*/spu_recomp.c")
     file(GLOB GT6_SPU_JOB_LIFTED CONFIGURE_DEPENDS
         "${GT6_SPU_LIFT}/jobs/*/spu_recomp.c")
+    # WWS job modules (scripts/lift-spu-wwsjobs.py).
+    file(GLOB GT6_SPU_WWS_LIFTED CONFIGURE_DEPENDS
+        "${GT6_SPU_LIFT}/wwsjobs/*/spu_recomp.c")
+    list(APPEND GT6_SPU_SOURCES ${GT6_SPU_WWS_LIFTED})
     list(LENGTH GT6_SPU_LIFTED N_SPU)
     list(LENGTH GT6_SPU_JOB_LIFTED N_SPU_JOBS)
     message(STATUS "lifted SPU images: ${N_SPU} + ${N_SPU_JOBS} runtime jobs")

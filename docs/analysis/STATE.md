@@ -11,15 +11,17 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 ## M1 checklist (open until verified; Arbeit47 inventory)
 - [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
-- [ ] G1 only dealer tile drawn: popup says "buy a FIT RS '10 first" (A53), likely locked; confirm after first buy
+- [x] G1 all Home tiles drawn after the first car buy (play_a55lift_20261126_060612, work/_a55/home_after.png)
 - [ ] I1 opening movie: cellPamf layout fixed (A50, patches/gt6-a50-pamf-header.patch, not run); cellDmux is a stub, no FFmpeg headers
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
 - [x] C2 car view after FIT RS renders, pad works, buy completes (play_a54retire_20261126_052113, work/_a54/car_ret2.png, car_ret4.png, buy1.png, buy7.png)
 - [x] G4 device hung = upload buffer freed while its copy was in the open command list (d3d_retire; same run: 0 DEVICE REMOVED)
 - [ ] G6 showroom: 3D car not drawn, black background (work/_a54/car_ret2.png)
-- [ ] S3 after buy, "Ihr neues Fahrzeug wird geliefert" stays >10 min at ~0.7 FPS (buy7.png, same run)
-- [ ] D3 car view ~0.9 FPS: one thread 100% SPU interpreter (pm_clean image, spu_interp_run_until)
+- [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
+- [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (same run, car.png)
+- [ ] D4 rest interpreted: image 89 entries LS 0x810C/0x8F40/0x84FC/0x7DC8, PM 0xA68 (SPU_INTERP_STATS=10)
+- [ ] G7 popup bar draws several popups on top of each other (work/_a55/home_after.png): check vs real
 - [ ] G5 FP 0x04D0BC01 rejected, X3504 index out of bounds (play_a54ucq); FP_FAIL_DUMP
 - [ ] G2 car-name text in dealer list smeared/overbold (work/_a53/dealer_cars_full.png)
 - [ ] G3 dealer tiles: grey backing covers only upper-left part of each tile (same frame)
@@ -48,11 +50,9 @@ sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-S3/D3: SPU interpreter dominates after the car view (ripsample: spu_step < spu_interp_run_until < pm_clean_spu_func_00001A30).
-Find which LS ranges are interpreted and why no lifted code matches (docs/DIAGNOSTICS.md SPU knobs); lift or
-cache the lookup. Then check the delivery screen ends and G1 (other dealer tiles after first buy).
-Repro: play.py start; sh work/_a53/to_home2.sh; python -I work/_a53/dealer.py; cross, cross (buy, Ja).
-GPU hangs: --env D3D12_DRED=1.
+D4: add missing entries to scripts/lift-spu-wwsjobs.py (lifter --extra-funcs, image 89 = 50th module in
+gt6/src/gen/spu_workloads_wwsjobs.c), relift, build, repro work/_a55/repro.sh. Then next M1 item: G6 (car
+view 3D car / black background) or I1 (opening movie). Fresh gt6/generated needs lift-spu-wwsjobs.py.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

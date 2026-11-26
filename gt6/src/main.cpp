@@ -113,6 +113,7 @@ extern const char* g_hle_inflight[64];    /* per-thread: HLE currently executing
 void gt6_spu_register_all(void);         /* generated: src/gen/spu_workloads.c */
 void gt6_spu_register_pm_clean(void);    /* WWS job-manager PM, image id 5 */
 void gt6_spu_register_jobs(void);        /* 15 runtime SPURS job images, ids 6..20 */
+void gt6_spu_register_wwsjobs(void);     /* WWS job modules in the ELF, ids 40.. */
 void gt6_start_present_thread(void);     /* src/gt6_present.cpp */
 }
 
@@ -855,6 +856,7 @@ int main(int argc, char* argv[])
     gt6_spu_register_all();   /* after the ELF load: fingerprints the loaded image */
     gt6_spu_register_pm_clean();  /* raw WWS PM at 0x013FFE00 (image id 5) */
     gt6_spu_register_jobs();      /* SPURS job binaries captured from the running title */
+    gt6_spu_register_wwsjobs();   /* job modules the WWS PM streams to LS 0x4000 */
 
     /* Give the main thread an actual stack. ppu_run reserves the entry ABI
      * frame and argv strings below this top. */
