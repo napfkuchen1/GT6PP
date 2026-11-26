@@ -68,6 +68,7 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - (A59) "sys_lwcond_wait restores the lwmutex owner without re-contending": refuted, lwm_acquire precedes the owner write (ppu_sysprx.cpp:596).
 - A61 refuted: inflated picture PTS (Media Foundation reports 29.97 for the 59.94 stream) as freeze cause; measuring ticks from stamps removed the jumps after picture 56, same freeze at 199 (play_a61mov_20261126_102655; source work/_a61/cellVdec.measuredticks.c, not committed).
 - A61 refuted: synchronous cellAdec callback blocks the movie (no thread blocked in it, play_a61mov_20261126_094916).
+- A62: movie freeze is not a frozen or wrong audio clock: port 1 feeder ran 23297 blocks, GetPortTimestamp fixed to system time, freeze unchanged (play_a62mov_20261126_110909).
 
 ## 5. Open core question
 - RPCS3 opens `PDIPFS/59/FI` (movie, PDI thread 0x100003b, Pamf/Vdec) after PDIPFS/9/EE/3C; we open 85/H2, 8M/A9, 6W/RR, 75/M8, SG/LW, SC/IC, 8M/0K, 4J/0E and park in lwcond (loader 9qstY).
@@ -89,3 +90,4 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - A61: 64-slot video AU queue blocked the demuxer before the audio arrived; byte ring must be the limit (patches/gt6-a61-dmux-queue.patch; 83 -> 188 audio AUs).
 - A61: "black movie" shots with non-black=0% can hold content (PD logo is <1% of pixels): look at the image.
 
+- A62: cellAudioGetPortTimestamp counted from cellAudioInit (port 1 stamps in the past); now last read-index advance minus block periods (patches/gt6-a62-audio-port-timestamp.patch; AUDIO_TS_TRACE=1).

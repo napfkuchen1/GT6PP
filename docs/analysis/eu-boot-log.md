@@ -952,3 +952,15 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   "Neues Fahrzeug erhalten", 4 SAVE complete. Delivery screen still up at t=1279 s, 0.15-0.9 FPS, 56 null calls
   (user cause 1 after the 5 s waiter gave up). Runtime edits: patches/gt6-a54-sema-ucmd-devlost.patch.
 
+## A62 movie freeze chain (play_a62mov_20261126_110909, snap_00248)
+
+- Demux: video AU #478 PTS 804714, audio AU 188 PTS 803550 (3840 ticks/AU, video 1501.5 ticks/AU = 59.94 fps).
+- Video presentation object 624007D0: mutex +0x30, frame ring ptr +0x78 -> 62400148 (count 4 of 4, slots at 62810000,
+  0x18 bytes, PTS 423333..432342 step 3003, seq 193..196), picture counter +0xE8 = 199. tid49 waits 8AC5F8 > FD6450 > 8AA25C.
+- Audio output player 62403ED0 (owner 62400300), port object 6FE122E8: +0x60 blocks 23297, +0x70 tag 6, +0x78/+0x80
+  system time/stamp match. Feeder 00B10FBC, callback 008A9CFC signals audio thread tid51 (8AC9A8, copy 8AC7B0).
+- PCM ring 624001A4 (player +0x84): count 0. Ring class helpers: ADD398 advance read, ADD42C advance write,
+  ADD484 slot pointer, +0xC count, +0x18 capacity. Ring 62400054 (object 62400300 +0x250) full 16/16, tid52 8AE41C.
+- ADD398 sites FD7100/FD748C are reset/restart paths (cellAdecStartSeq near FD7464), FD3044 is a byte copy loop.
+- Mixer: 187.5 blocks/s, port output audible only ~65 s (menu) then silent after the movie audio ran out.
+- Not the release site: 8AB5xx-8AB7xx (pause/volume loops, 8AAFC0 = volume fade), 8A9948 (frame size getter).

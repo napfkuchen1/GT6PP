@@ -55,12 +55,13 @@ Car repro: play.py start, work/_a53/to_home2.sh, work/_a53/dealer.py.
 - (A46) Main menu reached: GT Mode home, Ver. 1.22. Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-I1b: find the display clock. Trace cellAudioGetPortTimestamp/GetPortBlockTag and the port 1 read index during the
-movie (work/_a61/movie.sh). Clock frozen: fix cellAudio. Else walk the consumer of the frame ring (player+0x78,
-full wait 8AA25C, commit 8AA310) and read its release condition from a snapshot.
-NID 0xA1709ABD: sceNpManagerGetEntitlementById.
+I1b (A62, snapshot work/play_a62mov_20261126_110909/snap_00248; chain in eu-boot-log.md A62): frame ring 62400148
+full 4/4 (tid49 waits in 8AA25C), PCM ring 624001A4 empty, demux+audio at PTS 8.9 s, newest frames 4.8 s: video is
+~4 s late. Find who releases frame ring slots (player 624007D0, mutex +0x30, ring +0x78; xref +0x78 readers in
+next: callers of 8A9AA0 at 8AB8B0, 8AB970, 8AC0F4) and its clock. Else time decode.
+
 
 ## Refuted / symptom (do not repeat)
-"Dealer load hang" (A50-52) = attract demo. Post-save movie stall (A40).
-Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_*, exit race. More: LEDGER §4.
+"Dealer load hang" (A50-52) = attract demo.
+Quit flag, userdb, exit race, Hyp. 1-116. More: LEDGER §4.
 Never run GTToolsSharp/PDTools.
