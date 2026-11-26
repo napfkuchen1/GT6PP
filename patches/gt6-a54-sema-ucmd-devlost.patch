@@ -1,0 +1,452 @@
+diff --git a/libs/video/cellGcmSys.c b/libs/video/cellGcmSys.c
+index 5f9b18e8..adcbabc2 100644
+--- a/libs/video/cellGcmSys.c
++++ b/libs/video/cellGcmSys.c
+@@ -358,6 +358,33 @@ static _Atomic(u64) s_user_pending = 0;
+ #define GCM_USER_PENDING_TAKE() atomic_exchange(&s_user_pending, 0)
+ #endif
+ 
++/* Causes not yet handed to the user handler, in FIFO order. The walker retires
++ * many user interrupts per pass while the pump delivers later, so one slot lost
++ * causes (GT6: cause 1 overwritten by cause 0, guest then waits out 5 s). */
++#define GCM_UCQ_N 256u
++static u32 s_ucq[GCM_UCQ_N];
++static unsigned s_ucq_r, s_ucq_w;
++static atomic_flag s_ucq_lock = ATOMIC_FLAG_INIT;
++static void gcm_ucq_lock(void)   { while (atomic_flag_test_and_set_explicit(&s_ucq_lock, memory_order_acquire)) {} }
++static void gcm_ucq_unlock(void) { atomic_flag_clear_explicit(&s_ucq_lock, memory_order_release); }
++static void gcm_ucq_reset(void)  { gcm_ucq_lock(); s_ucq_r = s_ucq_w = 0; gcm_ucq_unlock(); }
++static void gcm_ucq_push(u32 cmd)
++{
++    gcm_ucq_lock();
++    const int full = s_ucq_w - s_ucq_r >= GCM_UCQ_N;
++    if (!full) s_ucq[s_ucq_w++ % GCM_UCQ_N] = cmd;
++    gcm_ucq_unlock();
++    if (full) { static int n; if (n++ < 8) fprintf(stderr, "[ucmd] queue full, cause %u dropped\n", cmd); }
++}
++static int gcm_ucq_pop(u32* cmd)
++{
++    gcm_ucq_lock();
++    const int have = s_ucq_r != s_ucq_w;
++    if (have) *cmd = s_ucq[s_ucq_r++ % GCM_UCQ_N];
++    gcm_ucq_unlock();
++    return have;
++}
++
+ /* Tile configuration (up to 15 tiles, 8 commonly used) */
+ static CellGcmTileInfo s_tiles[CELL_GCM_MAX_TILE_COUNT];
+ 
+@@ -624,6 +651,7 @@ s32 cellGcmInit(u32 cmdSize, u32 ioSize, u32 ioAddress)
+     s_vblank_frequency = 0;
+     GCM_USER_STORE(0);
+     GCM_USER_PENDING_STORE(0);
++    gcm_ucq_reset();
+ 
+     /* Set up the initial IO mapping for the command buffer region */
+     if (ioAddress != 0 && ioSize > 0) {
+@@ -1057,9 +1085,10 @@ void ppu_gcm_pump(void)
+         }
+     }
+     if (user) {
+-        u32 cmd = (u32)user;
+-        if (s_user_handler_opd && g_ps3_guest_caller)
+-            g_ps3_guest_caller(s_user_handler_opd, (uint64_t)cmd, 0, 0, 0, 0, 0, 0, 0);
++        u32 cmd;
++        while (gcm_ucq_pop(&cmd))
++            if (s_user_handler_opd && g_ps3_guest_caller)
++                g_ps3_guest_caller(s_user_handler_opd, (uint64_t)cmd, 0, 0, 0, 0, 0, 0, 0);
+     }
+     GCM_PUMP_LEAVE();
+ }
+@@ -1136,6 +1165,98 @@ static int s_report_hold_pass = 0;    /* this drain stopped on a held GET_REPORT
+  * since when it has stood with that put: the jump-park grace in the walker. */
+ static u32 park_off, park_put;
+ static unsigned long long park_since;
++/* GCM_PARKTRACE=1: keep the last FIFO branches, label operations and SPU PUTs
++ * and print them when a self-JUMP park is given up on (or an SPU is halted for
++ * polling) -- who jumped to the park, who patches it, who releases a label. */
++typedef struct { u32 kind, io, a, b; unsigned long long t; } gcm_pt_ev;
++static gcm_pt_ev s_pt_br[256], s_pt_sem[256];
++static unsigned s_pt_nbr, s_pt_nsem;
++static struct { u32 ea, size, cmd, pc, img; unsigned long long t; } s_pt_dma[16384];
++static volatile long s_pt_ndma;
++/* Start of the bounded ACQUIRE wait in progress, 0 = none. */
++static unsigned long long s_acq_t0;
++static int gcm_pt_on(void)
++{
++    static int on = -1;
++    if (on < 0) on = getenv("GCM_PARKTRACE") ? 1 : 0;
++    return on;
++}
++static void gcm_pt_br(u32 kind, u32 io, u32 a, u32 b)
++{
++    extern unsigned long long ps3_ms_now(void);
++    if (!gcm_pt_on()) return;
++    gcm_pt_ev* e = &s_pt_br[s_pt_nbr++ & 255];
++    e->kind = kind; e->io = io; e->a = a; e->b = b; e->t = ps3_ms_now();
++}
++/* kind: 'A' acquire, 'L' 406E release, 'B' back-end, 'T' texture release,
++ * 'R' release replayed by a resync. */
++static void gcm_pt_sem(u32 kind, u32 io, u32 off, u32 v)
++{
++    extern unsigned long long ps3_ms_now(void);
++    static u32 last_off = ~0u, last_v;
++    if (!gcm_pt_on()) return;
++    if (kind == 'A') { if (off == last_off && v == last_v) return; last_off = off; last_v = v; }
++    gcm_pt_ev* e = &s_pt_sem[s_pt_nsem++ & 255];
++    e->kind = kind; e->io = io; e->a = off; e->b = v; e->t = ps3_ms_now();
++    if ((off & 0xFFFFu) >= 0x500u && (off & 0xFFFFu) < 0x560u) {
++        static int n;
++        if (PS3_LOG_FIRST(n, 200))
++            fprintf(stderr, "[ptrace-lbl] %c io=%08X off=0x%X v=0x%08X t=%llu\n", (int)kind, io, off, v, e->t);
++    }
++}
++void ps3_ptrace_dma(u32 ea, u32 size, u32 cmd, u32 pc, u32 img)
++{
++    extern unsigned long long ps3_ms_now(void);
++    static volatile long long n;
++    if (!gcm_pt_on() || (cmd & 0xF0u) == 0x40u) return;   /* PUTs and atomics */
++    if (!((ea >= 0x60000000u && ea < 0x70000000u) || (ea >= 0x03000000u && ea < 0x03001000u))) return;
++    const unsigned i = (unsigned)(++n) & 16383u;   /* diagnostic: a lost race costs one entry */
++    s_pt_ndma = (long)n;
++    s_pt_dma[i].ea = ea; s_pt_dma[i].size = size; s_pt_dma[i].cmd = cmd;
++    s_pt_dma[i].pc = pc; s_pt_dma[i].img = img; s_pt_dma[i].t = ps3_ms_now();
++}
++void ps3_ptrace_dump(const char* why, u32 park_io)
++{
++    extern unsigned long long ps3_ms_now(void);
++    static int dumps;
++    if (!gcm_pt_on() || dumps >= 3) return;
++    dumps++;
++    if (!park_io) park_io = park_off;
++    const u32 pea = park_io ? gcm_io2ea(park_io) : 0;
++    fprintf(stderr, "[ptrace] dump %s park io=%08X ea=%08X t=%llu\n", why, park_io, pea, ps3_ms_now());
++    for (u32 a = 0x500u; a < 0x560u; a += 16u)
++        fprintf(stderr, "[ptrace] label %03X: %08X %08X %08X %08X\n", a,
++                vm_read32(GCM_LABEL_GUEST_BASE + a), vm_read32(GCM_LABEL_GUEST_BASE + a + 4),
++                vm_read32(GCM_LABEL_GUEST_BASE + a + 8), vm_read32(GCM_LABEL_GUEST_BASE + a + 12));
++    for (unsigned k = s_pt_nbr > 96 ? s_pt_nbr - 96 : 0; k < s_pt_nbr; k++) {
++        const gcm_pt_ev* e = &s_pt_br[k & 255];
++        fprintf(stderr, "[ptrace] br %c %08X -> %08X put=%08X t=%llu\n", (int)e->kind, e->io, e->a, e->b, e->t);
++    }
++    for (unsigned k = s_pt_nsem > 96 ? s_pt_nsem - 96 : 0; k < s_pt_nsem; k++) {
++        const gcm_pt_ev* e = &s_pt_sem[k & 255];
++        fprintf(stderr, "[ptrace] sem %c io=%08X off=0x%X v=0x%08X t=%llu\n", (int)e->kind, e->io, e->a, e->b, e->t);
++    }
++    {
++        const unsigned n = (unsigned)s_pt_ndma;
++        unsigned shown = 0;
++        for (unsigned k = n > 16383u ? n - 16383u : 1u; k <= n; k++) {
++            const unsigned i = k & 16383u;
++            const int hit = (pea && s_pt_dma[i].ea < pea + 0x20u && s_pt_dma[i].ea + s_pt_dma[i].size > pea - 0x20u)
++                         || (s_pt_dma[i].ea >= 0x03000500u && s_pt_dma[i].ea < 0x03000560u);
++            if (hit && shown++ < 80)
++                fprintf(stderr, "[ptrace] dma img=%u pc=%05X cmd=%02X ea=%08X size=%u t=%llu\n", s_pt_dma[i].img,
++                        s_pt_dma[i].pc, s_pt_dma[i].cmd, s_pt_dma[i].ea, s_pt_dma[i].size, s_pt_dma[i].t);
++        }
++        for (unsigned k = n > 24u ? n - 24u : 1u; k <= n; k++) {
++            const unsigned i = k & 16383u;
++            fprintf(stderr, "[ptrace] lastdma img=%u pc=%05X cmd=%02X ea=%08X size=%u t=%llu\n", s_pt_dma[i].img,
++                    s_pt_dma[i].pc, s_pt_dma[i].cmd, s_pt_dma[i].ea, s_pt_dma[i].size, s_pt_dma[i].t);
++        }
++        fprintf(stderr, "[ptrace] dma total=%u hits=%u\n", n, shown);
++    }
++    fflush(stderr);
++}
++
+ /* Backlog past which the drain stops honouring one-flip-per-tick and
+  * catches up instead. Sized well above a frame's command list so a
+  * title that keeps up never sees this path. */
+@@ -1972,8 +2093,10 @@ static void gcm_fifo_resync_why(const char* why, u32* getoff, u32 put)
+                 else if (m == 0x6Cu) {
+                     atomic_thread_fence(memory_order_release);
+                     vm_write32(GCM_LABEL_GUEST_BASE + (s_sema_offset & 0xFFFFu), v);
++                    gcm_pt_sem('R', io, s_sema_offset, v);
+                     labels++;
+                 } else if (m == 0x01A4u || m == 0x1D6Cu || m == 0x1D70u || m == 0x1D74u) {
++                    { static u32 ro; if (m == 0x1D6Cu) ro = v; else if (m != 0x01A4u) gcm_pt_sem('R', io, ro, v); }
+                     rsx_process_method(&s_resync_state, m, v);
+                     labels += (m == 0x1D70u || m == 0x1D74u);
+                 }
+@@ -2370,6 +2493,9 @@ static void gcm_3d_method(rsx_state* st, u32 m, u32 v, int legacy_state_live, u3
+     /* NV4097 back-end write / texture-read semaphore release: the label lands
+      * inside rsx_process_method, so publish `get` past the command first, as
+      * for NV406E RELEASE. */
++    { static u32 po; if (m == 0x1D6Cu) po = v;
++      else if (m == 0x1D70u) gcm_pt_sem('B', end_off, po, v);
++      else if (m == 0x1D74u) gcm_pt_sem('T', end_off, po, v); }
+     if ((m == 0x1D70u || m == 0x1D74u) && !gcm_get_eq_put())
+         vm_write32(GCM_CONTROL_GUEST_ADDR + 4, end_off);
+     /* #466: rsx_state feeds only the legacy vtable backend. With the draw
+@@ -2787,6 +2913,7 @@ static void gcm_rsx_process_fifo_unlocked(void)
+                                  vm_read32(gcm_io2ea(s_fifo_getoff)) == w) {
+                           park_off = 0;
+                           gcm_fifo_dump_around(s_fifo_getoff);
++                          ps3_ptrace_dump("jump-park", s_fifo_getoff);
+                           gcm_fifo_resync_why("jump-park", &s_fifo_getoff, put);
+                       }
+                   }
+@@ -2795,6 +2922,7 @@ static void gcm_rsx_process_fifo_unlocked(void)
+                   break;
+               }
+               if (tgt < s_fifo_getoff) s_fifo_back_jumps++;
++              gcm_pt_br('J', s_fifo_getoff, tgt, put);
+               s_fifo_getoff = tgt;
+               /* get is the RSX's fetch pointer: a title polling it sees the
+                * GPU leave a segment as soon as the JUMP out of it is taken.
+@@ -2807,11 +2935,13 @@ static void gcm_rsx_process_fifo_unlocked(void)
+         if ((w & 3) == 2) {                    /* CALL: offset | 2 */
+             { u32 tgt = w & 0x1FFFFFFCu;
+               if (!gcm_io2ea(tgt)) { gcm_fifo_bad_branch("CALL", tgt, w); gcm_fifo_resync_why("unmapped-CALL", &s_fifo_getoff, put); break; }
++              gcm_pt_br('C', s_fifo_getoff, tgt, put);
+               s_fifo_calloff = s_fifo_getoff + 4;
+               s_fifo_getoff  = tgt; }
+             continue;
+         }
+         if (w == 0x00020000u) {                /* RET */
++            gcm_pt_br('R', s_fifo_getoff, s_fifo_calloff, put);
+             s_fifo_getoff = s_fifo_calloff;
+             s_fifo_calloff = 0;
+             continue;
+@@ -2871,6 +3001,8 @@ static void gcm_rsx_process_fifo_unlocked(void)
+                         ps3_ft_span(PS3_FT_SEMA, 0, s_sema_offset, v, s_ft_sema_t0, ps3_ft_now());
+                         s_ft_sema_t0 = 0;
+                     }
++                    if (m == 0x68u) gcm_pt_sem('A', s_fifo_getoff, s_sema_offset, v);
++                    if (m == 0x6Cu) gcm_pt_sem('L', s_fifo_getoff, s_sema_offset, v);
+                     if (m == 0x64u)      s_sema_offset = v;
+                     else if (m == 0x6Cu) {
+                         /* The RSX has fetched past a RELEASE before its
+@@ -2897,27 +3029,38 @@ static void gcm_rsx_process_fifo_unlocked(void)
+             static int blk = -1; static unsigned blk_ms;
+             if (blk < 0) { const char* e = getenv("GCM_SEMA_ACQUIRE"); blk = e ? atoi(e) : 0;
+                            const char* t = getenv("GCM_SEMA_ACQUIRE_MS"); blk_ms = t ? (unsigned)atoi(t) : 0; }
+-            if (blk) {
++            /* GCM_SEMA_BLOCK=<lo>-<hi> (hex label offsets): block on the
++             * acquires in that range only, bounded (GCM_SEMA_ACQUIRE_MS, else
++             * 2000 ms). For a title whose handshake with an SPU needs the wait
++             * (consumer clears the label before the RSX may release it again)
++             * while another of its labels cannot be blocked on yet. */
++            static u32 r_lo, r_hi; static int r_init;
++            if (!r_init) { r_init = 1; const char* e = getenv("GCM_SEMA_BLOCK");
++                if (e) { char* d; r_lo = (u32)strtoul(e, &d, 16); if (*d == '-') r_hi = (u32)strtoul(d + 1, 0, 16); } }
++            const int in_range = s_sema_offset >= r_lo && s_sema_offset < r_hi;
++            if (blk || in_range) {
++                const unsigned limit_ms = (in_range && !blk_ms) ? 2000u : blk_ms;
+                 /* GCM_SEMA_ACQUIRE_MS=<ms>: a bounded wait. The hardware waits
+                  * for ever; an emulated producer that never comes (a boot-time
+                  * label nobody services yet) would wedge the drain, so after
+                  * <ms> on the same acquire it is consumed and said so. inFAMOUS 2
+                  * acquires a label its SPU lighting writes each frame: waiting
+                  * here is what orders the RSX's sampling after that write. */
+-                static u32 b_off, b_val; static unsigned long long b_t0;
++                static u32 b_off, b_val;
+                 extern unsigned long long ps3_ms_now(void);
+                 const unsigned long long now = ps3_ms_now();
+-                if (!b_t0 || b_off != s_sema_offset || b_val != v) { b_off = s_sema_offset; b_val = v; b_t0 = now; }
+-                if (!blk_ms || now - b_t0 < blk_ms) {
++                if (!s_acq_t0 || b_off != s_sema_offset || b_val != v) { b_off = s_sema_offset; b_val = v; s_acq_t0 = now; }
++                if (!limit_ms || now - s_acq_t0 < limit_ms) {
+                     if (PS3_FT_ON() && !s_ft_sema_t0) s_ft_sema_t0 = ps3_ft_now();
+                     sem_blocked = 1; break;
+                 }
+                 { static int tn; if (PS3_LOG_FIRST(tn, 12))
+                     fprintf(stderr, "[SEMA] acquire off=0x%X == 0x%08X gave up after %u ms (label 0x%08X)\n",
+-                            s_sema_offset, v, blk_ms, vm_read32(la)); }
+-                b_t0 = 0;
++                            s_sema_offset, v, limit_ms, vm_read32(la)); }
++                s_acq_t0 = 0;
+             }
+         }
++                    else if (m == 0x68u) s_acq_t0 = 0;   /* satisfied: next wait gets a fresh limit */
+                 }
+                 if (sem_blocked) { s_sema_blocked_pass = 1; break; }
+                 s_fifo_getoff += 4 + count * 4;
+@@ -4560,6 +4703,7 @@ void cellGcmTerminate(void)
+     s_default_fifo_mode = 0;
+     GCM_USER_STORE(0);
+     GCM_USER_PENDING_STORE(0);
++    gcm_ucq_reset();
+ 
+     memset(s_display_buffers, 0, sizeof(s_display_buffers));
+     memset(s_display_buffer_set, 0, sizeof(s_display_buffer_set));
+@@ -4780,11 +4924,12 @@ void cellGcmSetUserCommand(u32 cmd)
+ }
+ 
+ /* Called when a FIFO consumer retires a user-interrupt method. Publishing
+- * the cause and pending marker is atomic; guest code runs later in the pump.
+- * Like the driver cause register, multiple pending commands coalesce. */
++ * queues the cause, then marks it pending; guest code runs later in the pump,
++ * once per queued cause. */
+ void cellGcmQueueUserCommand(u32 cmd)
+ {
+     GCM_USER_STORE(cmd);
++    gcm_ucq_push(cmd);
+     GCM_USER_PENDING_STORE((1ULL << 32) | cmd);
+ #ifdef _WIN32
+     gcm_pump_wake();
+diff --git a/libs/video/rsx_d3d12_backend.c b/libs/video/rsx_d3d12_backend.c
+index 241dd9a4..464351ae 100644
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -1417,6 +1417,41 @@ static int d3d_fw_removed(void* c) {
+     (void)c;
+     return s_d3d.device->lpVtbl->GetDeviceRemovedReason(s_d3d.device) != 0 /* != S_OK */;
+ }
++/* Say once when and why the device was lost: every later frame is black and
++ * only the fence wait reported it before. With D3D12_DBG=1 the debug layer's
++ * errors are printed as they appear, so the command that killed it is named. */
++static void d3d_check_removed(const char* where)
++{
++    static int gone, dbg = -1, shown;
++    if (gone) return;
++    if (dbg < 0) dbg = getenv("D3D12_DBG") ? 1 : 0;
++    const HRESULT rr = s_d3d.device->lpVtbl->GetDeviceRemovedReason(s_d3d.device);
++    if (dbg) {
++        ID3D12InfoQueue* iq = NULL;
++        if (SUCCEEDED(s_d3d.device->lpVtbl->QueryInterface(
++                s_d3d.device, &IID_ID3D12InfoQueue, (void**)&iq)) && iq) {
++            const UINT64 n = iq->lpVtbl->GetNumStoredMessages(iq);
++            for (UINT64 mi = 0; mi < n && shown < 60; mi++) {
++                SIZE_T len = 0;
++                iq->lpVtbl->GetMessage(iq, mi, NULL, &len);
++                D3D12_MESSAGE* m = (D3D12_MESSAGE*)malloc(len);
++                if (m && SUCCEEDED(iq->lpVtbl->GetMessage(iq, mi, m, &len)) &&
++                    m->Severity <= D3D12_MESSAGE_SEVERITY_ERROR) {
++                    shown++;
++                    printf("[D3D12][DBG] %s id=%d %s\n", where, (int)m->ID, m->pDescription);
++                }
++                free(m);
++            }
++            iq->lpVtbl->ClearStoredMessages(iq);
++            iq->lpVtbl->Release(iq);
++        }
++    }
++    if (rr != S_OK) {
++        gone = 1;
++        printf("[D3D12] DEVICE REMOVED seen at %s: reason 0x%08lX\n", where, (long)rr);
++        fflush(stdout);
++    }
++}
+ static void d3d_fw_timeout(void* c, unsigned timeouts, int removed) {
+     D3DFenceWaitCtx* w = (D3DFenceWaitCtx*)c;
+     printf("[D3D12] %s STUCK %us: want %llu got %llu removed=0x%08lX%s\n", w->what, 2 * timeouts,
+@@ -1708,6 +1743,25 @@ static void rsx_capture_frame(u32 fi, u32 ndraws, u32 capidx)
+                                 (r->tex[u].fmt & 0x20) ? "LN" : "SZ",
+                                 (r->tex[u].fmt & 0x40) ? ",NR" : "",
+                                 r->tex[u].w, r->tex[u].h, r->tex[u].ctrl1 & 0xFFFF);
++                /* RSX_CAP_VHASH=1: hash of the decoded vertices (attr0) per draw,
++                 * so two frames of a static scene can be compared. */
++                if (!r->is_clear && s_d3d.vp_vb_mapped && getenv("RSX_CAP_VHASH")) {
++                    const u32 par = (u32)(s_d3d.vp_parity ^ 1);
++                    const u8* vb = (const u8*)s_d3d.vp_vb_mapped + (u64)par * MAX_VERTICES * 256u
++                                 + r->vb_byte_offset;
++                    const u32* ib = r->indexed ? (const u32*)s_d3d.vp_ib_mapped
++                                 + (u64)par * VP_MAX_INDICES + r->ib_first : NULL;
++                    const u32 n = r->indexed ? r->index_count : r->vertex_count;
++                    u32 h = 2166136261u;
++                    float first[4] = {0, 0, 0, 0};
++                    for (u32 i = 0; i < n; i++) {
++                        u32 w[4]; memcpy(w, vb + (size_t)(ib ? ib[i] : i) * 256u, sizeof w);
++                        if (!i) memcpy(first, w, sizeof first);
++                        for (int k = 0; k < 4; k++) { h ^= w[k]; h *= 16777619u; }
++                    }
++                    fprintf(mf, "      vh=%08X idx=%d v0=%.2f,%.2f,%.2f,%.2f\n", h, r->indexed,
++                            first[0], first[1], first[2], first[3]);
++                }
+             }
+         }
+         /* Per-draw VP constant banks for the first few offscreen-RT geometry
+@@ -2385,6 +2439,14 @@ static ID3D12PipelineState* vp_get_fp_pso(int vs_idx, u32 fp_addr, u32 blend, in
+             s_d3d.vp_fp[i].unnorm_mask == unnorm_mask &&
+             (!unnorm_mask || memcmp(s_d3d.vp_fp[i].unnorm_dim, unnorm_dim, sizeof(s_d3d.vp_fp[i].unnorm_dim)) == 0))
+             return s_d3d.vp_fp[i].pso;
++    /* A program D3DCompile rejected stays rejected: without this every draw
++     * that uses it pays the full decompile + compile again (GT6 car view:
++     * one bad program, seconds per draw, no frames). */
++    static struct { u32 uhash, ctrl, cube, unnorm; } bad[128];
++    static int nbad;
++    for (int i = 0; i < nbad; i++)
++        if (bad[i].uhash == uhash && bad[i].ctrl == ctrl &&
++            bad[i].cube == cube_mask && bad[i].unnorm == unnorm_mask) return NULL;
+     s_perf_pso_miss++;      /* falls through to a full decompile + D3DCompile */
+     /* PSOMISSDBG=1: on a miss, name the key field that differs from an existing
+      * entry for the same program. "the cache misses" is not actionable; "it
+@@ -2654,7 +2716,13 @@ static ID3D12PipelineState* vp_get_fp_pso(int vs_idx, u32 fp_addr, u32 blend, in
+         static int _e2=0; if (PS3_LOG_FIRST(_e2, 16))
+             printf("[FP] PS compile FAIL (fp=0x%08X): %s\n", fp_addr,
+                    e ? (const char*)e->lpVtbl->GetBufferPointer(e) : "?");
++        /* FP_FAIL_DUMP=<path>: write the first rejected HLSL. */
++        { static int dumped; const char* dp = getenv("FP_FAIL_DUMP");
++          if (dp && !dumped) { dumped = 1; FILE* f = fopen(dp, "wb");
++              if (f) { fputs(hlsl, f); fclose(f); } } }
+         if (e) e->lpVtbl->Release(e);
++        if (nbad < 128) { bad[nbad].uhash = uhash; bad[nbad].ctrl = ctrl;
++                          bad[nbad].cube = cube_mask; bad[nbad].unnorm = unnorm_mask; nbad++; }
+         return NULL;
+     }
+     if (e) e->lpVtbl->Release(e);
+@@ -2759,6 +2827,7 @@ static ID3D12PipelineState* vp_get_fp_pso(int vs_idx, u32 fp_addr, u32 blend, in
+         s_d3d.device, &pd, &IID_ID3D12PipelineState, (void**)&pso);
+     pb->lpVtbl->Release(pb);
+     if (FAILED(hr)) {
++        d3d_check_removed("fp-pso");
+         static int _e3=0; if (PS3_LOG_FIRST(_e3, 16)) printf("[FP] PSO FAIL (fp=0x%08X, 0x%08lX)\n", fp_addr, hr);
+         return NULL;
+     }
+@@ -5022,6 +5091,21 @@ static void render_frame(void)
+                 if (crt >= 0) {
+                     dr->tex_rt[_u] = crt;
+                     dr->tex_ds[_u] = ds;
++                    /* Unnormalized coordinates are texels of the surface, so
++                     * they scale by the host copy's size. The guest may declare
++                     * a smaller view of it (GT6: 1440x1080 of 1536x1408);
++                     * 1/declared stretched the lookup and shredded all text. */
++                    if (dr->tex[_u].fmt & 0x40) {
++                        dr->tex[_u].w = s_d3d.off_rt[crt].w;
++                        dr->tex[_u].h = s_d3d.off_rt[crt].h;
++                        if (_u < 4 && s_d3d.vp_fpcb_mapped && dr->cb_slot < MAX_DRAWS &&
++                            dr->tex[_u].w && dr->tex[_u].h) {
++                            float* ts = (float*)((char*)s_d3d.vp_fpcb_mapped
++                                + ((u64)s_d3d.vp_parity * MAX_DRAWS + dr->cb_slot) * VP_FPCB_STRIDE);
++                            ts[_u*4+0] = 1.0f / (float)dr->tex[_u].w;
++                            ts[_u*4+1] = 1.0f / (float)dr->tex[_u].h;
++                        }
++                    }
+                     /* The copy holds real A,R,G,B (A = depth high byte, B =
+                      * stencil), so the guest's crossbar applies as for any
+                      * A8R8G8B8 texture (GT6 text reads it through 0xAAFF). */
+@@ -6065,6 +6149,7 @@ skip_dump_consider: ;
+                                               s_d3d.tearing ? DXGI_PRESENT_ALLOW_TEARING : 0);
+     }
+     rdoc_frame_end();
++    d3d_check_removed("present");
+ 
+     move_to_next_frame();
+ 
+diff --git a/runtime/spu/spu_dma.h b/runtime/spu/spu_dma.h
+index b68b18e8..81064065 100644
+--- a/runtime/spu/spu_dma.h
++++ b/runtime/spu/spu_dma.h
+@@ -247,6 +247,8 @@ static inline int mfc_do_transfer(spu_context* spu, uint32_t lsa, uint64_t ea,
+         spu_lockline_unlock();
+         return 0;
+     }
++    { extern void ps3_ptrace_dma(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);   /* GCM_PARKTRACE */
++      ps3_ptrace_dma((uint32_t)ea, size, cmd, (uint32_t)spu->pc & SPU_LS_MASK, (uint32_t)spu->image_id); }
+     /* SPU_DMA_WATCH=<hex>: report any transfer whose destination RANGE covers
+      * this guest address. A DMA landing in the loaded ELF image is always a
+      * bug, and it is invisible to the sampling traces -- YDKJ had an SPU job
+@@ -1422,6 +1424,12 @@ static inline int mfc_submit(mfc_engine* mfc, spu_context* spu, uint32_t cmd)
+               if (now - s_since >= s_secs * 1000u) {
+                   s_rep = 0; s_since = 0;   /* re-arm: the chain may run this job again */
+                   extern void spu_halt(spu_context*);
++                { extern void ps3_ptrace_dump(const char*, uint32_t); ps3_ptrace_dump("spu-halt", 0); }
++                /* SPU_HALT_DUMP=<file>: local store + registers of the halted poller. */
++                { const char* hp = getenv("SPU_HALT_DUMP");
++                  if (hp) { FILE* hf = fopen(hp, "wb");
++                      if (hf) { fwrite(spu->ls, 1, SPU_LS_MASK + 1u, hf); fwrite(spu->gpr, 1, sizeof spu->gpr, hf); fclose(hf);
++                          fprintf(stderr, "[spu-halt-dump] pc=0x%05X lsa=0x%05X -> %s\n", (uint32_t)spu->pc & SPU_LS_MASK, lsa, hp); } } }
+                   fprintf(stderr, "[spu-dma] img=%d pc=0x%05X: %u identical "
+                           "transfers to ea=0x%08X -- halting the SPU\n",
+                           spu->image_id, (uint32_t)spu->pc & SPU_LS_MASK, s_limit,
