@@ -1,0 +1,108 @@
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -4036,6 +4036,39 @@
+     return -1;
+ }
+ 
++/* One offset can hold surfaces of two formats within a frame (GT6 uses one
++ * scratch buffer as RGBA16F and as A8R8G8B8). A slot is therefore identified
++ * by offset and host format: recreating a single slot dropped the earlier
++ * draws and reseeded the surface from guest memory. */
++static DXGI_FORMAT off_rt_dxgi(u32 rsx_fmt)
++{
++    /* RT_FORCE_RGBA8=1: see off_rt_get. */
++    static int f8 = -1;
++    if (f8 < 0) { const char* e = getenv("RT_FORCE_RGBA8"); f8 = e ? atoi(e) : 0; }
++    return f8 ? DXGI_FORMAT_R8G8B8A8_UNORM : rsx_surface_dxgi(rsx_fmt);
++}
++
++static int off_rt_find_fmt(u32 off, DXGI_FORMAT fmt)
++{
++    if (!off) return -1;
++    for (int i = 0; i < MAX_OFF_RTS; i++)
++        if (s_d3d.off_rt[i].res && s_d3d.off_rt[i].off == off &&
++            s_d3d.off_rt[i].dxgi == (u32)fmt) return i;
++    return -1;
++}
++
++/* The surface a texture of this format reads; any surface at the offset when
++ * none has the matching layout. */
++static int off_rt_find_tex(u32 off, u32 tex_fmt)
++{
++    const u32 base = tex_fmt & 0x9F;
++    const int i = off_rt_find_fmt(off,
++        base == 0x9A ? DXGI_FORMAT_R16G16B16A16_FLOAT :
++        base == 0x9B ? DXGI_FORMAT_R32G32B32A32_FLOAT :
++        base == 0x9C ? DXGI_FORMAT_R32_FLOAT : DXGI_FORMAT_R8G8B8A8_UNORM);
++    return i >= 0 ? i : off_rt_find(off);
++}
++
+ /* Ensure an RT resource exists for this surface; (re)creates the RTV at
+  * rt_rtv_heap[i] and the SRV at srv_heap[RT_SRV_BASE+i]. */
+ static int off_rt_get(u32 off, u32 w, u32 h, u32 rsx_fmt, u32 pitch)
+@@ -4043,16 +4076,13 @@
+     if (!off || !s_d3d.rt_rtv_heap || !s_d3d.srv_heap) return -1;
+     if (!w) w = s_d3d.width;
+     if (!h) h = s_d3d.height;
+-    DXGI_FORMAT want_fmt = rsx_surface_dxgi(rsx_fmt);
++    const DXGI_FORMAT want_fmt = off_rt_dxgi(rsx_fmt);
+     /* RT_FORCE_RGBA8=1: allocate every offscreen target as R8G8B8A8 rather than
+      * its native format. A title whose final composite reads a half-float
+      * surface cannot be shown with a plain CopyTextureRegion, and giving it an
+      * 8-bit target costs HDR precision but makes the composite a same-format
+      * copy. A stopgap for looking at the frame, not a rendering fix. */
+-    { static int f8 = -1;
+-      if (f8 < 0) { const char* e = getenv("RT_FORCE_RGBA8"); f8 = e ? atoi(e) : 0; }
+-      if (f8) want_fmt = DXGI_FORMAT_R8G8B8A8_UNORM; }
+-    int slot = off_rt_find(off);
++    int slot = off_rt_find_fmt(off, want_fmt);
+     if (slot >= 0) {
+         OffRT* r = &s_d3d.off_rt[slot];
+         /* A linear surface that keeps its pitch is the same memory seen
+@@ -5456,7 +5486,7 @@
+              * draw (ds_convert). */
+             if (dr->tex[_u].set) {
+                 const int ds = off_ds_find(dr->tex[_u].raw);
+-                const int crt = ds >= 0 ? off_rt_find(dr->tex[_u].raw) : -1;
++                const int crt = ds >= 0 ? off_rt_find_fmt(dr->tex[_u].raw, DXGI_FORMAT_R8G8B8A8_UNORM) : -1;
+                 if (crt >= 0) {
+                     dr->tex_rt[_u] = crt;
+                     dr->tex_ds[_u] = ds;
+@@ -5529,7 +5559,7 @@
+                               D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING);
+                     continue;
+                 }
+-                int rt = off_rt_find(dr->tex[_u].raw);
++                int rt = off_rt_find_tex(dr->tex[_u].raw, dr->tex[_u].fmt);
+                 if (rt >= 0) {
+                     dr->tex_rt[_u] = rt;
+                     srv_write(wslot, s_d3d.off_rt[rt].res, (DXGI_FORMAT)s_d3d.off_rt[rt].dxgi,
+@@ -5819,7 +5849,7 @@
+                         /* the bound target was copied from: bind it again (if this
+                          * op changes targets, the switch below does) */
+                         s_rt_view[dr->tex_view[_u]].parent == cur_rt && dr->rt_off &&
+-                        off_rt_find(dr->rt_off) == cur_rt)
++                        off_rt_find_fmt(dr->rt_off, off_rt_dxgi(dr->rt_fmt)) == cur_rt)
+                         force_rebind = 1;
+                 /* The reduced-viewport passes (this title's reflection, drawn
+                  * into a region of the same target) finish here -- snapshot
+@@ -5841,7 +5871,8 @@
+                 /* Render-to-texture: retarget when this op's surfaces differ.
+                  * A pass with a depth surface binds its OffDS; one without
+                  * shares a single depth buffer, cleared per switch. */
+-                int want  = (dr->rt_off && !dr->no_color) ? off_rt_find(dr->rt_off) : -1;
++                int want  = (dr->rt_off && !dr->no_color)
++                          ? off_rt_find_fmt(dr->rt_off, off_rt_dxgi(dr->rt_fmt)) : -1;
+                 /* Remember where geometry actually went: off_rt_find() matches
+                  * on offset alone and slots share offsets at different sizes,
+                  * so the composite cannot just look the source up by address. */
+@@ -5849,7 +5880,8 @@
+                                  s_d3d.off_rt[want].wgen++; }
+                 int wantm[3];
+                 for (int _m = 0; _m < 3; _m++)
+-                    wantm[_m] = (dr->rt_mrt[_m] && !dr->no_color) ? off_rt_find(dr->rt_mrt[_m]) : -1;
++                    wantm[_m] = (dr->rt_mrt[_m] && !dr->no_color)
++                             ? off_rt_find_fmt(dr->rt_mrt[_m], off_rt_dxgi(dr->rt_fmt)) : -1;
+                 /* The draw's own depth surface, or the shared buffer for a pass
+                  * without one (and for display targets, as before). */
+                 const int wantz = (dr->zeta_off && (want >= 0 || dr->no_color || !dr->rt_off))

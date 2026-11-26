@@ -45,18 +45,23 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - A56: showroom 3D pass = surface 0x01F00000 1152x648 (car visible there), then NV3089 blit to main 0x602A0000 pitch 4608 (play_a56cap_20261126_064234); host RT is never read back.
 - A57: NV3089 sources are local linear RTs (pitch 5120/8192); readback patches/gt6-a57-rt-readback.patch (NV3089_RB=0 off); play_a57cap_20261126_065731.
 - A57: NV40 fragment programs use H registers above 47 (6-bit field); patches/gt6-a57-fp-regs64.patch; play_a57cap_20261126_070409.
+- A57: car-view post-process is SPURS wid=5/image 5: GET 0x602A0000 (NV3089 result, correct), PUT 1152x648 at (64,36) into display buffers 0/0x660000/0xCC0000; guest colour clear precedes it (play_a57dma_20261126_072632, work/_a57/spuget.png).
+- A57: that job loads code main 0x01477000 -> LS 0x4000; its second image 0x60579000 (480x270) is white at GET time, output matches it (play_a57fb_20261126_082048, work/_a57/bloom.png).
 - A57: NV0039 (subch 1) was unimplemented; GT6 issues small local->local copies near 0x04CE-0x04D1; patches/gt6-a57-nv0039.patch (NV0039_DBG); play_a57cap_20261126_070950.
+- A58: scratch surface 0x022C0000/8192 is bound as RGBA16F (0x14B) and A8R8G8B8 (0x148); offset-keyed RT slot was recreated twice per frame and reseeded from guest memory; patches/gt6-a58-rt-format-slots.patch (play_a58rt_20261126_083427 vs play_a58fix_20261126_083937).
 
 ## 4. Refuted/symptom (do NOT repeat)
 - (A54) "A car-view draw/shader loop hangs the GPU": refuted, DRED shows the first copy of the list reading a freed buffer.
 - (A56) "Sub-range RT reads alone make the showroom car visible": refuted, screen unchanged (work/_a56/car_views.png); exposure/LUT still 0.
 - (A57) "RT readback for NV3089 (plus FP register fix) makes the showroom car visible": refuted, still black (work/_a57/car.png).
+- (A57) "White SPU output is accumulation in uncleared guest buffers": refuted, same with the rect zeroed after each upload.
 - (A57) "Dropped NV0039 copies leave the showroom black": refuted, copies run now, screen unchanged (work/_a57/car.png).
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
 - Sysmodule load list and fresh savedata (PS3_GAMEDATA_ROOT): no divergence from the oracle.
 - A53 REFUTED "dealer load hang" (A50-52): that screen was the attract demo (leavedemo.adc/LeaveDemoRoot loaded, 'Der Demofilm startet'), cross came too late. Dealer loads in ~7 s (live a53c, work/_a53/dealer_list.png).
 
 - A53 REFUTED GCM_SEMA_ACQUIRE=1 as fix for the car-view stall: acquire on label 0xFE0 times out all the time (play_a53e).
+- (A58) "Format-keyed RT slots fix the washed-out showroom": refuted, RT recreation gone but 0x022C0000 still reads back as noise (work/_a58/car.png, play_a58fix_20261126_083937).
 
 ## 5. Open core question
 - RPCS3 opens `PDIPFS/59/FI` (movie, PDI thread 0x100003b, Pamf/Vdec) after PDIPFS/9/EE/3C; we open 85/H2, 8M/A9, 6W/RR, 75/M8, SG/LW, SC/IC, 8M/0K, 4J/0E and park in lwcond (loader 9qstY).

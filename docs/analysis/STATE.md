@@ -22,8 +22,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
   run.log [NV3089RB] 444 copies, non-zero pixels)
 - [x] G6c consumer of 0x602A0000: SPURS wid=5 (image 5) reads the correct car image and writes the display buffers
   (play_a57dma_20261126_072632 [dma-range] reader put img=5; work/_a57/spuget.png)
-- [ ] G6d image 5 output is washed out white (work/_a57/spufb.png); display upload is opt-in until fixed (SPU_FB=1,
-  patches/gt6-a57-spu-fb.patch; backbuffer = buffer 0 only, uploads can miss presents: black/bright flicker)
+- [ ] G6d showroom washed out (parked A58, bypass: SPU upload stays off, SPU_FB=1 to see it): job input 0x60579000 =
+  NV3089 of RT 0x022C0000, noise (guest VRAM seed); surface is RGBA16F + RGBA8, slots split (a58 patch), still noise
 - [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
 - [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (same run, car.png)
 - [ ] D4 rest interpreted, car view 5 FPS: image 76 LS 0x108EC/0x7D28/0x8048, image 74 0x54BC, PM 0xA68
@@ -54,9 +54,9 @@ sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-M1 next item: G6d. Job input 0x60579000 (480x270, NV3089 from RT 0x022C0000/8192) is white (work/_a57/bloom.png),
-color input correct. Find what 0x022C0000 holds at blit time vs real (RT dump in d3d12_rt_readback; order of
-UI draws/clears, pool pitch/size). Job code: main 0x01477000 -> LS 0x4000. Repro: work/_a57/repro_in.sh.
+M1 next item: I1 opening movie. cellDmux is a stub (needs PAMF demux), cellVdec needs FFmpeg headers
+(avcodec-63/avutil-61; DLLs in tools/RPCS3). First run check: PAMF patch on a vol without skipopening, GT6_PFS_TRACE=1.
+G6d later: per-op surface format into manifest (op1231-1239 on 0x022C0000), then which slot NV3089 must read.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52) = attract demo. Post-save movie stall (Arbeit40).
