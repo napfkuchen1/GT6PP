@@ -48,7 +48,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [ ] L1 live non-headless run, persistent save, real pad input
 
 ## Method
-Overlay `work/gt6_vol_a32` (scripts/make-vol-overlay.py), env `GT6_VOL_ROOT`; `PPU_ONECORE=1` default; probe.ps1 gives empty hdd1.
+Overlays (env `GT6_VOL_ROOT`): a32 = plain 1.22, a35 = +ColorBegin bypass, a40t = skip tutorial,
+a45 = skip tutorial+opening (play.py default). `PPU_ONECORE=1` default; probe.ps1 gives empty hdd1.
 Never modify work/gt6_vol or gt6_vol_122+.
 Car repro: play.py start, work/_a53/to_home2.sh, work/_a53/dealer.py.
 

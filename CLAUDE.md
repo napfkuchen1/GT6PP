@@ -10,6 +10,8 @@ Language: chat with the user is German. Everything in the repo is English (see t
 ## Loop guard (do not run in circles)
 - **Every handover names one checklist item:** `handover.py --item <ID>`. It logs to `docs/analysis/LOOP.tsv` and writes the `Loop` line into the next prompt. The next session obeys that line before anything else.
 - **Item parked after 3 sessions in a row without a new check-off:** take another open item or a documented bypass. Splitting an item (`I1a`, `I1b`) is allowed if each part has a testable result; the streak counts the base ID.
+- **Session cap per main item:** while any sub-item of a base ID (e.g. G6) is open, the base ID gets at most 4 sessions in total (consecutive or not, since the last reset), then it is parked, even if sub-items were checked off.
+- **Checked items move** to `docs/analysis/CHECKLIST_DONE.md` (done by `handover.py`; STATE keeps their IDs, `grep` for evidence). To reopen one, add it as `- [ ] <ID> ...` in STATE.
 - **6 sessions in a row without any new check-off:** `STOP-GRUND: BLOCKER`. Supervisor starts no further worker and tells the user in 3 lines: tried, blocking, what a human could do.
 - **Check-off needs evidence** (run folder, frame or log line) in the same checklist line.
 - **Every workaround or bypass gets its own open checklist item** (e.g. one-core pinning, skipped intro), so it is not forgotten.
@@ -27,7 +29,7 @@ Language: chat with the user is German. Everything in the repo is English (see t
 
 ## Context and handover (hard)
 - After each probe batch and every ~15 tool calls: `python scripts/ctxwatch.py`. Handover window: **190k-210k** real context (stop-guard refuses earlier `UEBERGABE`; ctxwatch says `HANDOFF` at its limit, no new batch then). Never `/compact`, never keep working in a full window.
-- Handover = (1) STATE.md current (checklist, Next step), (2) `python scripts/handover.py --item <ID> --step "..." [--goal ...] [--not-repeat ...] [--running ...] [--read ...] --commit` (one single commit), (3) end the turn with `STOP-GRUND: UEBERGABE`. The supervisor then starts a NEW session.
+- Handover = (1) STATE.md current (checklist, Next step), (2) `python scripts/handover.py --item <ID> --step "..." [--goal ...] [--not-repeat ...] [--running ...] [--read ...] --commit` (one single commit incl. LEDGER/PROGRESS; on `COMMIT FAILED` fix the cause and rerun), (3) end the turn with `STOP-GRUND: UEBERGABE`. The supervisor then starts a NEW session.
 - NEXT_SESSION_PROMPT (<=1.5 KB, written by the script): Goal | State | Loop | Next step (concrete command/file, rule: if X then Y) | Do not repeat (LEDGER §4, max. 3 new) | Still running | Read (max. 3 files).
 
 ## Working method
