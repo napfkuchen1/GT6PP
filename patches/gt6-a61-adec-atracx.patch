@@ -1,0 +1,86 @@
+--- a/libs/codec/cellAdec.c
++++ b/libs/codec/cellAdec.c
+@@ -52,6 +52,12 @@
+ #define ADEC_AC3_SAMPLES  1536u
+ /* The largest block one AU produces here: an AC3 frame in 7.1. */
+ #define ADEC_PCM_MAX_BYTES (ADEC_AC3_SAMPLES * 8u * 4u)
++/* ATRAC3plus with the channel count in the codec type (SDK ATRACX_2CH/6CH/8CH):
++ * 2048 samples per frame at 48 kHz = 3840 ticks of the 90 kHz clock. */
++#define ADEC_IS_ATRACX_NCH(t) ((t) >= 13u && (t) <= 15u)
++#define ADEC_ATRACX_NCH(t)    ((t) == 13u ? 2u : (t) == 14u ? 6u : 8u)
++#define ADEC_ATRACX_SAMPLES   2048u
++#define ADEC_ATRACX_TICKS     (ADEC_ATRACX_SAMPLES * 90000ull / 48000ull)
+ 
+ /* Guest-visible scratch, in the HLE inject window rather than from the guest's
+  * own heap. Taking 8 KB out of that heap in cellAdecOpen stalled the title
+@@ -93,6 +99,8 @@
+     void* ff;           /* AdecFf: the libavcodec decoder, or NULL */
+     u8* au;             /* host copy of the AU being decoded */
+     u32 auCap;
++    u64 nextPts;        /* time stamp of the next AU that comes without one */
++    int havePts;
+ } AdecSlot;
+ 
+ static AdecSlot s_adec[MAX_ADEC];
+@@ -388,6 +396,7 @@
+         return (s32)CELL_ADEC_ERROR_ARG;
+ 
+     s_adec[handle].seqStarted = 1;
++    s_adec[handle].havePts = 0;
+     adec_ff_flush(s_adec[handle].ff);   /* a new sequence starts clean */
+     return CELL_OK;
+ }
+@@ -433,8 +442,25 @@
+     const u32 au_addr = vm_read32(au + (u32)offsetof(CellAdecAuInfo, startAddr));
+     const u32 au_size = vm_read32(au + (u32)offsetof(CellAdecAuInfo, size));
+     /* The AU info, read before AUDONE gives it back to the title. */
+-    const u32 au_w[4] = { vm_read32(au + 0x08), vm_read32(au + 0x0C),
+-                          vm_read32(au + 0x10), vm_read32(au + 0x14) };
++    u32 au_w[4] = { vm_read32(au + 0x08), vm_read32(au + 0x0C),
++                    vm_read32(au + 0x10), vm_read32(au + 0x14) };
++
++    /* Only the first AU of a PES packet carries a time stamp; the demuxer
++     * passes the others on as -1. Gran Turismo 6 throws away every PCM block
++     * stamped -1 (GetPcm(NULL), 0x00FD6DCC), so its movie audio ring never
++     * filled and the movie never started. Continue the stream's clock. */
++    if (ADEC_IS_ATRACX_NCH(a->codecType)) {
++        u64 pts = ((u64)au_w[0] << 32) | au_w[1];
++        if (pts == ~0ull && a->havePts) {
++            pts = a->nextPts;
++            au_w[0] = (u32)(pts >> 32);
++            au_w[1] = (u32)pts;
++        }
++        if (pts != ~0ull) {
++            a->nextPts = pts + ADEC_ATRACX_TICKS;
++            a->havePts = 1;
++        }
++    }
+ 
+     printf("[cellAdec] DecodeAu(handle=%u, addr=0x%X, size=%u)\n",
+            handle, au_addr, au_size);
+@@ -470,6 +496,9 @@
+             if (a->codecType == CELL_ADEC_TYPE_AC3) {
+                 ch = adec_ac3_channels(data, data ? au_size : 0);
+                 bytes = ADEC_AC3_SAMPLES * (ch ? ch : 2u) * 4u;
++            } else if (ADEC_IS_ATRACX_NCH(a->codecType)) {
++                ch = ADEC_ATRACX_NCH(a->codecType);
++                bytes = ADEC_ATRACX_SAMPLES * ch * 4u;
+             } else {
+                 bytes = ADEC_PCM_BYTES;
+             }
+@@ -491,7 +520,14 @@
+          * field. */
+         const u32 bsi = ADEC_BSI_EA(handle);
+         for (u32 o = 0; o < ADEC_BSI_BYTES; o += 4) vm_write32(bsi + o, 0);
+-        vm_write32(bsi + 0x14, bytes);
++        if (ADEC_IS_ATRACX_NCH(a->codecType)) {
++            /* CellAdecAtracXInfo { samplingFreq, channelConfigIndex, nbytes } */
++            vm_write32(bsi + 0x0, 48000u);
++            vm_write32(bsi + 0x4, ch == 8u ? 7u : ch);
++            vm_write32(bsi + 0x8, bytes);
++        } else {
++            vm_write32(bsi + 0x14, bytes);
++        }
+         vm_write32(it + PCMITEM_BSI_INFO,   bsi);
+         /* Echo the AU back, which is what a real decoder does -- the guest
+          * matches returned PCM against the AU it submitted. */

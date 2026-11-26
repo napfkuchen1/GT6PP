@@ -1,0 +1,132 @@
+--- a/libs/codec/cellAdec.c
++++ b/libs/codec/cellAdec.c
+@@ -19,6 +19,7 @@
+ #include "ps3emu/guest_call.h" /* g_ps3_guest_caller -- cbFunc is a GUEST OPD */
+ #include "../../runtime/memory/vm.h"     /* VM_HLE_INJECT_BASE */
+ #include "ps3emu/log_first.h"
++#include "../../third_party/at3_standalone/at3_bridge.h"
+ #include "ffmpeg_runtime.h"   /* PS3FFmpeg; empty without PS3RECOMP_FFMPEG_RUNTIME */
+ 
+ /* CellAdecPcmItem as the guest reads it, from RPCS3 Modules/cellAdec.h:339.
+@@ -101,6 +102,7 @@
+     u32 auCap;
+     u64 nextPts;        /* time stamp of the next AU that comes without one */
+     int havePts;
++    void* at3;          /* ATRAC3plus stereo decoder, opened on the first AU */
+ } AdecSlot;
+ 
+ static AdecSlot s_adec[MAX_ADEC];
+@@ -266,6 +268,55 @@
+ 
+ #endif /* PS3RECOMP_FFMPEG_RUNTIME */
+ 
++/* ATRAC3plus stereo: one AU is an 8-byte ATS header (0x0F 0xD0, rate and
++ * channels, frame size / 8 - 1) and one frame. Writes 2048 interleaved
++ * big-endian float samples a channel to dst; 0 when the AU did not decode. */
++static u32 adec_at3_decode(AdecSlot* a, const u8* au, u32 size, u32 dst)
++{
++    float l[ADEC_ATRACX_SAMPLES], r[ADEC_ATRACX_SAMPLES];
++    u32 pcm[ADEC_ATRACX_SAMPLES * 2];
++    u32 frame = size;
++    int n = 0;
++
++    if (size > 8 && au[0] == 0x0F && au[1] == 0xD0) {
++        frame = ((((u32)au[2] & 3u) << 8) | au[3]) * 8u + 8u;
++        au += 8;
++        if (frame > size - 8u) return 0;
++    }
++    if (!a->at3) {
++        int align = (int)frame;
++        a->at3 = at3p_open(2, &align);
++        if (!a->at3) return 0;
++    }
++    if (at3p_decode(a->at3, l, r, &n, au, (int)frame) < 0 || n != (int)ADEC_ATRACX_SAMPLES) {
++        static int _n = 0;
++        if (PS3_LOG_FIRST(_n, 4))
++            printf("[cellAdec] ATRAC3plus frame of %u bytes did not decode\n", frame);
++        return 0;
++    }
++    float peak = 0.0f;
++    for (u32 i = 0; i < ADEC_ATRACX_SAMPLES * 2u; i++) {
++        float v = (i & 1u) ? r[i / 2] : l[i / 2];
++        u32 w;
++        memcpy(&w, &v, 4);
++        pcm[i] = (w >> 24) | ((w >> 8) & 0xFF00u) | ((w << 8) & 0xFF0000u) | (w << 24);
++        if (v > peak) peak = v;
++    }
++    if (peak > 0.01f) {
++        static int _n = 0;
++        if (PS3_LOG_FIRST(_n, 1))
++            printf("[cellAdec] ATRAC3plus audible: frame=%u bytes, peak=%.3f\n", frame, peak);
++    }
++    vm_memcpy_to(dst, pcm, sizeof(pcm));
++    return (u32)sizeof(pcm);
++}
++
++static void adec_at3_close(AdecSlot* a)
++{
++    if (a->at3) at3p_close(a->at3);
++    a->at3 = NULL;
++}
++
+ /* Fire one guest callback.
+  *
+  * The guest's cbFunc is a guest EA naming an OPD, so it goes through the
+@@ -379,6 +430,7 @@
+         return (s32)CELL_ADEC_ERROR_ARG;
+ 
+     adec_ff_close(s_adec[handle].ff);
++    adec_at3_close(&s_adec[handle]);
+     free(s_adec[handle].au);
+     s_adec[handle].ff = NULL;
+     s_adec[handle].au = NULL;
+@@ -397,6 +449,7 @@
+ 
+     s_adec[handle].seqStarted = 1;
+     s_adec[handle].havePts = 0;
++    if (s_adec[handle].at3) at3p_flush(s_adec[handle].at3);
+     adec_ff_flush(s_adec[handle].ff);   /* a new sequence starts clean */
+     return CELL_OK;
+ }
+@@ -465,10 +518,10 @@
+     printf("[cellAdec] DecodeAu(handle=%u, addr=0x%X, size=%u)\n",
+            handle, au_addr, au_size);
+ 
+-    /* The AC3 bytes are copied out first, too: AUDONE hands their buffer back
++    /* The AC3 and ATRAC3plus bytes are copied out first, too: AUDONE hands their buffer back
+      * to the title's demuxer, which may refill it at once. */
+     const u8* data = NULL;
+-    if (a->codecType == CELL_ADEC_TYPE_AC3 && au_addr && au_size && au_size <= 0x10000u) {
++    if ((a->codecType == CELL_ADEC_TYPE_AC3 || a->codecType == 13u) && au_addr && au_size && au_size <= 0x10000u) {
+         if (au_size > a->auCap) {
+             u8* nb = (u8*)realloc(a->au, au_size);
+             if (nb) { a->au = nb; a->auCap = au_size; }
+@@ -492,6 +545,10 @@
+         const u32 it = a->itemEa;
+         u32 ch = 0;
+         u32 bytes = (a->ff && data) ? adec_ff_decode(a->ff, data, au_size, a->pcmEa, &ch) : 0;
++        if (a->codecType == 13u && data) {
++            bytes = adec_at3_decode(a, data, au_size, a->pcmEa);
++            ch = 2u;
++        }
+         if (bytes == 0) {
+             if (a->codecType == CELL_ADEC_TYPE_AC3) {
+                 ch = adec_ac3_channels(data, data ? au_size : 0);
+@@ -547,7 +604,7 @@
+ 
+ s32 cellAdecGetPcm(CellAdecHandle handle, void* outBuffer)
+ {
+-    { static int _n = 0; if (PS3_LOG_FIRST(_n, 6))
++    { static int _n = 0; if (PS3_LOG_FIRST(_n, getenv("ADEC_TRACE") ? 100000 : 6))
+         printf("[cellAdec] GetPcm(handle=%u out=0x%08X)\n",
+                handle, GUEST_EA(outBuffer)); }
+     if (handle >= MAX_ADEC || !s_adec[handle].in_use)
+@@ -570,7 +627,7 @@
+ 
+ s32 cellAdecGetPcmItem(CellAdecHandle handle, const CellAdecPcmItem** pcmItem)
+ {
+-    { static int _n = 0; if (PS3_LOG_FIRST(_n, 6))
++    { static int _n = 0; if (PS3_LOG_FIRST(_n, getenv("ADEC_TRACE") ? 100000 : 6))
+         printf("[cellAdec] GetPcmItem(handle=%u out=0x%08X hasPcm=%d)\n",
+                handle, GUEST_EA(pcmItem),
+                handle < MAX_ADEC ? s_adec[handle].hasPcm : -1); }

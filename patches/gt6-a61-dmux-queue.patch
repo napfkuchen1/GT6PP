@@ -1,0 +1,25 @@
+--- a/libs/codec/cellDmux.c
++++ b/libs/codec/cellDmux.c
+@@ -52,7 +52,7 @@
+ #define TS_INVALID       0xFFFFFFFFFFFFFFFFull
+ #define AU_SLOT_SIZE     0x38u     /* AuInfo (0x28) + AU specific info (0x10) */
+ #define AU_SLOT_SPEC     0x28u
+-#define ES_QUEUE_MAX     0x100u
++#define ES_QUEUE_MAX     0x400u
+ #define ES_HANDLE_OF(d, e)  (0x100u + (u32)(d) * CELL_DMUX_MAX_ES + (u32)(e))
+ #define DMUX_HANDLE_OF(d)   ((u32)(d) + 1u)
+ 
+@@ -568,7 +568,12 @@
+ /* AU data ring and queue depth the SDK reports for each stream type. */
+ static void es_sizes(enum EsKind k, u32 specInfo, u32* ring, u32* queue)
+ {
+-    *queue = k == ES_LPCM ? 0x100u : 0x40u;
++    /* Video AUs are mostly a few hundred bytes, so the ring's bytes, not a
++     * slot count, must bound them: with 64 slots GT6's opening movie filled
++     * the video queue and the demuxer stopped before the audio the player
++     * was waiting for. */
++    *queue = (k == ES_AVC || k == ES_M2V) ? ES_QUEUE_MAX :
++             k == ES_LPCM ? 0x100u : 0x40u;
+     switch (k) {
+     case ES_AVC: {
+         /* esSpecificInfo of an AVC stream starts with the level */
