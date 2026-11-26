@@ -15,8 +15,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
   work/_a61/movie.png = PD logo, play_a61mov_20261126_101824)
 - [x] I1b movie no longer freezes at ~4 s: AVC frameRateCode was 0 (=23.976), now 60/s (A63, patches/gt6-a63-*;
   play_a63frc_20261126_113049: 2550+ pictures at 42 s, old stop 199, frame work/_a63/a63frc.png)
-- [ ] I1c menu after the movie: movie ends (~274 s, play_a63full2_20261126_113451, demux ResetStream + adec
-  EndSeq), then GT logo loading screen >600 s, no menu
+- [x] I1c movie ends and the menu follows: cellDmuxResetStream always answers DEMUX_DONE now (A63,
+  patches/gt6-a63-dmux-*; work/play_a63done_20261126_115546, work/_a63/after_done.png = Home menu)
 - [ ] I3 movie audio: ATRAC3plus decoder wired (A61 log "ATRAC3plus audible"), not verified by ear
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
@@ -57,9 +57,8 @@ Car repro: play.py start, work/_a53/to_home2.sh, work/_a53/dealer.py.
 - (A46) Main menu reached: GT Mode home, Ver. 1.22. Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-I1c (snapshot snap_01110 in that run): after adec EndSeq the player calls vdec StartSeq again, never EndSeq; movie
-threads tid49-52 stay alive. Walk 8AC5F8/8AA794/8AC788 + the caller of StartSeq (end condition: SEQDONE? last
-pictures? PRX NID 0xA7A94892 unresolved, run.log.err). If the player is idle by design, walk the script thread.
+I2: boot with the opening movie and without the tutorial skip (overlay gt6_vol_a32/a35 instead of a40t): does the
+tutorial race run through to the menu? If it stalls: snapshot, snap_walk bt, fix.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (A50-52) = attract demo.

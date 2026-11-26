@@ -977,3 +977,5 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - Full run play_a63full2_20261126_113451: movie to PTS 24788165 (~274 s, pic 16470+, video AU 16500), then
   cellDmux ResetStream, cellAdec EndSeq, cellVdec StartSeq (no vdec EndSeq), autosave, GT logo loading screen to
   1120 s at ~40 FPS, X no effect. Snapshot snap_01110 (tid49-52 movie threads in lwcond wait).
+- Post-movie hang: tid48 joins tid52 (8AE564), tid52 waits at 8AE30C after cellDmuxResetStream (NID 5D345DE9) for
+  DEMUX_DONE. Fix patches/gt6-a63-dmux-reset-done.patch; work/play_a63done_20261126_115546: ResetStream, vdec EndSeq/Close, dmux Close, Home menu.
