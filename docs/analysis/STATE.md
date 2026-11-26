@@ -1,20 +1,21 @@
 # GT6PP EU - STATE (entry point, keep under ~5 KB)
 
 State: 2026-11-26. Branch `eu-first-build`, main checkout. Disc EU `BCES01893`. Line: game 1.22 + ps3recomp v0.20.
-Rules: `CLAUDE.md`. Grep: `LEDGER.md`, `PROGRESS.md`, `eu-boot-log.md`. One line per finding.
+Rules: `CLAUDE.md`. Grep: `LEDGER.md`, `PROGRESS.md`, `eu-boot-log.md`.
 
 ## Goal
-User 2026-11-25: M1 DONE only when main menu is complete and correct: intro
-sequence plays, menu controllable, no graphics errors, no text errors. M2 afterwards: first race.
+M1 (user 2026-11-25): complete, correct main menu, intro plays, controllable, no gfx/text errors; then M2: race.
 STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headless) run with persistent save + pad input.
 
-## M1 checklist (open until verified; Arbeit47 inventory)
+## M1 checklist (open until verified)
 - [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
 - [x] G1 all Home tiles drawn after the first car buy (work/_a55/home_after.png)
-- [ ] I1 opening movie: lock deadlock fixed (A60: cellVdec callbacks on own thread, 0 LWM-LONG,
-  play_a60mov_20261126_094244); still black, audio DecodeAu stops at 57
-- [ ] I3 movie audio: cellAdec returns silent PCM for ATRAC3plus (decoder in third_party/at3_standalone)
+- [x] I1a opening movie decodes and shows on screen (A61: ATRAC PTS/size + video queue fix, patches/gt6-a61-*;
+  work/_a61/movie.png = PD logo, play_a61mov_20261126_101824)
+- [ ] I1b movie freezes after ~4 s: display stops after 199 pictures, video ES ring (4.6 MB) full, demux blocks,
+  audio ends at AU 188 (play_a61mov_20261126_100927, _102655)
+- [ ] I3 movie audio: ATRAC3plus decoder wired (A61 log "ATRAC3plus audible"), not verified by ear
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
 - [x] C2 car view after FIT RS renders, pad works, buy completes (play_a54retire_20261126_052113, work/_a54/buy7.png)
@@ -24,8 +25,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
   run.log [NV3089RB] 444 copies, non-zero pixels)
 - [x] G6c consumer of 0x602A0000: SPURS wid=5 (image 5) reads the correct car image and writes the display buffers
   (play_a57dma_20261126_072632 [dma-range] reader put img=5; work/_a57/spuget.png)
-- [ ] G6d showroom washed out (parked A58, bypass: SPU upload stays off, SPU_FB=1 to see it): job input 0x60579000 =
-  NV3089 of RT 0x022C0000, noise (guest VRAM seed); surface is RGBA16F + RGBA8, slots split (a58 patch), still noise
+- [ ] G6d showroom washed out (parked A58, bypass: SPU upload off, SPU_FB=1 shows it): job input 0x60579000 =
+  NV3089 of RT 0x022C0000 is noise (guest VRAM seed), also with split surface slots (a58 patch)
 - [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
 - [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (car.png)
 - [ ] D4 rest interpreted, car view 5 FPS: image 76 LS 0x108EC/0x7D28/0x8048, image 74 0x54BC, PM 0xA68
@@ -46,21 +47,20 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 
 ## Method
 Overlay `work/gt6_vol_a32` (scripts/make-vol-overlay.py), env `GT6_VOL_ROOT`; `PPU_ONECORE=1` default; probe.ps1 gives empty hdd1.
-Batch: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol or gt6_vol_122+.
-Car repro: scripts/play.py start,
-sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
+Never modify work/gt6_vol or gt6_vol_122+.
+Car repro: play.py start, work/_a53/to_home2.sh, work/_a53/dealer.py.
 
 ## State
 
-- (Arbeit46) MAIN MENU REACHED (C6): GT Mode home, Ver. 1.22, tiles + popup.
-  Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
+- (A46) Main menu reached: GT Mode home, Ver. 1.22. Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-I1: movie.sh with VDEC_TRACE=1;DMUX_TRACE=1: count video DecodeAu/GetPicture, find where it stalls.
-If a cellAdec callback blocks (still synchronous, "caller=1" in log), thread it like cellVdec.
-NID 0xA1709ABD = sceNpManagerGetEntitlementById.
+I1b: find the display clock. Trace cellAudioGetPortTimestamp/GetPortBlockTag and the port 1 read index during the
+movie (work/_a61/movie.sh). Clock frozen: fix cellAudio. Else walk the consumer of the frame ring (player+0x78,
+full wait 8AA25C, commit 8AA310) and read its release condition from a snapshot.
+NID 0xA1709ABD: sceNpManagerGetEntitlementById.
 
 ## Refuted / symptom (do not repeat)
-"Dealer load hang" (Arbeit50-52) = attract demo. Post-save movie stall (Arbeit40).
-Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_*, exit race.
+"Dealer load hang" (A50-52) = attract demo. Post-save movie stall (A40).
+Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_*, exit race. More: LEDGER §4.
 Never run GTToolsSharp/PDTools.

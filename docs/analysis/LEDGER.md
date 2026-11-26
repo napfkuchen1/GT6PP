@@ -66,6 +66,8 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - A53 REFUTED GCM_SEMA_ACQUIRE=1 as fix for the car-view stall: acquire on label 0xFE0 times out all the time (play_a53e).
 - (A58) "Format-keyed RT slots fix the washed-out showroom": refuted, RT recreation gone but 0x022C0000 still reads back as noise (work/_a58/car.png, play_a58fix_20261126_083937).
 - (A59) "sys_lwcond_wait restores the lwmutex owner without re-contending": refuted, lwm_acquire precedes the owner write (ppu_sysprx.cpp:596).
+- A61 refuted: inflated picture PTS (Media Foundation reports 29.97 for the 59.94 stream) as freeze cause; measuring ticks from stamps removed the jumps after picture 56, same freeze at 199 (play_a61mov_20261126_102655; source work/_a61/cellVdec.measuredticks.c, not committed).
+- A61 refuted: synchronous cellAdec callback blocks the movie (no thread blocked in it, play_a61mov_20261126_094916).
 
 ## 5. Open core question
 - RPCS3 opens `PDIPFS/59/FI` (movie, PDI thread 0x100003b, Pamf/Vdec) after PDIPFS/9/EE/3C; we open 85/H2, 8M/A9, 6W/RR, 75/M8, SG/LW, SC/IC, 8M/0K, 4J/0E and park in lwcond (loader 9qstY).
@@ -82,3 +84,8 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - A51: jump tables with the base loaded before a branch into the loop (FE1CAC, 1000B30) were lifted as indirect calls (cases skipped); log sign "unresolved indirect call" to mid-function addresses (patches/gt6-a51-jt-loop-base.patch).
 
 - A52: dealer load hang is not a blocked wait: tid30 keeps executing interpreter code (different lr per sample), no new [fs] opens for >250 s (play_a52c wd_00233..00533, snap_00539).
+
+- A61: GT6 drops movie PCM stamped -1 (GetPcm(NULL), 0xFD6DCC); cellAdec must continue the ATRAC clock and return 2048 samples/AU (patches/gt6-a61-adec-*; DecodeAu 57 -> 83).
+- A61: 64-slot video AU queue blocked the demuxer before the audio arrived; byte ring must be the limit (patches/gt6-a61-dmux-queue.patch; 83 -> 188 audio AUs).
+- A61: "black movie" shots with non-black=0% can hold content (PD logo is <1% of pixels): look at the image.
+
