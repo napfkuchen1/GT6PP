@@ -5,12 +5,13 @@ Blocks the stop (decision=block) unless the last assistant text has a line start
 'STOP-GRUND: MENUE|BLOCKER|UEBERGABE' or MAX (25) continuations without a new commit were forced.
 Disable: create work/.stop-guard-off. Counter: work/.stop-guard-count.
 """  # token kept literal: the SENT regex below depends on it
-import json, os, re, subprocess, sys
+import json, os, re, subprocess, sys, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CNT = os.path.join(ROOT, "work", ".stop-guard-count")
 OFF = os.path.join(ROOT, "work", ".stop-guard-off")
 MAX = 25  # consecutive blocks WITHOUT a new commit
+LOOPF = os.path.join(ROOT, "docs", "analysis", "LOOP.tsv")
 HEADF = os.path.join(ROOT, "work", ".stop-guard-head")
 SENT = re.compile(r"^\s*STOP-GRUND:\s*(MENUE|BLOCKER|UEBERGABE)", re.I | re.M)
 
@@ -103,6 +104,15 @@ def main():
     early = bool(m) and m.group(1).upper() == "UEBERGABE" and 0 < ctx < MIN_HANDOVER
     if early:
         reason_ok = False
+    # loop guard: a worker handover must have gone through handover.py (updates LOOP.tsv)
+    no_loop = False
+    if reason_ok and m.group(1).upper() == "UEBERGABE":
+        try:
+            no_loop = time.time() - os.path.getmtime(LOOPF) > 3600
+        except OSError:
+            no_loop = True
+        if no_loop:
+            reason_ok = False
     if reason_ok or n >= MAX:
         try:
             os.remove(CNT)
@@ -118,7 +128,7 @@ def main():
         "reason": "Stop-Guard (%d/%d): a finished hypothesis is not the end of the turn (CLAUDE.md turn-end rule). "
                   "Update STATE.md, commit locally (napfkuchen1, no trailer), IMMEDIATELY start the next hypothesis. "
                   "Stop ONLY with a line at the start of a line: STOP-GRUND: MENUE / BLOCKER <reason> / UEBERGABE. "
-                  "%s" % (n + 1, MAX, ("UEBERGABE refused: context only %dk (<%dk). A broken tool/probe is not a blocker: fix it (max 2 attempts) or take the bypass, then continue." % (ctx // 1000, MIN_HANDOVER // 1000)) if early else "")}))
+                  "%s%s" % (n + 1, MAX, ("UEBERGABE refused: context only %dk (<%dk). A broken tool/probe is not a blocker: fix it (max 2 attempts) or take the bypass, then continue." % (ctx // 1000, MIN_HANDOVER // 1000)) if early else "", " UEBERGABE refused: run scripts/handover.py --item <ID> first (loop guard)." if no_loop and not early else "")}))
     return 0
 
 
