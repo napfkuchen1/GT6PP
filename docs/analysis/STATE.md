@@ -8,32 +8,18 @@ M1 (user 2026-11-25): complete, correct main menu, intro plays, controllable, no
 STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headless) run with persistent save + pad input.
 
 ## M1 checklist (open until verified)
-- [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
-- [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
-- [x] G1 all Home tiles drawn after the first car buy (work/_a55/home_after.png)
-- [x] I1a opening movie decodes and shows (A61, patches/gt6-a61-*; work/_a61/movie.png)
-- [x] I1b movie no longer freezes: AVC frameRateCode fixed (A63; play_a63frc_20261126_113049)
-- [x] I1c movie ends, menu follows: demux reset answers DEMUX_DONE (A63; play_a63done_20261126_115546)
+Done (evidence in CHECKLIST_DONE.md): T1 T2 G1 I1a I1b I1c C1 C2 G4 G6a G6b G6c S3 D3 G5
 - [ ] I3 movie audio: ATRAC3plus decoder wired (A61 log "ATRAC3plus audible"), not verified by ear
 - [ ] I2 tutorial/intro flow without skip overlay: movie -> race c204 loads + TutorialDialog name entry (A64,
   play_a64tut_20261126_120625); cellOskDialog stub never answered, now does (play_a64osk_20261126_124112)
 - [ ] W5 workaround: cellOskDialog has no input UI, auto-confirms with initial text or PS3_OSK_TEXT (Player)
 - [ ] G8 tutorial race: window flickers between a stale UI frame and a broken 3D frame, dialog state unreadable
   (A64; guest buffers 0/0x660000/0xCC0000 hold only dark 3D, work/_a64/fb3.png)
-- [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
-- [x] C2 car view after FIT RS renders, buy completes (play_a54retire_20261126_052113)
-- [x] G4 device hung: upload buffer freed too early (d3d_retire; same run)
-- [x] G6a showroom car drawn into the offscreen surface (A56; play_a56cap_20261126_063223)
-- [x] G6b NV3089 reads host RTs back into guest memory (A57; play_a57cap_20261126_065731)
-- [x] G6c SPURS wid=5 reads the car image, writes display buffers (play_a57dma_20261126_072632)
 - [ ] G6d showroom washed out (parked A58, bypass: SPU upload off, SPU_FB=1 shows it): job input 0x60579000 =
   NV3089 of RT 0x022C0000 is noise (guest VRAM seed), also with split surface slots (a58 patch)
-- [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
-- [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (car.png)
 - [ ] D4 rest interpreted, car view 5 FPS: image 76 LS 0x108EC/0x7D28/0x8048, image 74 0x54BC, PM 0xA68
   (play_a55lift2_20261126_061944)
 - [ ] G7 popup bar draws several popups on top of each other (work/_a55/home_after.png): check vs real
-- [x] G5 FP register arrays 48 -> 64 (work/play_a57cap_20261126_070409: 0 PS compile FAIL)
 - [ ] G2 car-name text in dealer list smeared/overbold (work/_a53/dealer_cars_full.png)
 - [ ] G3 dealer tiles: grey backing covers only upper-left part of each tile (same frame)
 - [ ] D1 attract demo (autodemo race) loads very slowly, window FPS 0.29 (a53a)
