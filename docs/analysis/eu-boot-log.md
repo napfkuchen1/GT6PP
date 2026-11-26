@@ -862,3 +862,34 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   r2 18745 flips, never at menu capture frame 25000; tid30 in 8A7B90 (lr 8A7234).
 - [LWM-BLOCK] log is capped at 40 (runtime/ppu/ppu_sysprx.cpp:298); uncap it to print the owner of 0x6FF52FF0.
 - Env PS3_LWMUTEX_TRACE=1 prints [LWM-CONVOY] holder tid + held time for every contended lock; PS3_LWM_WATCH=<lwm> records the last lock site (ppu_sysprx.cpp:183,319).
+
+## Arbeit51 (2026-11-26) dealer load hang = our flush guard
+- [LWM-LONG] (new, ppu_sysprx.cpp; owner of infinite lwmutex waits >30 s) a51deal r1: tid30 waits lwm 0x6FFE06C0, owner tid41 (PDI),
+  which waits a PFS request (AAC4C4<AAC240<AADA6C<532370). Old "0x6FF52FF0" was a stale watchdog register.
+- PS3_WD_DUMP=<hexaddr>:<len>[,..] (new, ppu_loader.cpp) dumps guest words per watchdog sample.
+- PFS pipeline object 0x177CE00 (events 0x30 apart, set byte +0x29): hang = event +0x1b68 "do read" set, no waiter; tid5 waits +0x1b98.
+- a51thr (45 s): tid6 thread object 0x6FFC40E0 entry OPD 01636C38 = AC75B0, this=0177CE00: AC75B0 is the READER THREAD entry,
+  not a flush. port_hooks.py part 3 FLUSH_GUARD returns early (+0x1c29==0 at start) -> reader exits at boot.
+- a51fix (2x 720 s, GT6_NO_FDFLUSH=1): 0 LWM-LONG, tid6 alive in AC74FC both runs, no early quit. Hook removed from
+  port_hooks.py + gen 023, rebuilt (rebuilt exe not yet run). r1 flips 27048: still GT loading screen at 720 s,
+  tid30 moving (6752E0<67D140<6C7664<7B51B8); r2 17249 flips stall before menu, tid30 AD321C<AD555C<8A7B90.
+  Sheet work/_a51_sheet.png (popups, home, dealer loading).
+
+
+## STATE trim 2026-11-26
+  probe.ps1 early-kill bug fixed ($last unset with explicit -Seconds). Frames: RSX_CAP=start:count:stride.
+  tid30 loop 616C80 keeps ticking 3 slots; script task 403D1910 reaches state 3 (done), no further task polls, no throw (A29 hooks), no file opens.
+  Tool: `snap_walk.py <dir> bt` (guest call chains).
+  unless skipOpening: MovieRoot.open, loop until isFinished -> start_project_gt6. play_movie: t_movie 'OPENING' -> /movies/<f>.pam,
+  pdistd.Exist (else end_movie) -> Tv2.decodeContentsKey -> load. No .pam open / cellVdec call logged: black = likely stuck there.
+  Trace tool: GT6_A40VM=<sec>, tools/a40_vm_hook.inc, scripts/adc_trace_match.py.
+  to 460 s. GTModeRoot script error "(nil).toInt" (GroupData, SPECDB-like query) on tid1.
+  (before 15477), but '(nil).toInt' still 10x, no frames captured (needs -Frame). CarName.dat still read 97984/103008.
+  raw encrypted file (0E 94 7D BF), menudb.dat same. Reads served by hostov n=512 + n=full; no filter at stream+0x48 (only CarName.dat).
+  probe.ps1 now derives -Frame from RSX_CAP. Frames a42full: credit dialogs, GT Mode loading screen.
+  ignores it (read at AAF74C). xOpen C1FE74 pager fill AE6C34 leaves zeros (no page fault); p4 hook (port_hooks.py:131) copies raw.
+  stubs.cpp gt6_pfs_key_layer). Dumps of DB0106 + menudb pass sqlite integrity_check. Runtime: queries on DB0106 still
+  rc=11 (CORRUPT); xRead C1FC3C only ever reads off=0 (page 1), cache stable -> likely xFileSize reports old/small size.
+  gt6_pfs_fstat_fix. Probe a45fix2: no rc=11, no toInt.
+  is skipped by host override cap and cellPamf shows 0 streams (video not working).
+  PFS slot (16, LRU) evicted -> xFileSize fell back to 1.00 TOC size. Size table per FileObject now. Run a46fix: 0 errors.
