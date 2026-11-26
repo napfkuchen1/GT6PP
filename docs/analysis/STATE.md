@@ -1,7 +1,7 @@
 # GT6PP EU - STATE (entry point, keep under ~5 KB)
 
 State: 2026-11-26. Branch `eu-first-build`, main checkout. Disc EU `BCES01893`. Line: game 1.22 + ps3recomp v0.20.
-Rules: `CLAUDE.md`. Facts: `LEDGER.md` (grep). Checkpoints/runs: `PROGRESS.md`. History: `eu-boot-log.md` (grep). One line per finding.
+Rules: `CLAUDE.md`. Grep: `LEDGER.md`, `PROGRESS.md`, `eu-boot-log.md`. One line per finding.
 
 ## Goal
 User 2026-11-25: M1 DONE only when main menu is complete and correct: intro
@@ -12,8 +12,9 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
 - [x] G1 all Home tiles drawn after the first car buy (work/_a55/home_after.png)
-- [ ] I1 opening movie: .pam served + parsed (play_a58mov_20261126_084501); 9 cellDmux/cellPamf imports unregistered,
-  cellDmux is a stub, cellVdec lacks FFmpeg headers
+- [ ] I1 opening movie (A59): dmux + imports + MF H.264 in (7488456); lock inversion: dmux worker holds lwm
+  0x6FFE0960, wants 0x990; tid49 the reverse (play_a58mov_20261126_090939/run.log.err LWM-LONG)
+- [ ] I3 movie audio: cellAdec returns silent PCM for ATRAC3plus (decoder in third_party/at3_standalone)
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
 - [x] C2 car view after FIT RS renders, pad works, buy completes (play_a54retire_20261126_052113, work/_a54/buy7.png)
@@ -26,11 +27,11 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [ ] G6d showroom washed out (parked A58, bypass: SPU upload stays off, SPU_FB=1 to see it): job input 0x60579000 =
   NV3089 of RT 0x022C0000, noise (guest VRAM seed); surface is RGBA16F + RGBA8, slots split (a58 patch), still noise
 - [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
-- [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (same run, car.png)
+- [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (car.png)
 - [ ] D4 rest interpreted, car view 5 FPS: image 76 LS 0x108EC/0x7D28/0x8048, image 74 0x54BC, PM 0xA68
   (play_a55lift2_20261126_061944)
 - [ ] G7 popup bar draws several popups on top of each other (work/_a55/home_after.png): check vs real
-- [x] G5 FP register arrays 48 -> 64 (A57; work/play_a57cap_20261126_070409: 0 PS compile FAIL)
+- [x] G5 FP register arrays 48 -> 64 (work/play_a57cap_20261126_070409: 0 PS compile FAIL)
 - [ ] G2 car-name text in dealer list smeared/overbold (work/_a53/dealer_cars_full.png)
 - [ ] G3 dealer tiles: grey backing covers only upper-left part of each tile (same frame)
 - [ ] D1 attract demo (autodemo race) loads very slowly, window FPS 0.29 (a53a)
@@ -55,11 +56,10 @@ sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-Next: I1. Add the unregistered imports (LEDGER grep A58), then a real PAMF demux in
-libs/codec/cellDmux.c (guest callbacks, AU info in guest memory). Repro: sh work/_a58/movie.sh.
-G6d later: surface format per op in manifest.txt, then which slot NV3089 reads.
+I1: PS3_LWCLOG=1 run (lwcond re-acquire is fine: lwm_acquire at ppu_sysprx.cpp:596); find
+who takes 0x960/0x990 on 0x7FFFxxxx threads and tid49. Name NID 0xA1709ABD. Repro: sh work/_a58/movie.sh.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52) = attract demo. Post-save movie stall (Arbeit40).
-Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
-Never run GTToolsSharp/PDTools. 1.00-era findings: obsolete, see LEDGER.
+Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_*, exit race.
+Never run GTToolsSharp/PDTools.
