@@ -1,0 +1,89 @@
+diff --git a/libs/video/rsx_d3d12_backend.c b/libs/video/rsx_d3d12_backend.c
+index e3ac9cc..779bd53 100644
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -4602,6 +4602,8 @@ static int s_present_this_frame = 1;
+  * backbuffer, so the next pass must keep it and it still needs a present.
+  * s_flush_prev: the surfaces it used still count as used in the next pass. */
+ static int s_flush_only, s_flush_prev, s_flush_bb;
++/* PRESENT_LOG=<n>: one line per presented batch for the first n presents. */
++static const char* s_present_src = "?";
+ 
+ /* Resolve a DRAW_*_TEX value: a hex raw offset, or the literal "duck" for the
+  * content-identified duck texture. */
+@@ -4880,7 +4882,11 @@ static void scanout_auto_present(u32 fi)
+         const char* e = getenv("SCANOUT_FB");
+         on = !(e && e[0] == '0') && !getenv("GCM_GUEST_FB");
+     }
+-    if (!on || s_dbg_last_draws != 0) return;
++    /* Once RSX work has run, an empty batch (everything already executed by a
++     * mid-frame flush) must not be replaced by the guest bytes. */
++    static int drew = 0;
++    if (s_dbg_last_draws) drew = 1;
++    if (!on || drew) return;
+     /* The display-buffer registry that matters is cellGcmSys's own: the
+      * ticker-driven backend path never brings the draw engine up, so the
+      * engine's table stays empty. cellGcm tracks the buffer the current flip
+@@ -5644,6 +5650,7 @@ static void render_frame(void)
+     s_d3d.cmd_list->lpVtbl->OMSetRenderTargets(s_d3d.cmd_list, 1, &rtv_handle, FALSE, &dsv_handle);
+ 
+     /* Clear color and depth */
++    const int bb_kept = s_flush_bb;
+     if (!s_flush_bb) {
+         s_d3d.cmd_list->lpVtbl->ClearRenderTargetView(
+             s_d3d.cmd_list, rtv_handle, s_d3d.clear_color, 0, NULL);
+@@ -6600,6 +6607,21 @@ skip_dump_consider: ;
+     /* Present, on the vblank unless D3D12_VSYNC=0: that one is for measuring a
+      * title past the display's rate. Skipped for an offscreen-only batch. */
+     if (s_present_this_frame) {
++        static long left = -1;
++        if (left < 0) { const char* e = getenv("PRESENT_LOG"); left = e ? atol(e) : 0; }
++        if (left > 0) {
++            u32 d0 = 0, doff = 0, c0 = 0;
++            for (u32 _i = 0; _i < s_d3d.draw_count && _i < MAX_DRAWS; _i++) {
++                const D3D12DrawRecord* r = &s_d3d.draws[_i];
++                if (r->rt_off) doff++; else if (r->is_clear) c0++; else d0++;
++            }
++            left--;
++            fprintf(stderr, "[PRESENTLOG] t=%llu frame=%llu src=%s buf=%u draws=%u display=%u dclear=%u offscreen=%u"
++                    " kept=%d cc=%.2f,%.2f,%.2f%c", (unsigned long long)GetTickCount64(),
++                    (unsigned long long)s_d3d.frame_count, s_present_src, s_d3d.present_buffer_id,
++                    s_d3d.draw_count, d0, c0, doff, bb_kept, s_d3d.clear_color[0],
++                    s_d3d.clear_color[1], s_d3d.clear_color[2], 10);
++        }
+         if (!d3d12_vsync_off())
+             s_d3d.swap_chain->lpVtbl->Present(s_d3d.swap_chain, 1, 0);
+         else
+@@ -6708,6 +6730,7 @@ static void d3d12_present(void* ud, u32 buffer_id)
+     }
+     if (s_d3d.initialized && flip_has_display) {
+         s_d3d12_stats.flips_rendered++;
++        s_present_src = "flip";
+         render_frame();
+     } else if (s_d3d.initialized) {
+         s_d3d12_stats.flips_deferred++;
+@@ -6849,6 +6872,7 @@ static void d3d12_clear(void* ud, u32 flags, u32 color, float depth, u8 stencil)
+         if (blink_dbg())
+             printf("[CLEAR] presenting %u accumulated draws at frame boundary\n",
+                    s_d3d.draw_count);
++        s_present_src = "clear";
+         render_frame();
+         s_clear_presents++;
+         s_last_clear_presented_flip = s_last_clear_boundary_flip;
+@@ -8798,7 +8822,7 @@ void rsx_d3d12_backend_present(void)
+       if (gfb < 0) { const char* e = getenv("GCM_GUEST_FB"); gfb = e ? 1 : 0; }
+       if (gfb) has_display = 1; }
+     if (s_composite_src || s_flush_bb) has_display = 1;
+-    if (has_display && s_d3d.draw_count > 0) s_seen_content = 1;
++    if (has_display && (s_d3d.draw_count > 0 || s_flush_bb)) s_seen_content = 1;
+     /* The same accounting as d3d12_present: this ticker is the present many
+      * titles reach. A title that renders only to offscreen surfaces had
+      * every flip skipped here with nothing logged. */
+@@ -8870,6 +8894,7 @@ void rsx_d3d12_backend_present(void)
+           if (remap < 0) { const char* e = getenv("TEX_REMAP"); remap = e ? atoi(e) : 0; }
+           if (remap) rsx_reset_upload_claims(); }
+         s_present_this_frame = has_display;
++        s_present_src = "tick";
+         render_frame();
+         s_present_this_frame = 1;
+     }
