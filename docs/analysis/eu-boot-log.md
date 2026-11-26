@@ -893,3 +893,18 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   gt6_pfs_fstat_fix. Probe a45fix2: no rc=11, no toInt.
   is skipped by host override cap and cellPamf shows 0 streams (video not working).
   PFS slot (16, LRU) evicted -> xFileSize fell back to 1.00 TOC size. Size table per FileObject now. Run a46fix: 0 errors.
+
+## Arbeit51 part 2 (2026-11-26) faults behind the dealer load (after the reader-thread fix)
+- a51new (rebuilt, no env, 2x 1100 s): r1 reaches dealer loading (work/_a51_new_sheet.png), then null calls tid30 (lr C479E8)
+  and a 1.8 GB log flood. r2 stalls at flip 3912: tid30 lwm 6F9664C8 held by tid27 in ring wait B321F0.
+- r2 chain: "[cellGcmSys] FIFO resync (jump-park)" despite GCM_PARK_GRACE_MS=5000 -> SPU img 5 repeat guard halts lane.
+  Trying 60000 did not help (below), reverted to 5000.
+- r1 chain: only skipped calls before the first fault = 12 "unresolved indirect" 01000D9C / FE269C (tid27): switch cases of
+  interpreters FE1CAC (table FE1D84) and 1000B30 (table 1000C28). Lifter lost the lis/addi table base behind a branch into
+  the loop. Lifter fallback (patches/gt6-a51-jt-loop-base.patch); both functions re-lifted and spliced into gen 037
+  (work/_a51_splice.py, backup work/_a51/ppu_recomp_037.cpp.bak). A full re-lift picks the fix up by itself.
+- a51fix r1/r2: "recursion cap" preceded VM garbage. gt6_ctxfiber.cpp now keeps the runtime call depth per fiber.
+- Lift caveat: subset lifts must include the neighbouring functions, else the gap pass swallows them.
+- a51jt (fiber depth + jump tables, grace 60000, 2x 840 s): 0 null-call, 0 unresolved, 0 recursion cap, 0 LWM-LONG.
+  r1 home -> dealer press -> GT loading screen until end (work/_a51_jt1.png, flips 24118). r2 SPU img 5 halt at 19055 flips
+  with 0 FIFO resync: the self-JUMP park is never patched within 30 s (SPU repeat guard), so the stall is a true wait.

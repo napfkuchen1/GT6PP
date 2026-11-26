@@ -1,0 +1,31 @@
+diff --git a/tools/ppu_lifter.py b/tools/ppu_lifter.py
+index 1ad45328..737ff9e0 100644
+--- a/tools/ppu_lifter.py
++++ b/tools/ppu_lifter.py
+@@ -4822,6 +4822,26 @@ def discover_jump_tables(all_insns, read_u32, toc, text_lo, text_hi, func_starts
+                 break                           # first definition of cand wins/loses
+             if disp is not None or abs_base is not None:
+                 _bases.append((r_base, disp, base_is_ld, disp2, disp2_is_ld, abs_base))
++        if not _bases:
++            # Interpreter loops load the table base in the prologue and branch
++            # into the loop head, which hides it from the scan above (GT6
++            # func_00FE1CAC: `lis r9,0xFE; addi r14,r9,0x1D84; b loop`). Accept
++            # a lis/addi pair in this function only when it names the word
++            # right after the bctr, where gcc places the table.
++            _fn = all_insns[_scan_lo(i):i] if func_starts else all_insns[max(0, i - 128):i]
++            _hi = {}
++            for w in _fn:
++                a = [x.strip() for x in w.operands.split(',')]
++                try:
++                    if w.mnemonic == 'lis' and len(a) == 2:
++                        _hi[a[0]] = int(a[1], 0) << 16
++                    elif (w.mnemonic == 'addi' and len(a) == 3 and a[0] in _cands
++                          and a[1] in _hi
++                          and ((_hi[a[1]] + int(a[2], 0)) & 0xFFFFFFFF) == all_insns[i].addr + 4):
++                        _bases.append((a[0], None, False, None, False, all_insns[i].addr + 4))
++                        break
++                except ValueError:
++                    pass
+         _dbg(all_insns[i].addr, f"bases={_bases} toc={toc}")
+         if not _bases:
+             continue

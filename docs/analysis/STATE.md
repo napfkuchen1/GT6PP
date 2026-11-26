@@ -14,7 +14,9 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [ ] G1 only dealer tile drawn, rest dark: maybe tutorial dimming; check after popup close; stacked banner x3 too
 - [ ] I1 opening movie: cellPamf layout fixed (A50, patches/gt6-a50-pamf-header.patch, not run); cellDmux is a stub, no FFmpeg headers
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
-- [ ] C1 pad controls menu: popup X + dealer enter OK (a50pad 2/2); dealer screen/back/cursor unverified (loading >100 s)
+- [ ] C1 pad menu: popup X + dealer enter OK; dealer screen still loading at 840 s, 0 faults (a51jt r1, work/_a51_jt1.png)
+- [ ] S1 pre-menu stall: SPU img 5 polls label 0x03000530, FIFO self-JUMP park never patched (a51jt r2, a51new r2)
+- [ ] W1 workaround: interpreter bodies spliced into gen 037; confirm with a full re-lift (patches/gt6-a51-jt-loop-base.patch)
 - [ ] L1 live non-headless run, persistent save, real pad input
 
 ## Method
@@ -30,11 +32,9 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-a50deal (2x 900 s): dealer load never finishes. r1 tid30 in sys_lwmutex_lock(0x6FF52FF0), chain AD4294+0x78 <6166A4
-<7B51B8, same at 780/880 s; tid3 in B091FC (heap). r2 only 18745 flips (stall before menu; tid30 8A7B90). Find the lock
-owner (lwmutex struct at that EA, snapshot or WD print), compare with tools/guard_heaplock.py deadlock (Arbeit37).
-Then I1: real MPEG-PS demux in cellDmux.c + FFmpeg headers (avcodec-63/avutil-61, DLLs in tools/RPCS3), run without
-skipopening; check served .pam size (old run passed 1.00 size 351096832). Notes: side-session note arbeit50-movie.md.
+a51jt command (probe name a52deal), -Seconds 1500, RSX_CAP=25000:30:2000, PS3_WD_AT=700,900,1100,1300,1480: does the
+dealer finish? If still loading: compare tid30/tid27 chains and last opened files across WD samples (moving = slow,
+fixed = wait to walk). S1: find who patches the self-JUMP before label 0x53 (park address in [FIFODUMP] runs).
 
 ## Refuted / symptom (do not repeat)
 Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.

@@ -30,6 +30,8 @@ uint32_t vm_read32(uint64_t addr);
 void     ps3_hle_register_ctx(unsigned int nid, const char* name, void (*fn)(ppu_context*));
 extern PPU_THREAD_LOCAL ppu_context* g_active_ctx;
 extern void (*g_ppu_thread_entry_trampoline)(ppu_context*);
+int*     ps3_ppu_dispatch_depth_slot(void);
+int*     ps3_ppu_vcall_sp_slot(void);
 }
 
 namespace {
@@ -46,6 +48,7 @@ struct CFiber {
     void*        back;     /* fiber of the Run caller */
     int          state;    /* 0 ready/suspended, 1 running, 2 done */
     uint32_t     cause;
+    int          depth, vsp; /* runtime call-depth counters of this coroutine */
     ppu_context  ctx;
 };
 
@@ -128,8 +131,17 @@ void h_run(ppu_context* c)
     const uint32_t sl_pre = vm_read32((uint32_t)c->gpr[1] + 0x9C);
     const uint32_t hd_pre = vm_read32((uint32_t)c->gpr[1] + 0xA0 + 0x74);
     if (logging() && hd_pre) fprintf(stderr, "[CTXFIBER] pre head=%08X [head]=%08X\n", hd_pre, vm_read32(hd_pre));
+    /* The runtime counts indirect-call nesting per host thread. A fiber that
+     * yields from deep inside would leak its depth into this thread until the
+     * recursion guard skips every call, so each fiber keeps its own count. */
+    int* const depth = ps3_ppu_dispatch_depth_slot();
+    int* const vsp   = ps3_ppu_vcall_sp_slot();
+    const int depth_pre = *depth, vsp_pre = *vsp;
+    *depth = f->depth; *vsp = f->vsp;
     SwitchToFiber(f->host);
-    if (logging()) { uint32_t hd = vm_read32((uint32_t)c->gpr[1] + 0xA0 + 0x74);
+    f->depth = *depth; f->vsp = *vsp;
+    *depth = depth_pre; *vsp = vsp_pre;
+    if (logging()) {uint32_t hd = vm_read32((uint32_t)c->gpr[1] + 0xA0 + 0x74);
         fprintf(stderr, "[CTXFIBER] head=%08X [head]=%08X [head+4]=%08X hd_pre=%08X\n", hd, hd ? vm_read32(hd) : 0, hd ? vm_read32(hd+4) : 0, hd_pre); }
     if (logging()) fprintf(stderr, "[CTXFIBER] caller r1=%llX r31 pre=%llX post=%llX r1post=%llX r31slot pre=%08X post=%08X\n",
         (unsigned long long)r1_pre, (unsigned long long)r31_pre, (unsigned long long)c->gpr[31],
