@@ -11,12 +11,18 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 ## M1 checklist (open until verified; Arbeit47 inventory)
 - [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
-- [ ] G1 only dealer tile drawn; persists with popups closed (work/_a52/menu_home_nopopup.png): locked tiles or bug?
+- [ ] G1 only dealer tile drawn: popup says "buy a FIT RS '10 first" (A53), likely locked; confirm after first buy
 - [ ] I1 opening movie: cellPamf layout fixed (A50, patches/gt6-a50-pamf-header.patch, not run); cellDmux is a stub, no FFmpeg headers
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
-- [ ] C1 pad menu: popup X + dealer enter OK; dealer loading never ends: tid30 runs script code (lr moves), file opens
-  stop (a52c 1346 at t=279 s and 533 s; a52 same screen to 897 s). work/_a52/dealer_loading.png
-- [ ] S1 pre-menu stall: SPU img 5 polls label 0x03000530, FIFO self-JUMP park never patched (a51jt r2, a51new r2)
+- [x] C1 pad menu: popup X, enter dealer (~7 s load), Honda car list (A53 live a53c: work/_a53/dealer_list.png,
+  dealer_honda_cars.png). Old "dealer hang" = idle attract demo (leavedemo) started before cross was pressed.
+- [ ] C2 car detail view stalls after picking FIT RS: flips stop, same chain as S1 (a53c run.log.err 2842..2874)
+- [ ] G2 car-name text in dealer list smeared/overbold (work/_a53/dealer_cars_full.png)
+- [ ] G3 dealer tiles: grey backing covers only upper-left part of each tile (same frame)
+- [ ] D1 attract demo (autodemo race) loads very slowly, window FPS 0.29 (a53a)
+- [ ] D2 idle demo starts ~10 s after Home; input during the countdown does not cancel it (a53b, a53i): check
+- [ ] S2 boot crash 0xC00000FD, recursive tree walk func_00AE0464 on tid34 (play_a53g_20261126_035132, 1 of 8)
+- [ ] S1 stall (pre-menu and car view): SPU img 5 polls label 0x03000530, FIFO self-JUMP park never patched (a51jt r2, a51new r2)
 - [ ] W1 workaround: interpreter bodies spliced into gen 037; confirm with a full re-lift (patches/gt6-a51-jt-loop-base.patch)
 - [ ] W2 workaround: PPU_ONECORE=1 default (one-core pinning); run without it
 - [ ] W3 workaround: GCM_PARK_GRACE_MS=5000 in gt6/src/main.cpp (FIFO self-JUMP resync), see S1
@@ -25,8 +31,9 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 ## Method
 Overlay `work/gt6_vol_a32` (scripts/make-vol-overlay.py), env `GT6_VOL_ROOT`; `PPU_ONECORE=1` default; probe.ps1 gives empty hdd1.
 Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol or gt6_vol_122+.
-Menu questions: scripts/play.py (start, press, wait, shot, status, dump [--snap], quit); work/_a52/to_dealer.sh drives
-boot->dealer in ~185 s (Home at ~160 s; timed pad script 395 s menu, 560 s dealer).
+Menu questions: scripts/play.py (start, press, wait, shot, status, dump [--snap], quit); work/_a53/to_dealer.sh drives
+boot->dealer in ~175 s. Car repro: start, sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py (focus detect,
+a53j OK). Idle demo starts ~10 s after Home ("Der Demofilm startet in Kuerze"): cross must come before it.
 
 ## State
 
@@ -37,12 +44,12 @@ boot->dealer in ~185 s (Home at ~160 s; timed pad script 395 s menu, 560 s deale
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-Dealer: snapshot work/play_a52c_*/snap_00539 (tid30). Identify interpreter at 1FA204/1FA968 (outer chain 8A7B90<892998<
-2F53E8<8AF7F0) and which script/query it repeats: several `play.py dump` samples, constant outer frame = loop owner.
-If it loops over car DB rows (SQL GENERIC_CAR/GEAR/CUSTOM_WING in RAM) check rc/row count; if progressing, measure rate.
-S1: find who patches the self-JUMP before label 0x53 (park address in [FIFODUMP] runs).
+C2/S1, deterministic (a53c/j/k): RSX parks on self-JUMP io 0x146A08C = ea 0x6146A08C, resync after 5 s, labels
+0x03000500..55F stay 0, SPU img 5 halts. Words (a53k): 146A080=JUMP 148D834, 084=00041FC0 FFFF, 08C=park.
+First: find who jumps to 146A084 and who should patch 08C / release 0x53 (write watch on 0x6146A08C; log SEMA
+release off 0x530; img 5 job descriptors near 0x6146xxxx in [spu-int] loadJobState; wait value at pc 0x7C44).
 
 ## Refuted / symptom (do not repeat)
-Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
+"Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
 Arbeit22-30 1.00-script/A22_BLOCK task chains (B90, node flush, MMuseum2, PFS pipe): obsolete since 1.22 overlay.
 Script VM addresses 9EEA88/9F0748 are 1.00. Never run GTToolsSharp/PDTools.

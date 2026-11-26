@@ -918,3 +918,14 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a52vm (GT6_A40VM=180): tid1 task BB90 loops script lines 116-124; this run alone ended in a render stall:
   [FIFODUMP] bad word 3E000000 at io 0xD5015C -> unmapped-JUMP resync, flips +5 in 24 s (one occurrence, other runs 0).
 - a52c snapshot tid30 stack objects reference only "GT-ALL" (+0x2A4) and "leavedemo" (+0x4C4) (work/_a52/stackstr.py <snapdir> 30).
+
+## Arbeit53 (2026-11-26)
+- a52c shot_00184 shows 'Der Demofilm startet in Kuerze'; run.log.err 1648..1667 loads leavedemo; no dealer scripts. tid30 chain = demo load.
+- a53a: demo path loads autodemo d024.xml + course c054, window FPS 0.29, returns to Home page 1 once; second demo d032.
+- a53b: demo starts within ~10 s of the last popup; a d-pad press in that window did not stop it.
+- a53c: popups x3, cross on dealer tile at t=166 s -> dealer maker list at t=173 s; Honda -> car list (FIT RS selectable, others locked).
+- a53c: cross on FIT RS -> car/showroom assets load (car/0005/0110/hq), flips stop at 5423 from t<=298 s to 404 s; FIFO park + img 5 halt.
+- a53e: GCM_SEMA_ACQUIRE=1 (2000 ms bound) gives up repeatedly on label 0xFE0 from boot on, slows everything: unusable.
+- a53g: 0xC00000FD at t=137 s, tid34, guest_fn 0xAE0464 (self-recursive), host frame rva 0x9BE9C22 repeating.
+- a53j: repro via focus detection: park io 0x146A08C -> put 0x10090 again, 16 s after FIT RS; [WDDUMP] 03000530 = 0.
+- a53k: stall dump: ea 6146A080 = 2148D834 00041FC0 0000FFFF 2146A08C, then NOPs; 03000500..55F all 0; put 0x12090.

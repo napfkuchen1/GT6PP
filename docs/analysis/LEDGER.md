@@ -30,10 +30,15 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - (A49) SPU img 5 halt on ea 0x03000530 (label 0x53) = jump-park FIFO resync; GCM_PARK_GRACE_MS=5000. Evidence: probe_a49park/a49fix.
 - (A49) Shredded text = depth surface read as texture scaled by declared size, not host copy size. Evidence: probe_a49vh/a49fix.
 - (A50) Pad works in GT Mode home (popups, dealer enter): probe_a50pad_*. PAMF stream headers start at 0x88, 0x30 each (patch gt6-a50-pamf-header).
+- A53: car detail stall = [FIFODUMP] self-JUMP park io 0x146A08C -> jump-park resync -> SPU img 5 halts after 30 s polling ea 0x03000530 (play_a53c_20261126_033359 run.log.err 2842..2874).
 
 ## 4. Refuted/symptom (do NOT repeat)
 - Pad/dialog chain Hyp. 1-14; exit race Hyp. 83-117; fresh vs persistent db; PRIO_START/LOCKSTEP/RESV_OFF; fiber list/busy loop; snap diff 140 vs 175 s; PDIPFS data missing; RPCS3 --no-gui as oracle.
 - Sysmodule load list and fresh savedata (PS3_GAMEDATA_ROOT): no divergence from the oracle.
+- A53 REFUTED "dealer load hang" (A50-52): that screen was the attract demo (leavedemo.adc/LeaveDemoRoot loaded, 'Der Demofilm startet'), cross came too late. Dealer loads in ~7 s (live a53c, work/_a53/dealer_list.png).
+
+- A53 REFUTED GCM_SEMA_ACQUIRE=1 as fix for the car-view stall: acquire on label 0xFE0 times out all the time (play_a53e).
+
 ## 5. Open core question
 - RPCS3 opens `PDIPFS/59/FI` (movie, PDI thread 0x100003b, Pamf/Vdec) after PDIPFS/9/EE/3C; we open 85/H2, 8M/A9, 6W/RR, 75/M8, SG/LW, SC/IC, 8M/0K, 4J/0E and park in lwcond (loader 9qstY).
 - Next offline diff: oracle callers (LR) of 59/FI, trigger of the movie decision after EE/3C, now on the 1.22 build against RPCS3 (same version). Port hooks first.
