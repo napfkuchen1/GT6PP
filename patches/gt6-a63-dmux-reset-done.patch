@@ -1,0 +1,21 @@
+--- a/libs/codec/cellDmux.c
++++ b/libs/codec/cellDmux.c
+@@ -736,12 +736,12 @@
+         dmux_unlock(&s_lock);
+         return (s32)CELL_DMUX_ERROR_ARG;
+     }
+-    if (d->active) {
+-        d->abort = 1;
+-        dmux_broadcast(&d->cond);
+-        while (wait && t_worker != d && d->active && !d->quit)
+-            dmux_wait(&d->cond, &s_lock);
+-    }
++    /* A reset is always answered with DEMUX_DONE, also after the stream ran
++     * out by itself: GT6's player waits for it when its movie ends. */
++    d->active = d->abort = 1;
++    dmux_broadcast(&d->cond);
++    while (wait && t_worker != d && d->active && !d->quit)
++        dmux_wait(&d->cond, &s_lock);
+     dmux_unlock(&s_lock);
+     return CELL_OK;
+ }
