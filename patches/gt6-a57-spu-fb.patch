@@ -1,6 +1,6 @@
 --- a/runtime/spu/spu_dma.h
 +++ b/runtime/spu/spu_dma.h
-@@ -266,11 +266,32 @@
+@@ -266,11 +266,40 @@
                                " size=%u covers 0x%08X\n",
                        (uint32_t)spu->pc & SPU_LS_MASK, cmd, lsa, (uint32_t)ea, size,
                        (uint32_t)s_w); } }
@@ -17,6 +17,14 @@
 +      { static void* volatile s_reader;
 +        if (s_hi && (cmd & 0xF0) == 0x40 && (uint32_t)ea < s_hi && (uint32_t)ea + size > s_lo)
 +            s_reader = (void*)spu;
++        /* ...and what else it reads: one line per 4 KB page outside the range. */
++        if (s_hi && (cmd & 0xF0) == 0x40 && s_reader == (void*)spu &&
++            !((uint32_t)ea < s_hi && (uint32_t)ea + size > s_lo)) {
++            static uint32_t pg[64]; static int np;
++            int i = 0; while (i < np && pg[i] != ((uint32_t)ea >> 12)) i++;
++            if (i == np && np < 64) { pg[np++] = (uint32_t)ea >> 12;
++                fprintf(stderr, "[dma-range] reader get ea=0x%08X lsa=0x%05X size=%u pc=0x%05X\n",
++                        (uint32_t)ea, lsa, size, (uint32_t)spu->pc & SPU_LS_MASK); } }
 +        if (s_hi && (cmd & 0xF0) == 0x20 && s_reader == (void*)spu) {
 +            static uint32_t pg[96]; static int np;
 +            int i = 0; while (i < np && pg[i] != ((uint32_t)ea >> 16)) i++;
@@ -184,3 +192,20 @@
                  if (dr->is_clear) {
                      D3D12_CPU_DESCRIPTOR_HANDLE rh =
                          (cur_rt >= 0) ? off_rt_rtv(cur_rt) : rtv_handle;
+@@ -8452,7 +8529,15 @@
+     static u64 rb_size = 0;
+     u32 x = 0, y = 0;
+     if (!s_d3d.initialized || pitch <= 64 || !w || !h || !dst) return 0;
+-    if (off_rt_containing(offset, pitch, &x, &y) < 0) return 0;
++    if (off_rt_containing(offset, pitch, &x, &y) < 0) {
++        static int miss = 0;   /* RB_MISS_LOG=1: why a source has no host surface */
++        if (getenv("RB_MISS_LOG") && miss < 12) { miss++;
++            const int i = off_rt_find(offset);
++            const OffRT* r = i >= 0 ? &s_d3d.off_rt[i] : NULL;
++            fprintf(stderr, "[rb-miss] off=0x%08X pitch=%u slot=%d %ux%u pitch=%u dxgi=%u\n", offset, pitch,
++                    i, r ? r->w : 0, r ? r->h : 0, r ? r->pitch : 0, r ? r->dxgi : 0); }
++        return 0;
++    }
+     if (s_d3d.draw_count) {
+         s_flush_only = 1;
+         s_present_this_frame = 0;
