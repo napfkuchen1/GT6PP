@@ -1,0 +1,85 @@
+--- a/runtime/ppu/ppu_loader.cpp
++++ b/runtime/ppu/ppu_loader.cpp
+@@ -3540,6 +3540,18 @@
+ 
+ extern "C" void ppu_rpage_arm(void);
+ #ifdef _WIN32
++/* <hexaddr>:<hexlen>[,...]: print guest words */
++static void ps3_wd_words(const char* d)
++{
++    while (d && *d) {
++        char* e = 0; uint32_t a = (uint32_t)strtoul(d, &e, 16);
++        uint32_t len = (*e == ':') ? (uint32_t)strtoul(e + 1, &e, 16) : 0x40;
++        for (uint32_t o = 0; o < len; o += 16)
++            fprintf(stderr, "[WDDUMP] %08X: %08X %08X %08X %08X\n", a + o, vm_read32(a + o),
++                    vm_read32(a + o + 4), vm_read32(a + o + 8), vm_read32(a + o + 12));
++        d = (*e == ',') ? e + 1 : 0;
++    }
++}
+ /* PS3_WD_AT=<s1>,<s2>: gt6 has no boot_main watchdog; dump every guest thread's
+  * lr/in-flight lv2 syscall + HLE at those uptimes (seconds). */
+ static DWORD WINAPI ps3_wd_thread(LPVOID p)
+@@ -3553,15 +3565,7 @@
+         fprintf(stderr, "[WATCHDOG] sample at %ds\n", t[i]);
+         ppu_report_guest_lrs_ex(i & 1 ? "b" : "a");
+         /* PS3_WD_DUMP=<hexaddr>:<hexlen>[,...]: guest words at each sample */
+-        for (const char* d = getenv("PS3_WD_DUMP"); d && *d; ) {
+-            char* e = 0; uint32_t a = (uint32_t)strtoul(d, &e, 16);
+-            uint32_t len = (*e == ':') ? (uint32_t)strtoul(e + 1, &e, 16) : 0x40;
+-            for (uint32_t o = 0; o < len; o += 16)
+-                fprintf(stderr, "[WDDUMP] %08X: %08X %08X %08X %08X
+-", a + o, vm_read32(a + o),
+-                        vm_read32(a + o + 4), vm_read32(a + o + 8), vm_read32(a + o + 12));
+-            d = (*e == ',') ? e + 1 : 0;
+-        }
++        ps3_wd_words(getenv("PS3_WD_DUMP"));
+         fflush(stderr);
+     }
+     return 0;
+@@ -3604,6 +3608,35 @@
+     fprintf(stderr, "[SNAP] done dir=%s\n", dir); fflush(stderr);
+     return 0;
+ }
++/* PS3_WD_FILE=<path>: on-demand diagnostics for a driven session (scripts/play.py dump).
++ * Polled twice a second. A line "wd [<hexaddr>:<hexlen>,...]" takes one watchdog
++ * sample, "snap <dir>" writes a snapshot; the file is emptied when done. */
++static DWORD WINAPI ps3_wdfile_thread(LPVOID p)
++{
++    const char* path = (const char*)p;
++    extern void ppu_report_guest_lrs_ex(const char*);
++    for (int n = 0;;) {
++        Sleep(500);
++        char line[600]; line[0] = 0;
++        FILE* f = fopen(path, "rb");
++        if (!f) continue;
++        if (!fgets(line, sizeof line, f)) line[0] = 0;
++        fclose(f);
++        line[strcspn(line, "\r\n")] = 0;
++        if (!line[0]) continue;
++        fprintf(stderr, "[WDFILE] begin %d %s\n", n, line);
++        if (!strncmp(line, "snap ", 5)) {
++            _putenv_s("PS3_SNAP_DIR", line + 5);
++            ps3_snap_thread((LPVOID)"0");
++        } else {
++            fprintf(stderr, "[WATCHDOG] sample on demand %d\n", n);
++            ppu_report_guest_lrs_ex(n & 1 ? "b" : "a");
++            if (!strncmp(line, "wd ", 3)) ps3_wd_words(line + 3);
++        }
++        fprintf(stderr, "[WDFILE] done %d\n", n++); fflush(stderr);
++        if ((f = fopen(path, "wb"))) fclose(f);
++    }
++}
+ #endif
+ extern "C" void lv2_syscall(ppu_context* ctx)
+ {
+@@ -3616,6 +3649,10 @@
+       if (!_sn) { _sn = 1; const char* e = getenv("PS3_SNAP_AT");
+           if (e && *e) { static char sbuf[64]; snprintf(sbuf, sizeof sbuf, "%s", e);
+                          CreateThread(NULL, 0, ps3_snap_thread, sbuf, 0, NULL); } } }
++    { static int _wf = 0;
++      if (!_wf) { _wf = 1; const char* e = getenv("PS3_WD_FILE");
++          if (e && *e) { static char fbuf[512]; snprintf(fbuf, sizeof fbuf, "%s", e);
++                         CreateThread(NULL, 0, ps3_wdfile_thread, fbuf, 0, NULL); } } }
+ #endif
+     ppu_rpage_arm();
+     /* One-shot: PPU_GUARD_EA=<hex> arms the page guard on that address without

@@ -17,6 +17,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [ ] C1 pad menu: popup X + dealer enter OK; dealer screen still loading at 840 s, 0 faults (a51jt r1, work/_a51_jt1.png)
 - [ ] S1 pre-menu stall: SPU img 5 polls label 0x03000530, FIFO self-JUMP park never patched (a51jt r2, a51new r2)
 - [ ] W1 workaround: interpreter bodies spliced into gen 037; confirm with a full re-lift (patches/gt6-a51-jt-loop-base.patch)
+- [ ] W2 workaround: PPU_ONECORE=1 default (one-core pinning); run without it
+- [ ] W3 workaround: GCM_PARK_GRACE_MS=5000 in gt6/src/main.cpp (FIFO self-JUMP resync), see S1
 - [ ] L1 live non-headless run, persistent save, real pad input
 
 ## Method

@@ -86,7 +86,7 @@ prog = ""
 try: prog = [l for l in open(os.path.join(A, "PROGRESS.md"), encoding="utf-8").read().splitlines() if l.strip()][-1][:160]
 except Exception: pass
 state = "last commit %s; PROGRESS: %s" % (git("log", "-1", "--format=%h %s")[:80], prog)
-txt = "Goal: %s\nState: %s\nLoop: %s\nNext step: %s\nDo not repeat: %s\nStill running: %s\nRead: %s\n" % (a.goal, state, loop, a.step, a.not_repeat, a.running, a.read)
+txt = "Goal: %s\nState: %s\nLoop: %s\nNext step: %s\nTool: scripts/play.py (start/press/wait/shot/status/dump/quit) for menu questions, not timed probes.\nDo not repeat: %s\nStill running: %s\nRead: %s\n" % (a.goal, state, loop, a.step, a.not_repeat, a.running, a.read)
 if len(txt.encode()) > 1500: print("WARN: prompt >1.5 KB (%d)" % len(txt.encode()))
 open(os.path.join(A, "NEXT_SESSION_PROMPT.md"), "w", encoding="utf-8", newline="\n").write(txt)
 print("STATE %d B, %d lines moved; prompt %d B" % (size(text.split("\n")), len(moved), len(txt.encode())))

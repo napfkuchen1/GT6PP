@@ -53,6 +53,7 @@ Language: chat with the user is German. Everything in the repo is English (see t
 - Stop-guard applies only to worker sessions (prompt contains `working session GT6PP` / `Arbeitssession`).
 
 ## Runs (mandatory: `scripts/probe.ps1`)
+- Menu/UI questions: `scripts/play.py` (`start|shot|press cross|wait RX/--change/--stable|status|dump [--snap]|quit`) drives ONE live gt6.exe, same state isolation; never beside a probe run; `quit` before turn end.
 - Run all probe/capture runs via `scripts/probe.ps1`. It selects the newest build, validates env/PAD_SCRIPT, isolates state, writes to `work/probe_<name>_<ts>_<i>/`, checks expected lines. Parallel only via `-Parallel 3-4` with several variants per batch; never two `probe.ps1` at once (taskkill kills the other run).
 - 1.22 data: overlay + `GT6_VOL_ROOT` (see STATE.md Method). `-Boot` variants patch the 1.00 tree: do not apply them to the 1.22 overlay. Never modify `work/gt6_vol` or `work/gt6_vol_122+`.
 - Long runs in the background + `Monitor`, never `sleep`. Frames via `RSX_CAP`.

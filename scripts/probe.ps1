@@ -113,6 +113,13 @@ foreach ($k in $variants.Keys) { $f = Join-Path $Root ("work\ARCHIV\" + $variant
 if ($customVol) { $BootName = "vol:" + (Split-Path -Leaf $volRoot) }
 Write-Host "BOOT variant: $BootName"
 
+# --- no parallel interactive session (scripts\play.py) ----------------------
+$playState = Join-Path $Root "work\play_current.json"
+if (Test-Path $playState) {
+    $playPid = (Get-Content $playState -Raw | ConvertFrom-Json).pid
+    if ((Get-Process -Id $playPid -ErrorAction SilentlyContinue).ProcessName -eq "gt6") { throw "play.py session active (pid $playPid). Run: scripts\play.py quit" }
+}
+
 # --- toolchain DLLs --------------------------------------------------------
 $mingw = Get-ChildItem -Path (Join-Path $Root "tools\llvm-mingw") -Directory -ErrorAction SilentlyContinue |
     ForEach-Object { Join-Path $_.FullName "bin\clang.exe" } | Where-Object { Test-Path $_ } | Select-Object -First 1
