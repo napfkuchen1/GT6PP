@@ -1,0 +1,218 @@
+--- a/libs/video/cellGcmSys.c
++++ b/libs/video/cellGcmSys.c
+@@ -1136,6 +1136,96 @@
+  * since when it has stood with that put: the jump-park grace in the walker. */
+ static u32 park_off, park_put;
+ static unsigned long long park_since;
++/* GCM_PARKTRACE=1: keep the last FIFO branches, label operations and SPU PUTs
++ * and print them when a self-JUMP park is given up on (or an SPU is halted for
++ * polling) -- who jumped to the park, who patches it, who releases a label. */
++typedef struct { u32 kind, io, a, b; unsigned long long t; } gcm_pt_ev;
++static gcm_pt_ev s_pt_br[256], s_pt_sem[256];
++static unsigned s_pt_nbr, s_pt_nsem;
++static struct { u32 ea, size, cmd, pc, img; unsigned long long t; } s_pt_dma[16384];
++static volatile long s_pt_ndma;
++static int gcm_pt_on(void)
++{
++    static int on = -1;
++    if (on < 0) on = getenv("GCM_PARKTRACE") ? 1 : 0;
++    return on;
++}
++static void gcm_pt_br(u32 kind, u32 io, u32 a, u32 b)
++{
++    extern unsigned long long ps3_ms_now(void);
++    if (!gcm_pt_on()) return;
++    gcm_pt_ev* e = &s_pt_br[s_pt_nbr++ & 255];
++    e->kind = kind; e->io = io; e->a = a; e->b = b; e->t = ps3_ms_now();
++}
++/* kind: 'A' acquire, 'L' 406E release, 'B' back-end, 'T' texture release,
++ * 'R' release replayed by a resync. */
++static void gcm_pt_sem(u32 kind, u32 io, u32 off, u32 v)
++{
++    extern unsigned long long ps3_ms_now(void);
++    static u32 last_off = ~0u, last_v;
++    if (!gcm_pt_on()) return;
++    if (kind == 'A') { if (off == last_off && v == last_v) return; last_off = off; last_v = v; }
++    gcm_pt_ev* e = &s_pt_sem[s_pt_nsem++ & 255];
++    e->kind = kind; e->io = io; e->a = off; e->b = v; e->t = ps3_ms_now();
++    if ((off & 0xFFFFu) >= 0x500u && (off & 0xFFFFu) < 0x560u) {
++        static int n;
++        if (PS3_LOG_FIRST(n, 200))
++            fprintf(stderr, "[ptrace-lbl] %c io=%08X off=0x%X v=0x%08X t=%llu\n", (int)kind, io, off, v, e->t);
++    }
++}
++void ps3_ptrace_dma(u32 ea, u32 size, u32 cmd, u32 pc, u32 img)
++{
++    extern unsigned long long ps3_ms_now(void);
++    static volatile long long n;
++    if (!gcm_pt_on() || (cmd & 0xF0u) == 0x40u) return;   /* PUTs and atomics */
++    if (!((ea >= 0x60000000u && ea < 0x70000000u) || (ea >= 0x03000000u && ea < 0x03001000u))) return;
++    const unsigned i = (unsigned)(++n) & 16383u;   /* diagnostic: a lost race costs one entry */
++    s_pt_ndma = (long)n;
++    s_pt_dma[i].ea = ea; s_pt_dma[i].size = size; s_pt_dma[i].cmd = cmd;
++    s_pt_dma[i].pc = pc; s_pt_dma[i].img = img; s_pt_dma[i].t = ps3_ms_now();
++}
++void ps3_ptrace_dump(const char* why, u32 park_io)
++{
++    extern unsigned long long ps3_ms_now(void);
++    static int dumps;
++    if (!gcm_pt_on() || dumps >= 3) return;
++    dumps++;
++    if (!park_io) park_io = park_off;
++    const u32 pea = park_io ? gcm_io2ea(park_io) : 0;
++    fprintf(stderr, "[ptrace] dump %s park io=%08X ea=%08X t=%llu\n", why, park_io, pea, ps3_ms_now());
++    for (u32 a = 0x500u; a < 0x560u; a += 16u)
++        fprintf(stderr, "[ptrace] label %03X: %08X %08X %08X %08X\n", a,
++                vm_read32(GCM_LABEL_GUEST_BASE + a), vm_read32(GCM_LABEL_GUEST_BASE + a + 4),
++                vm_read32(GCM_LABEL_GUEST_BASE + a + 8), vm_read32(GCM_LABEL_GUEST_BASE + a + 12));
++    for (unsigned k = s_pt_nbr > 96 ? s_pt_nbr - 96 : 0; k < s_pt_nbr; k++) {
++        const gcm_pt_ev* e = &s_pt_br[k & 255];
++        fprintf(stderr, "[ptrace] br %c %08X -> %08X put=%08X t=%llu\n", (int)e->kind, e->io, e->a, e->b, e->t);
++    }
++    for (unsigned k = s_pt_nsem > 96 ? s_pt_nsem - 96 : 0; k < s_pt_nsem; k++) {
++        const gcm_pt_ev* e = &s_pt_sem[k & 255];
++        fprintf(stderr, "[ptrace] sem %c io=%08X off=0x%X v=0x%08X t=%llu\n", (int)e->kind, e->io, e->a, e->b, e->t);
++    }
++    {
++        const unsigned n = (unsigned)s_pt_ndma;
++        unsigned shown = 0;
++        for (unsigned k = n > 16383u ? n - 16383u : 1u; k <= n; k++) {
++            const unsigned i = k & 16383u;
++            const int hit = (pea && s_pt_dma[i].ea < pea + 0x20u && s_pt_dma[i].ea + s_pt_dma[i].size > pea - 0x20u)
++                         || (s_pt_dma[i].ea >= 0x03000500u && s_pt_dma[i].ea < 0x03000560u);
++            if (hit && shown++ < 80)
++                fprintf(stderr, "[ptrace] dma img=%u pc=%05X cmd=%02X ea=%08X size=%u t=%llu\n", s_pt_dma[i].img,
++                        s_pt_dma[i].pc, s_pt_dma[i].cmd, s_pt_dma[i].ea, s_pt_dma[i].size, s_pt_dma[i].t);
++        }
++        for (unsigned k = n > 24u ? n - 24u : 1u; k <= n; k++) {
++            const unsigned i = k & 16383u;
++            fprintf(stderr, "[ptrace] lastdma img=%u pc=%05X cmd=%02X ea=%08X size=%u t=%llu\n", s_pt_dma[i].img,
++                    s_pt_dma[i].pc, s_pt_dma[i].cmd, s_pt_dma[i].ea, s_pt_dma[i].size, s_pt_dma[i].t);
++        }
++        fprintf(stderr, "[ptrace] dma total=%u hits=%u\n", n, shown);
++    }
++    fflush(stderr);
++}
++
+ /* Backlog past which the drain stops honouring one-flip-per-tick and
+  * catches up instead. Sized well above a frame's command list so a
+  * title that keeps up never sees this path. */
+@@ -1972,8 +2062,10 @@
+                 else if (m == 0x6Cu) {
+                     atomic_thread_fence(memory_order_release);
+                     vm_write32(GCM_LABEL_GUEST_BASE + (s_sema_offset & 0xFFFFu), v);
++                    gcm_pt_sem('R', io, s_sema_offset, v);
+                     labels++;
+                 } else if (m == 0x01A4u || m == 0x1D6Cu || m == 0x1D70u || m == 0x1D74u) {
++                    { static u32 ro; if (m == 0x1D6Cu) ro = v; else if (m != 0x01A4u) gcm_pt_sem('R', io, ro, v); }
+                     rsx_process_method(&s_resync_state, m, v);
+                     labels += (m == 0x1D70u || m == 0x1D74u);
+                 }
+@@ -2370,6 +2462,9 @@
+     /* NV4097 back-end write / texture-read semaphore release: the label lands
+      * inside rsx_process_method, so publish `get` past the command first, as
+      * for NV406E RELEASE. */
++    { static u32 po; if (m == 0x1D6Cu) po = v;
++      else if (m == 0x1D70u) gcm_pt_sem('B', end_off, po, v);
++      else if (m == 0x1D74u) gcm_pt_sem('T', end_off, po, v); }
+     if ((m == 0x1D70u || m == 0x1D74u) && !gcm_get_eq_put())
+         vm_write32(GCM_CONTROL_GUEST_ADDR + 4, end_off);
+     /* #466: rsx_state feeds only the legacy vtable backend. With the draw
+@@ -2787,6 +2882,7 @@
+                                  vm_read32(gcm_io2ea(s_fifo_getoff)) == w) {
+                           park_off = 0;
+                           gcm_fifo_dump_around(s_fifo_getoff);
++                          ps3_ptrace_dump("jump-park", s_fifo_getoff);
+                           gcm_fifo_resync_why("jump-park", &s_fifo_getoff, put);
+                       }
+                   }
+@@ -2795,6 +2891,7 @@
+                   break;
+               }
+               if (tgt < s_fifo_getoff) s_fifo_back_jumps++;
++              gcm_pt_br('J', s_fifo_getoff, tgt, put);
+               s_fifo_getoff = tgt;
+               /* get is the RSX's fetch pointer: a title polling it sees the
+                * GPU leave a segment as soon as the JUMP out of it is taken.
+@@ -2807,11 +2904,13 @@
+         if ((w & 3) == 2) {                    /* CALL: offset | 2 */
+             { u32 tgt = w & 0x1FFFFFFCu;
+               if (!gcm_io2ea(tgt)) { gcm_fifo_bad_branch("CALL", tgt, w); gcm_fifo_resync_why("unmapped-CALL", &s_fifo_getoff, put); break; }
++              gcm_pt_br('C', s_fifo_getoff, tgt, put);
+               s_fifo_calloff = s_fifo_getoff + 4;
+               s_fifo_getoff  = tgt; }
+             continue;
+         }
+         if (w == 0x00020000u) {                /* RET */
++            gcm_pt_br('R', s_fifo_getoff, s_fifo_calloff, put);
+             s_fifo_getoff = s_fifo_calloff;
+             s_fifo_calloff = 0;
+             continue;
+@@ -2871,6 +2970,8 @@
+                         ps3_ft_span(PS3_FT_SEMA, 0, s_sema_offset, v, s_ft_sema_t0, ps3_ft_now());
+                         s_ft_sema_t0 = 0;
+                     }
++                    if (m == 0x68u) gcm_pt_sem('A', s_fifo_getoff, s_sema_offset, v);
++                    if (m == 0x6Cu) gcm_pt_sem('L', s_fifo_getoff, s_sema_offset, v);
+                     if (m == 0x64u)      s_sema_offset = v;
+                     else if (m == 0x6Cu) {
+                         /* The RSX has fetched past a RELEASE before its
+@@ -2897,7 +2998,17 @@
+             static int blk = -1; static unsigned blk_ms;
+             if (blk < 0) { const char* e = getenv("GCM_SEMA_ACQUIRE"); blk = e ? atoi(e) : 0;
+                            const char* t = getenv("GCM_SEMA_ACQUIRE_MS"); blk_ms = t ? (unsigned)atoi(t) : 0; }
+-            if (blk) {
++            /* GCM_SEMA_BLOCK=<lo>-<hi> (hex label offsets): block on the
++             * acquires in that range only, bounded (GCM_SEMA_ACQUIRE_MS, else
++             * 2000 ms). For a title whose handshake with an SPU needs the wait
++             * (consumer clears the label before the RSX may release it again)
++             * while another of its labels cannot be blocked on yet. */
++            static u32 r_lo, r_hi; static int r_init;
++            if (!r_init) { r_init = 1; const char* e = getenv("GCM_SEMA_BLOCK");
++                if (e) { char* d; r_lo = (u32)strtoul(e, &d, 16); if (*d == '-') r_hi = (u32)strtoul(d + 1, 0, 16); } }
++            const int in_range = s_sema_offset >= r_lo && s_sema_offset < r_hi;
++            if (blk || in_range) {
++                const unsigned limit_ms = (in_range && !blk_ms) ? 2000u : blk_ms;
+                 /* GCM_SEMA_ACQUIRE_MS=<ms>: a bounded wait. The hardware waits
+                  * for ever; an emulated producer that never comes (a boot-time
+                  * label nobody services yet) would wedge the drain, so after
+@@ -2908,13 +3019,13 @@
+                 extern unsigned long long ps3_ms_now(void);
+                 const unsigned long long now = ps3_ms_now();
+                 if (!b_t0 || b_off != s_sema_offset || b_val != v) { b_off = s_sema_offset; b_val = v; b_t0 = now; }
+-                if (!blk_ms || now - b_t0 < blk_ms) {
++                if (!limit_ms || now - b_t0 < limit_ms) {
+                     if (PS3_FT_ON() && !s_ft_sema_t0) s_ft_sema_t0 = ps3_ft_now();
+                     sem_blocked = 1; break;
+                 }
+                 { static int tn; if (PS3_LOG_FIRST(tn, 12))
+                     fprintf(stderr, "[SEMA] acquire off=0x%X == 0x%08X gave up after %u ms (label 0x%08X)\n",
+-                            s_sema_offset, v, blk_ms, vm_read32(la)); }
++                            s_sema_offset, v, limit_ms, vm_read32(la)); }
+                 b_t0 = 0;
+             }
+         }
+--- a/runtime/spu/spu_dma.h
++++ b/runtime/spu/spu_dma.h
+@@ -247,6 +247,8 @@
+         spu_lockline_unlock();
+         return 0;
+     }
++    { extern void ps3_ptrace_dma(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);   /* GCM_PARKTRACE */
++      ps3_ptrace_dma((uint32_t)ea, size, cmd, (uint32_t)spu->pc & SPU_LS_MASK, (uint32_t)spu->image_id); }
+     /* SPU_DMA_WATCH=<hex>: report any transfer whose destination RANGE covers
+      * this guest address. A DMA landing in the loaded ELF image is always a
+      * bug, and it is invisible to the sampling traces -- YDKJ had an SPU job
+@@ -1422,6 +1424,12 @@
+               if (now - s_since >= s_secs * 1000u) {
+                   s_rep = 0; s_since = 0;   /* re-arm: the chain may run this job again */
+                   extern void spu_halt(spu_context*);
++                { extern void ps3_ptrace_dump(const char*, uint32_t); ps3_ptrace_dump("spu-halt", 0); }
++                /* SPU_HALT_DUMP=<file>: local store + registers of the halted poller. */
++                { const char* hp = getenv("SPU_HALT_DUMP");
++                  if (hp) { FILE* hf = fopen(hp, "wb");
++                      if (hf) { fwrite(spu->ls, 1, SPU_LS_MASK + 1u, hf); fwrite(spu->gpr, 1, sizeof spu->gpr, hf); fclose(hf);
++                          fprintf(stderr, "[spu-halt-dump] pc=0x%05X lsa=0x%05X -> %s\n", (uint32_t)spu->pc & SPU_LS_MASK, lsa, hp); } } }
+                   fprintf(stderr, "[spu-dma] img=%d pc=0x%05X: %u identical "
+                           "transfers to ea=0x%08X -- halting the SPU\n",
+                           spu->image_id, (uint32_t)spu->pc & SPU_LS_MASK, s_limit,
