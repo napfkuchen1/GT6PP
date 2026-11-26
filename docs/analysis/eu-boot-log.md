@@ -979,3 +979,12 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   1120 s at ~40 FPS, X no effect. Snapshot snap_01110 (tid49-52 movie threads in lwcond wait).
 - Post-movie hang: tid48 joins tid52 (8AE564), tid52 waits at 8AE30C after cellDmuxResetStream (NID 5D345DE9) for
   DEMUX_DONE. Fix patches/gt6-a63-dmux-reset-done.patch; work/play_a63done_20261126_115546: ResetStream, vdec EndSeq/Close, dmux Close, Home menu.
+
+
+## Arbeit64 (2026-11-26) tutorial flow without skip overlay (I2)
+- play_a64tut: movie ends, race assets c204 + car/0044/0020 load, TutorialDialog: welcome popups then name entry.
+- Window alternates frame by frame: name-entry image (80% non-black, identical md5) vs dark/saturated 3D frames (3 flip buffers).
+- snap_01384: all three guest display buffers hold dark 3D only, no UI (work/_a64/fb.py, fb3.png). SPU_FB=1 run looks the same.
+- Cross on a name field calls cellOskDialog; DisableDimmer/SetKeyLayoutOption/ExtSetInitialScale/ForceFinish NIDs unregistered (harmless).
+- OSK fixed: play_a64osk two full Load/Unload cycles, cursor moves Vorname->Nachname; O.K. unreachable with empty result,
+  so empty results now return PS3_OSK_TEXT. play_a64name: no OSK opened after popups, state hidden by flicker (unverified).

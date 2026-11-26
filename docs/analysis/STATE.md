@@ -11,22 +11,21 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
 - [x] G1 all Home tiles drawn after the first car buy (work/_a55/home_after.png)
-- [x] I1a opening movie decodes and shows on screen (A61: ATRAC PTS/size + video queue fix, patches/gt6-a61-*;
-  work/_a61/movie.png = PD logo, play_a61mov_20261126_101824)
-- [x] I1b movie no longer freezes at ~4 s: AVC frameRateCode was 0 (=23.976), now 60/s (A63, patches/gt6-a63-*;
-  play_a63frc_20261126_113049: 2550+ pictures at 42 s, old stop 199, frame work/_a63/a63frc.png)
-- [x] I1c movie ends and the menu follows: cellDmuxResetStream always answers DEMUX_DONE now (A63,
-  patches/gt6-a63-dmux-*; work/play_a63done_20261126_115546, work/_a63/after_done.png = Home menu)
+- [x] I1a opening movie decodes and shows (A61, patches/gt6-a61-*; work/_a61/movie.png)
+- [x] I1b movie no longer freezes: AVC frameRateCode fixed (A63; play_a63frc_20261126_113049)
+- [x] I1c movie ends, menu follows: demux reset answers DEMUX_DONE (A63; play_a63done_20261126_115546)
 - [ ] I3 movie audio: ATRAC3plus decoder wired (A61 log "ATRAC3plus audible"), not verified by ear
-- [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
+- [ ] I2 tutorial/intro flow without skip overlay: movie -> race c204 loads + TutorialDialog name entry (A64,
+  play_a64tut_20261126_120625); cellOskDialog stub never answered, now does (play_a64osk_20261126_124112)
+- [ ] W5 workaround: cellOskDialog has no input UI, auto-confirms with initial text or PS3_OSK_TEXT (Player)
+- [ ] G8 tutorial race: window flickers between a stale UI frame and a broken 3D frame, dialog state unreadable
+  (A64; guest buffers 0/0x660000/0xCC0000 hold only dark 3D, work/_a64/fb3.png)
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
-- [x] C2 car view after FIT RS renders, pad works, buy completes (play_a54retire_20261126_052113, work/_a54/buy7.png)
-- [x] G4 device hung = upload buffer freed while its copy was in the open command list (d3d_retire; same run: 0 DEVICE REMOVED)
-- [x] G6a showroom car is drawn into the offscreen scene surface (A56 views patch; work/play_a56cap_20261126_063223 frame_01/rt_01F00000.bmp)
-- [x] G6b NV3089 reads host RTs back into guest memory (A57 rt-readback patch; work/play_a57cap_20261126_065731
-  run.log [NV3089RB] 444 copies, non-zero pixels)
-- [x] G6c consumer of 0x602A0000: SPURS wid=5 (image 5) reads the correct car image and writes the display buffers
-  (play_a57dma_20261126_072632 [dma-range] reader put img=5; work/_a57/spuget.png)
+- [x] C2 car view after FIT RS renders, buy completes (play_a54retire_20261126_052113)
+- [x] G4 device hung: upload buffer freed too early (d3d_retire; same run)
+- [x] G6a showroom car drawn into the offscreen surface (A56; play_a56cap_20261126_063223)
+- [x] G6b NV3089 reads host RTs back into guest memory (A57; play_a57cap_20261126_065731)
+- [x] G6c SPURS wid=5 reads the car image, writes display buffers (play_a57dma_20261126_072632)
 - [ ] G6d showroom washed out (parked A58, bypass: SPU upload off, SPU_FB=1 shows it): job input 0x60579000 =
   NV3089 of RT 0x022C0000 is noise (guest VRAM seed), also with split surface slots (a58 patch)
 - [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
@@ -58,8 +57,9 @@ Car repro: play.py start, work/_a53/to_home2.sh, work/_a53/dealer.py.
 - (A46) Main menu reached: GT Mode home, Ver. 1.22. Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-I2: boot with the opening movie and without the tutorial skip (overlay gt6_vol_a32/a35 instead of a40t): does the
-tutorial race run through to the menu? If it stalls: snapshot, snap_walk bt, fix.
+G8 first: map flipped display buffer 0/1/2 to the host image presented (rsx_d3d12_backend.c, spu_fb_upload only
+handles buffer 0; SPU post-process writes guest VRAM, G6d). Then finish I2: name entry (to_name.sh in work/_a64,
+overlay a40 = movie skipped), O.K., race, Home. PS3_OSK_TEXT default is built, not yet exercised.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (A50-52) = attract demo.

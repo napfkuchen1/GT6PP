@@ -1,0 +1,104 @@
+--- a/libs/misc/cellOskDialog.c
++++ b/libs/misc/cellOskDialog.c
+@@ -13,7 +13,9 @@
+ 
+ #include "cellOskDialog.h"
+ #include "osk_native.h"
++#include "../system/cellSysutil.h"
+ #include <stdio.h>
++#include <stdlib.h>
+ #include <string.h>
+ #include "../../runtime/ppu/ppu_memory.h"   /* vm_write*: guest EA -> host, byte-swapped */
+ #include "../guest_struct.h"   /* GUEST_EA, vm_read/vm_write: guest EA -> host */
+@@ -95,6 +97,15 @@
+     }
+ }
+ 
++/* Queue a dialog status for every sysutil callback slot; delivered from the
++ * guest's next cellSysutilCheckCallback. */
++static void osk_stub_event(u32 status)
++{
++    printf("[cellOskDialog] sysutil status=0x%X\n", status);
++    for (int slot = 0; slot < CELL_SYSUTIL_MAX_CALLBACKS; slot++)
++        cellSysutilQueueEvent(slot, status, 0);
++}
++
+ /* ---------------------------------------------------------------------------
+  * API implementations
+  * -----------------------------------------------------------------------*/
+@@ -133,9 +144,8 @@
+ #endif
+     (void)container; (void)dialogParam;
+ 
+-    if (!s_osk_initialized)
+-        return CELL_OSK_ERROR_NOT_INITIALIZED;
+-
++    /* No s_osk_initialized check: the guest API has no Init call, so GT6
++     * never makes one and LoadAsync has to work on its own. */
+     if (s_osk_loaded)
+         return CELL_OSK_ERROR_DIALOG_ALREADY_LOADED;
+ 
+@@ -173,15 +183,33 @@
+         s_result_length = (u32)strlen(s_default_response);
+         printf("[cellOskDialog] Returning default response: \"%s\"\n",
+                s_default_response);
+-    } else if (init_ea) {
++    } else if (init_len) {
+         /* Copy initial text as the response */
+         memcpy(s_result_text, host_init,
+                (init_len + 1) * sizeof(CellOskDialogChar));
+         s_result_length = init_len;
+     } else {
+-        s_result_length = 0;
++        /* Nothing to confirm and no way to type: answer with PS3_OSK_TEXT so
++         * that fields which require input (player name) can be passed. */
++        const char* t = getenv("PS3_OSK_TEXT");
++        if (!t || !*t) t = "Player";
++        osk_ascii_to_utf16(t, s_result_text, CELL_OSK_MAX_TEXT_LENGTH);
++        s_result_length = (u32)strlen(t);
++        if (s_result_length > CELL_OSK_MAX_TEXT_LENGTH)
++            s_result_length = CELL_OSK_MAX_TEXT_LENGTH;
++    }
++    {   /* honour the field's own limit */
++        u32 limit = info_ea ? vm_read32(info_ea + OSKIF_O_LIMIT_LENGTH) : 0;
++        if (limit && s_result_length > limit) {
++            s_result_length = limit;
++            s_result_text[limit] = 0;
++        }
+     }
+ 
++    /* There is no keyboard UI: report it opened and confirmed at once, so the
++     * caller takes the initial text and unloads it. */
++    osk_stub_event(0x502);   /* CELL_SYSUTIL_OSKDIALOG_LOADED */
++    osk_stub_event(0x503);   /* CELL_SYSUTIL_OSKDIALOG_FINISHED */
+     return CELL_OK;
+ }
+ 
+@@ -190,9 +218,6 @@
+ #ifdef PS3RECOMP_NATIVE_OSK
+     return osk_native_unload(GUEST_EA(result));
+ #endif
+-    if (!s_osk_initialized)
+-        return CELL_OSK_ERROR_NOT_INITIALIZED;
+-
+     if (!s_osk_loaded)
+         return CELL_OSK_ERROR_DIALOG_NOT_LOADED;
+ 
+@@ -212,6 +237,7 @@
+     }
+ 
+     s_osk_loaded = 0;
++    osk_stub_event(0x504);   /* CELL_SYSUTIL_OSKDIALOG_UNLOADED */
+     return CELL_OK;
+ }
+ 
+@@ -271,9 +297,6 @@
+ #ifdef PS3RECOMP_NATIVE_OSK
+     return osk_native_get_text(GUEST_EA(result));
+ #endif
+-    if (!s_osk_initialized)
+-        return CELL_OSK_ERROR_NOT_INITIALIZED;
+-
+     if (!result)
+         return CELL_OSK_ERROR_INVALID_PARAMETER;
+ 
