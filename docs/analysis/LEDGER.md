@@ -49,6 +49,7 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - A57: that job loads code main 0x01477000 -> LS 0x4000; its second image 0x60579000 (480x270) is white at GET time, output matches it (play_a57fb_20261126_082048, work/_a57/bloom.png).
 - A57: NV0039 (subch 1) was unimplemented; GT6 issues small local->local copies near 0x04CE-0x04D1; patches/gt6-a57-nv0039.patch (NV0039_DBG); play_a57cap_20261126_070950.
 - A58: scratch surface 0x022C0000/8192 is bound as RGBA16F (0x14B) and A8R8G8B8 (0x148); offset-keyed RT slot was recreated twice per frame and reseeded from guest memory; patches/gt6-a58-rt-format-slots.patch (play_a58rt_20261126_083427 vs play_a58fix_20261126_083937).
+- A58: opening movie: 1.22 tv_10006 .pam served and parsed; chain stops at unregistered cellDmuxOpenEx/QueryAttr/QueryEsAttr/ResetEs and cellPamfVerify/GetHeaderSize2/GetStreamOffsetAndSize/ReaderGetEsFilterId/ReaderGetStreamTypeAndChannel (play_a58mov_20261126_084501).
 
 ## 4. Refuted/symptom (do NOT repeat)
 - (A54) "A car-view draw/shader loop hangs the GPU": refuted, DRED shows the first copy of the list reading a freed buffer.

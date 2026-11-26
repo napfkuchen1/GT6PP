@@ -12,7 +12,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
 - [x] G1 all Home tiles drawn after the first car buy (work/_a55/home_after.png)
-- [ ] I1 opening movie: cellPamf layout fixed (A50, patches/gt6-a50-pamf-header.patch, not run); cellDmux is a stub, no FFmpeg headers
+- [ ] I1 opening movie: .pam served + parsed (play_a58mov_20261126_084501); 9 cellDmux/cellPamf imports unregistered,
+  cellDmux is a stub, cellVdec lacks FFmpeg headers
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
 - [x] C2 car view after FIT RS renders, pad works, buy completes (play_a54retire_20261126_052113, work/_a54/buy7.png)
@@ -54,9 +55,9 @@ sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-M1 next item: I1 opening movie. cellDmux is a stub (needs PAMF demux), cellVdec needs FFmpeg headers
-(avcodec-63/avutil-61; DLLs in tools/RPCS3). First run check: PAMF patch on a vol without skipopening, GT6_PFS_TRACE=1.
-G6d later: per-op surface format into manifest (op1231-1239 on 0x022C0000), then which slot NV3089 must read.
+Next: I1. Add the unregistered imports (LEDGER grep A58), then a real PAMF demux in
+libs/codec/cellDmux.c (guest callbacks, AU info in guest memory). Repro: sh work/_a58/movie.sh.
+G6d later: surface format per op in manifest.txt, then which slot NV3089 reads.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52) = attract demo. Post-save movie stall (Arbeit40).
