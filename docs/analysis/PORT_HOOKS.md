@@ -12,7 +12,7 @@ Source 1.00: `git show 6697a6d:<path>` (ARCHIV/v100 deleted). 1.22 anchors: tool
 | boot.adc gates | yes | scripts/patch-boot-adc.py (1.22 offsets) | dialogs skipped (notut runs until ProgressDialog) |
 | ZWAP gate (cellMusicInitialize2 arg2=pointer to CELL_OK) | host side yes (stubs.cpp:1325) | - | in 1.22 run NO cellMusicInitialize2 call (0 log lines): guest never reaches the point |
 | PFS cache fill b5b260 (fill userdb cache) | p4 ported (GT6_NO_CACHEFILL), probe cf 90 s: no effect (5774 flips, no open) | candidate func_00C1FE74: A26510->AE6C34 @C20368, alloc AE6FE8, obj+0x28/+0x2C/+0x30, B5A944->C1F604 | initUserDB never reached in 1.22 (no open userdb0101.dat) -> relevant only after quit cause |
-| FileDeviceHost flush (A08A74/A08B8C) | YES p3 | AC7418 init / AC75B0 flush | CAUSAL: quit ~30 s gone (fdf 5769 flips; GT6_NO_FDFLUSH=1 -> quit) |
+| FileDeviceHost flush (A08A74/A08B8C) | YES p3 | AC7418 init / AC75B0 flush | REMOVED Arbeit51: AC75B0 is the reader thread entry; guard killed it at boot (dealer-load deadlock) |
 | H113 guard (A25C64), PackageNullGuard (5F81B0) | NO | 1.22 anchor open | not checked |
 | SPURS job walker, a3 title color, AdjustScreen REALFLAG | unclear | host side (gt6/src, patches/gt6-h46*, gt6-rsx-ignore-stale-a3) | AdjustScreen never reached in 1.22 |
 

@@ -113,25 +113,16 @@ for p in sorted(root.glob("ppu_recomp_*.cpp")):
         p.write_text(s, encoding="latin-1")
 print("part2 hooks present", len(done2), "/", len(ENTRY) + 2, "missing", sorted((set(ENTRY) | {"sync", "pump"}) - done2))
 
-# ---- part 3: FileDeviceHost flush guard (1.00 A08A00 -> 1.22 AC7418, Flush A08B8C -> AC75B0; fuzzy 2026-11-23) ----
-# Runtime off-switch: env GT6_NO_FDFLUSH=1 (checked at call time).
-INIT_ANCHOR = "        ctx->lr = 0x00AC74DC; func_00AAA8EC(ctx); DRAIN_TRAMPOLINE(ctx);\n"
-INIT_CLEAR = "        if (!getenv(\"GT6_NO_FDFLUSH\")) vm_write32(ctx->gpr[29] + 0x1C2C, 0); /* local stream destroyed */\n"
-FLUSH_KEY = "void func_00AC75B0(ppu_context* ctx) {\n    PPU_MM_SNAP\n"
-FLUSH_GUARD = "        if (!getenv(\"GT6_NO_FDFLUSH\") && vm_read8(ctx->gpr[3] + 0x1C29) == 0) return; /* no read active */\n"
-done3 = set()
+# ---- part 3: removed (Arbeit51). 1.22 AC75B0 is the PFS pipeline READER THREAD entry, not a flush; the early
+# return killed that thread at boot and reads waiting on it hung forever (dealer load). Strip old injected lines.
+OLD3 = ('        if (!getenv("GT6_NO_FDFLUSH") && vm_read8(ctx->gpr[3] + 0x1C29) == 0) return; /* no read active */
+',
+        '        if (!getenv("GT6_NO_FDFLUSH")) vm_write32(ctx->gpr[29] + 0x1C2C, 0); /* local stream destroyed */
+')
 for p in sorted(root.glob("ppu_recomp_*.cpp")):
     s = p.read_text(encoding="latin-1"); o = s
-    if "void func_00AC7418(" in s and INIT_ANCHOR in s:
-        done3.add("init")
-        if INIT_ANCHOR + INIT_CLEAR not in s: s = s.replace(INIT_ANCHOR, INIT_ANCHOR + INIT_CLEAR, 1)
-    if FLUSH_KEY in s:
-        done3.add("flush")
-        if FLUSH_KEY + FLUSH_GUARD not in s: s = s.replace(FLUSH_KEY, FLUSH_KEY + FLUSH_GUARD, 1)
-    if s != o:
-        if "<stdlib.h>" not in s and "<cstdlib>" not in s: s = s.replace(INC, INC + "#include <stdlib.h>\n", 1)
-        p.write_text(s, encoding="latin-1")
-print("part3 hooks present", sorted(done3), "/ init,flush")
+    for line in OLD3: s = s.replace(line, "")
+    if s != o: p.write_text(s, encoding="latin-1"); print("part3 stripped", p.name)
 
 # ---- part 4: file-cache fill (1.00 func_00B5B260 -> 1.22 func_00C1FE74; fuzzy by A26510->AE6C34, B5A944->C1F604, F7666C->109DCA8) ----
 # Env off-switch GT6_NO_CACHEFILL=1. Anchor: after AE6C34 result test, success path jumps to loc_00C20488.

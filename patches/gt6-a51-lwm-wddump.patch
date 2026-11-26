@@ -1,0 +1,42 @@
+--- a/runtime/ppu/ppu_sysprx.cpp
++++ b/runtime/ppu/ppu_sysprx.cpp
+@@ -304,7 +304,19 @@
+                     (unsigned long long)ctx->thread_id, lwm, h, held, vm_read32(lwm + LWM_OWNER), g_lwmw_lr, g_lwmw_sp, g_lwmw_chain); fflush(stderr); }
+             ppu_thread_note_block(ctx->thread_id);
+             long long _blk_start = lwm_trace() ? lwm_now_us() : 0;
+-            if (!lwm_acquire(sl0, timeout_us)) {   /* honor the timeout: ETIMEDOUT, no acquire */
++            if (!timeout_us) {   /* infinite wait: report the owner while it stays blocked */
++                int waited = 0;
++                while (!lwm_acquire(sl0, 30000000ull)) {
++                    waited += 30;
++                    if (waited <= 120 || (waited % 120) == 0) {
++                        fprintf(stderr, "[LWM-LONG] tid=%llu lwm=0x%08X waited=%ds owner=%u recur=%u words=%08X %08X %08X %08X %08X %08X lr=%08X\n",
++                            (unsigned long long)ctx->thread_id, lwm, waited, vm_read32(lwm + LWM_OWNER), vm_read32(lwm + LWM_RECUR),
++                            vm_read32(lwm), vm_read32(lwm + 4), vm_read32(lwm + 8), vm_read32(lwm + 12), vm_read32(lwm + 16), vm_read32(lwm + 20),
++                            (uint32_t)ctx->lr);
++                        fflush(stderr);
++                    }
++                }
++            } else if (!lwm_acquire(sl0, timeout_us)) {   /* honor the timeout: ETIMEDOUT, no acquire */
+                 if (lwm_trace()) fprintf(stderr, "[LWM-CONVOY] tid=%llu TIMED-OUT on lwm=0x%08X after %lldus (ETIMEDOUT, retry)\n",
+                     (unsigned long long)ctx->thread_id, lwm, lwm_now_us() - _blk_start);
+                 ctx->gpr[3] = (uint64_t)(int64_t)(int32_t)0x8001000Bu;
+--- a/runtime/ppu/ppu_loader.cpp
++++ b/runtime/ppu/ppu_loader.cpp
+@@ -3552,6 +3552,16 @@
+         Sleep((DWORD)((i ? t[i] - t[i-1] : t[0]) * 1000));
+         fprintf(stderr, "[WATCHDOG] sample at %ds\n", t[i]);
+         ppu_report_guest_lrs_ex(i & 1 ? "b" : "a");
++        /* PS3_WD_DUMP=<hexaddr>:<hexlen>[,...]: guest words at each sample */
++        for (const char* d = getenv("PS3_WD_DUMP"); d && *d; ) {
++            char* e = 0; uint32_t a = (uint32_t)strtoul(d, &e, 16);
++            uint32_t len = (*e == ':') ? (uint32_t)strtoul(e + 1, &e, 16) : 0x40;
++            for (uint32_t o = 0; o < len; o += 16)
++                fprintf(stderr, "[WDDUMP] %08X: %08X %08X %08X %08X\n", a + o, vm_read32(a + o),
++                        vm_read32(a + o + 4), vm_read32(a + o + 8), vm_read32(a + o + 12));
++            d = (*e == ',') ? e + 1 : 0;
++        }
++        fflush(stderr);
+     }
+     return 0;
+ }
