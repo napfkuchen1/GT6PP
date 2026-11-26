@@ -744,10 +744,11 @@ int main(int argc, char* argv[])
      * then skips the label release an SPU job polls (img 5, 0x03000530) and
      * the SPU repeat guard halts it. Wait longer; the env var still wins. */
     if (!getenv("GCM_PARK_GRACE_MS")) _putenv_s("GCM_PARK_GRACE_MS", "5000");
-    /* Labels 0x50..0x55 guard the display-list segments: the RSX waits for 0,
-     * releases 1, and SPU img 5 waits for 1 and writes 0. Without the RSX wait
-     * a release overwrites an unconsumed one and the SPU polls forever. */
-    if (!getenv("GCM_SEMA_BLOCK")) _putenv_s("GCM_SEMA_BLOCK", "500-560");
+    /* Labels 0x4E..0x55 guard the display-list segments (0x4E seen in the race):
+     * the RSX waits for 0, releases 1, and SPU img 5 waits for 1 and writes 0.
+     * Without the RSX wait a release overwrites an unconsumed one and the SPU
+     * polls forever. */
+    if (!getenv("GCM_SEMA_BLOCK")) _putenv_s("GCM_SEMA_BLOCK", "4E0-560");
 #endif
 
     if (int32_t rc = vm_init()) {
