@@ -964,3 +964,16 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - ADD398 sites FD7100/FD748C are reset/restart paths (cellAdecStartSeq near FD7464), FD3044 is a byte copy loop.
 - Mixer: 187.5 blocks/s, port output audible only ~65 s (menu) then silent after the movie audio ran out.
 - Not the release site: 8AB5xx-8AB7xx (pause/volume loops, 8AAFC0 = volume fade), 8A9948 (frame size getter).
+
+## A63 movie freeze solved: AVC frameRateCode (play_a63mov_20261126_112422, play_a63frc_20261126_113049)
+
+- VDEC_TIMING=1 before the fix: decode 27 ms per 30 AUs, store 4 ms, so decoding is not too slow. Pictures taken every
+  1245 ms per 30 = 24.0/s for a 59.94 stream, same with PPU_ONECORE=0 at 62 FPS (play_a63free_*): pacing, not load.
+- Cause: cellVdecGetPicItem left CellVdecAvcInfo.frameRateCode (+0x1C, RPCS3 layout) at 0 = 23.976.
+- Fix: duration measured from two stamped AUs, written as frameRateCode (+0x12/+0x13/+0x1B/+0x1D flags set) and used
+  for synthesized PTS (patches/gt6-a63-vdec-avc-framerate.patch).
+- After: 30 pictures per ~500 ms (60/s), PTS step 1501.5, 2550+ pictures at 42 s (old stop 199).
+- Note: A61 had measured ticks only for PTS; without the rate code the player still paced at 23.976.
+- Full run play_a63full2_20261126_113451: movie to PTS 24788165 (~274 s, pic 16470+, video AU 16500), then
+  cellDmux ResetStream, cellAdec EndSeq, cellVdec StartSeq (no vdec EndSeq), autosave, GT logo loading screen to
+  1120 s at ~40 FPS, X no effect. Snapshot snap_01110 (tid49-52 movie threads in lwcond wait).

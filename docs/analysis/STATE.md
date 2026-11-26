@@ -13,8 +13,10 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] G1 all Home tiles drawn after the first car buy (work/_a55/home_after.png)
 - [x] I1a opening movie decodes and shows on screen (A61: ATRAC PTS/size + video queue fix, patches/gt6-a61-*;
   work/_a61/movie.png = PD logo, play_a61mov_20261126_101824)
-- [ ] I1b movie freezes after ~4 s: display stops after 199 pictures, video ES ring (4.6 MB) full, demux blocks,
-  audio ends at AU 188 (play_a61mov_20261126_100927, _102655)
+- [x] I1b movie no longer freezes at ~4 s: AVC frameRateCode was 0 (=23.976), now 60/s (A63, patches/gt6-a63-*;
+  play_a63frc_20261126_113049: 2550+ pictures at 42 s, old stop 199, frame work/_a63/a63frc.png)
+- [ ] I1c menu after the movie: movie ends (~274 s, play_a63full2_20261126_113451, demux ResetStream + adec
+  EndSeq), then GT logo loading screen >600 s, no menu
 - [ ] I3 movie audio: ATRAC3plus decoder wired (A61 log "ATRAC3plus audible"), not verified by ear
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
@@ -55,11 +57,9 @@ Car repro: play.py start, work/_a53/to_home2.sh, work/_a53/dealer.py.
 - (A46) Main menu reached: GT Mode home, Ver. 1.22. Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-I1b (A62, snapshot work/play_a62mov_20261126_110909/snap_00248; chain in eu-boot-log.md A62): frame ring 62400148
-full 4/4 (tid49 waits in 8AA25C), PCM ring 624001A4 empty, demux+audio at PTS 8.9 s, newest frames 4.8 s: video is
-~4 s late. Find who releases frame ring slots (player 624007D0, mutex +0x30, ring +0x78; xref +0x78 readers in
-next: callers of 8A9AA0 at 8AB8B0, 8AB970, 8AC0F4) and its clock. Else time decode.
-
+I1c (snapshot snap_01110 in that run): after adec EndSeq the player calls vdec StartSeq again, never EndSeq; movie
+threads tid49-52 stay alive. Walk 8AC5F8/8AA794/8AC788 + the caller of StartSeq (end condition: SEQDONE? last
+pictures? PRX NID 0xA7A94892 unresolved, run.log.err). If the player is idle by design, walk the script thread.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (A50-52) = attract demo.
