@@ -908,3 +908,13 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
 - a51jt (fiber depth + jump tables, grace 60000, 2x 840 s): 0 null-call, 0 unresolved, 0 recursion cap, 0 LWM-LONG.
   r1 home -> dealer press -> GT loading screen until end (work/_a51_jt1.png, flips 24118). r2 SPU img 5 halt at 19055 flips
   with 0 FIFO resync: the self-JUMP park is never patched within 30 s (SPU repeat guard), so the stall is a true wait.
+
+## Arbeit52 (2026-11-26)
+- scripts/play.py: interactive control of one gt6.exe; PrintWindow capture works with the D3D12 window; PAD_FILE press taken in 0.1 s.
+  PS3_WD_FILE (patches/gt6-a52-wd-file.patch) gives watchdog samples / snapshots on demand.
+- Boot to Home menu 160 s (timed pad script: last key 395 s), dealer entered at ~163-185 s instead of 560 s.
+- a52 (t 202..897 s): dealer loading logo, flips continue, 1308 [fs] lines unchanged t=412..897 s.
+- a52b/a52c dumps: tid30 chain changes between samples (CD2B70<92269C sleep once, mostly interpreter code); a52c fs=1346 fixed.
+- a52vm (GT6_A40VM=180): tid1 task BB90 loops script lines 116-124; this run alone ended in a render stall:
+  [FIFODUMP] bad word 3E000000 at io 0xD5015C -> unmapped-JUMP resync, flips +5 in 24 s (one occurrence, other runs 0).
+- a52c snapshot tid30 stack objects reference only "GT-ALL" (+0x2A4) and "leavedemo" (+0x4C4) (work/_a52/stackstr.py <snapdir> 30).

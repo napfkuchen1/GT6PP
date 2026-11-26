@@ -47,3 +47,5 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 - 2026-11-24 Arbeit22: heap fix (512MB mmapper alignment) + GT6_PUMP_ITERS=0 + main blocked after MGOM.start => boot project renders 'SCE presents' (probe_a22cap_20261124_171454_1). Main-exit cause: root task legit finishes; oracle main blocks (unknown why).
 - (Arbeit51) 1.22 AC75B0 = PFS pipeline reader THREAD entry (object 0177CE00, tid6), not a flush; old p3 guard killed it at boot -> dealer-load deadlock (LWM-LONG owner 41). Removed. Evidence a51thr/a51dump/a51fix.
 - A51: jump tables with the base loaded before a branch into the loop (FE1CAC, 1000B30) were lifted as indirect calls (cases skipped); log sign "unresolved indirect call" to mid-function addresses (patches/gt6-a51-jt-loop-base.patch).
+
+- A52: dealer load hang is not a blocked wait: tid30 keeps executing interpreter code (different lr per sample), no new [fs] opens for >250 s (play_a52c wd_00233..00533, snap_00539).
