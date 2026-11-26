@@ -1,0 +1,306 @@
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -159,6 +159,8 @@
+                          * shading G-buffers write 3-4 targets in one pass. */
+     u32 rt_w, rt_h;     /* surface clip dims at record time (offscreen RT size) */
+     u32 rt_fmt;         /* RSX surface colour format (SET_SURFACE_FORMAT [4:0]) */
++    u32 rt_pitch;       /* colour surface pitch (bytes) */
++    int tex_view[16];   /* pre-pass: RtView read through unit u, -1 = none */
+     u32 zeta_off;       /* depth surface (SET_SURFACE_ZETA_OFFSET) when the surface has one */
+     int no_color;       /* colour target NONE with a depth surface: a depth-only pass */
+     /* Guest viewport rect at draw time (target pixels). Sub-viewport layouts
+@@ -190,6 +192,8 @@
+     u32                   dxgi;        /* DXGI_FORMAT of the resource */
+     D3D12_RESOURCE_STATES st;          /* tracked resource state */
+     int                   used;        /* referenced this frame */
++    u32                   pitch;       /* guest pitch of a linear surface, 0 = unknown */
++    u32                   wgen;        /* bumped for every op that targets it */
+ } OffRT;
+ #define MAX_OFF_RTS  128 /* titles with bloom pyramids and cubemap RTT passes allocate 20+ surfaces */
+ 
+@@ -1890,18 +1894,20 @@
+                         r->cc[0], r->cc[1], r->cc[2], r->cc[3]);
+             else {
+                 fprintf(mf, "op%03u DRAW  rt=0x%08X mrt=0x%X/0x%X/0x%X vp=%u,%u,%ux%u fp=0x%08X vs=%d "
+-                            "n=%u cmask=%X blend=%d bk=0x%X t0=0x%08X t1=0x%08X t2=0x%08X t3=0x%08X zeta=0x%08X zs=0x%llX\n",
++                            "n=%u cmask=%X blend=%d bk=0x%X t0=0x%08X t1=0x%08X t2=0x%08X t3=0x%08X zeta=0x%08X zs=0x%llX surf=%ux%u/%u\n",
+                         d, r->rt_off, r->rt_mrt[0], r->rt_mrt[1], r->rt_mrt[2],
+                         r->vp_x, r->vp_y, r->vp_w, r->vp_h,
+                         r->fp_addr, r->vs_idx, r->vertex_count, r->cmask, r->blend, r->blend_key,
+-                        r->tex[0].raw, r->tex[1].raw, r->tex[2].raw, r->tex[3].raw, r->zeta_off, (unsigned long long)r->zs_key);
+-                for (int u = 0; u < 4; u++)
++                        r->tex[0].raw, r->tex[1].raw, r->tex[2].raw, r->tex[3].raw, r->zeta_off, (unsigned long long)r->zs_key,
++                        r->rt_w, r->rt_h, r->rt_pitch);
++                for (int u = 0; u < 16; u++)
+                     if (r->tex[u].set)
+-                        fprintf(mf, "      t%d off=0x%08X fmt=0x%02X (%s%s) %ux%u remap=0x%04X\n", u,
++                        fprintf(mf, "      t%d off=0x%08X fmt=0x%02X (%s%s) %ux%u remap=0x%04X pitch=%u view=%d rt=%d\n", u,
+                                 r->tex[u].off, r->tex[u].fmt,
+                                 (r->tex[u].fmt & 0x20) ? "LN" : "SZ",
+                                 (r->tex[u].fmt & 0x40) ? ",NR" : "",
+-                                r->tex[u].w, r->tex[u].h, r->tex[u].ctrl1 & 0xFFFF);
++                                r->tex[u].w, r->tex[u].h, r->tex[u].ctrl1 & 0xFFFF,
++                                r->tex[u].pitch, r->tex_view[u], r->tex_rt[u]);
+                 /* RSX_CAP_VHASH=1: hash of the decoded vertices (attr0) per draw,
+                  * so two frames of a static scene can be compared. */
+                 if (!r->is_clear && s_d3d.vp_vb_mapped && getenv("RSX_CAP_VHASH")) {
+@@ -4000,6 +4006,28 @@
+     }
+ }
+ 
++/* A texture that reads part of a linear render target (a sub-address, or a
++ * smaller declared size at its start) gets its own resource of the declared
++ * size, refreshed by a region copy whenever the surface was written since. */
++#define MAX_RT_VIEWS 48
++typedef struct {
++    ID3D12Resource* res;
++    D3D12_RESOURCE_STATES st;
++    int parent;
++    u32 x, y, w, h, wgen;
++    u64 last_frame;
++} RtView;
++static RtView s_rt_view[MAX_RT_VIEWS];
++
++static void rt_view_drop(int parent)
++{
++    for (int i = 0; i < MAX_RT_VIEWS; i++)
++        if (s_rt_view[i].res && s_rt_view[i].parent == parent) {
++            wait_for_gpu();
++            d3d_retire(s_rt_view[i].res); s_rt_view[i].res = NULL;
++        }
++}
++
+ static int off_rt_find(u32 off)
+ {
+     if (!off) return -1;
+@@ -4010,7 +4038,7 @@
+ 
+ /* Ensure an RT resource exists for this surface; (re)creates the RTV at
+  * rt_rtv_heap[i] and the SRV at srv_heap[RT_SRV_BASE+i]. */
+-static int off_rt_get(u32 off, u32 w, u32 h, u32 rsx_fmt)
++static int off_rt_get(u32 off, u32 w, u32 h, u32 rsx_fmt, u32 pitch)
+ {
+     if (!off || !s_d3d.rt_rtv_heap || !s_d3d.srv_heap) return -1;
+     if (!w) w = s_d3d.width;
+@@ -4027,7 +4055,17 @@
+     int slot = off_rt_find(off);
+     if (slot >= 0) {
+         OffRT* r = &s_d3d.off_rt[slot];
+-        if (r->w == w && r->h == h && r->dxgi == (u32)want_fmt) { r->used = 1; return slot; }
++        /* A linear surface that keeps its pitch is the same memory seen
++         * through another clip rect: keep the largest extent (GT6 renders
++         * its exposure mip chain as rows of one surface, then reads the
++         * levels back through sub-addresses). */
++        const int lin = pitch > 64 && r->pitch == pitch && r->dxgi == (u32)want_fmt;
++        if ((r->w == w && r->h == h && r->dxgi == (u32)want_fmt) ||
++            (lin && r->w >= w && r->h >= h)) {
++            if (pitch) r->pitch = pitch;
++            r->used = 1; return slot;
++        }
++        if (lin) { if (r->w > w) w = r->w; if (r->h > h) h = r->h; }
+         /* The frame in flight still references this resource -- releasing it here
+          * is "was deleted prior to closing the command list" (D3D12 message 921),
+          * and every draw recorded against it silently lands nowhere while the
+@@ -4068,6 +4106,8 @@
+             &IID_ID3D12Resource, (void**)&r->res)))
+         return -1;
+     r->off = off; r->w = w; r->h = h; r->dxgi = (u32)want_fmt;
++    r->pitch = pitch; r->wgen++;
++    rt_view_drop(slot);
+     r->st = D3D12_RESOURCE_STATE_COPY_DEST;
+     r->used = 1;
+     rdoc_name((ID3D12Object*)r->res, "rt 0x%08X %ux%u rsxfmt %02X", off, w, h, rsx_fmt);
+@@ -4226,6 +4266,87 @@
+     r->st = to;
+ }
+ 
++/* The view a texture unit needs, or -1 when the texture is not a part of a
++ * linear render target used this frame. */
++static int rt_view_for(u32 raw, u32 w, u32 h, u32 fmt, u32 pitch)
++{
++    if (!raw || !w || !h || !(fmt & 0x20) || (fmt & 0x9F) != 0x85 || pitch <= 64) return -1;
++    int p = -1; u32 px = 0, py = 0;
++    for (int i = 0; i < MAX_OFF_RTS; i++) {
++        const OffRT* r = &s_d3d.off_rt[i];
++        if (!r->res || !r->used || r->pitch != pitch || r->off > raw ||
++            r->dxgi != (u32)DXGI_FORMAT_R8G8B8A8_UNORM) continue;
++        const u32 d = raw - r->off, y = d / pitch, x = (d % pitch) / 4u;
++        if (x + w > r->w || y + h > r->h) continue;
++        if (p >= 0 && r->off < s_d3d.off_rt[p].off) continue;
++        p = i; px = x; py = y;
++    }
++    if (p < 0) return -1;
++    if (s_d3d.off_rt[p].off == raw &&
++        s_d3d.off_rt[p].w == w && s_d3d.off_rt[p].h == h) return -1;
++    int slot = -1;
++    for (int i = 0; i < MAX_RT_VIEWS; i++) {
++        RtView* v = &s_rt_view[i];
++        if (v->res && v->parent == p && v->x == px && v->y == py && v->w == w && v->h == h) {
++            v->last_frame = s_d3d.frame_count; return i; }
++        if (slot < 0 && !v->res) slot = i;
++    }
++    if (slot < 0)
++        for (int i = 0; i < MAX_RT_VIEWS; i++)
++            if (s_rt_view[i].last_frame != s_d3d.frame_count) {
++                wait_for_gpu(); d3d_retire(s_rt_view[i].res); s_rt_view[i].res = NULL;
++                slot = i; break; }
++    if (slot < 0) return -1;
++    RtView* v = &s_rt_view[slot];
++    D3D12_HEAP_PROPERTIES hp = {0}; hp.Type = D3D12_HEAP_TYPE_DEFAULT;
++    D3D12_RESOURCE_DESC td = {0};
++    td.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
++    td.Width = w; td.Height = h; td.DepthOrArraySize = 1; td.MipLevels = 1;
++    td.Format = DXGI_FORMAT_R8G8B8A8_UNORM; td.SampleDesc.Count = 1;
++    if (FAILED(s_d3d.device->lpVtbl->CreateCommittedResource(
++            s_d3d.device, &hp, D3D12_HEAP_FLAG_NONE, &td,
++            D3D12_RESOURCE_STATE_COPY_DEST, NULL,
++            &IID_ID3D12Resource, (void**)&v->res)))
++        return -1;
++    v->st = D3D12_RESOURCE_STATE_COPY_DEST;
++    v->parent = p; v->x = px; v->y = py; v->w = w; v->h = h;
++    v->wgen = s_d3d.off_rt[p].wgen - 1u;
++    v->last_frame = s_d3d.frame_count;
++    return slot;
++}
++
++static void rt_view_barrier(RtView* v, D3D12_RESOURCE_STATES to)
++{
++    if (v->st == to) return;
++    D3D12_RESOURCE_BARRIER b = {0};
++    b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
++    b.Transition.pResource = v->res;
++    b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
++    b.Transition.StateBefore = v->st; b.Transition.StateAfter = to;
++    s_d3d.cmd_list->lpVtbl->ResourceBarrier(s_d3d.cmd_list, 1, &b);
++    v->st = to;
++}
++
++/* Copy the surface region into the view if the surface changed. Returns 1 when
++ * a copy was recorded (the caller must rebind its render targets). */
++static int rt_view_refresh(int i)
++{
++    RtView* v = &s_rt_view[i];
++    if (!v->res || v->wgen == s_d3d.off_rt[v->parent].wgen) return 0;
++    off_rt_transition(v->parent, D3D12_RESOURCE_STATE_COPY_SOURCE);
++    rt_view_barrier(v, D3D12_RESOURCE_STATE_COPY_DEST);
++    D3D12_TEXTURE_COPY_LOCATION dst = {0}, src = {0};
++    dst.pResource = v->res; dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
++    src.pResource = s_d3d.off_rt[v->parent].res;
++    src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
++    D3D12_BOX box = { v->x, v->y, 0, v->x + v->w, v->y + v->h, 1 };
++    s_d3d.cmd_list->lpVtbl->CopyTextureRegion(s_d3d.cmd_list, &dst, 0, 0, 0, &src, &box);
++    rt_view_barrier(v, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
++    v->wgen = s_d3d.off_rt[v->parent].wgen;
++    return 1;
++}
++
++
+ /* 1 when any draw of this frame samples the depth surface at `off` as a texture
+  * (GT6 text: glyphs write stencil, a later cover pass reads it back). */
+ static int zeta_sampled(u32 off, u32* pw, u32* ph)
+@@ -5136,10 +5257,10 @@
+     for (u32 _d = 0; _d < s_d3d.draw_count && _d < MAX_DRAWS; _d++) {
+         D3D12DrawRecord* dr = &s_d3d.draws[_d];
+         if (dr->is_vp && dr->rt_off)
+-            off_rt_get(dr->rt_off, dr->rt_w, dr->rt_h, dr->rt_fmt);
++            off_rt_get(dr->rt_off, dr->rt_w, dr->rt_h, dr->rt_fmt, dr->rt_pitch);
+         for (int _m = 0; _m < 3; _m++)
+             if (dr->is_vp && dr->rt_mrt[_m])
+-                off_rt_get(dr->rt_mrt[_m], dr->rt_w, dr->rt_h, dr->rt_fmt);
++                off_rt_get(dr->rt_mrt[_m], dr->rt_w, dr->rt_h, dr->rt_fmt, dr->rt_pitch);
+         if (dr->is_vp && dr->zeta_off && (dr->rt_off || dr->no_color))
+             off_ds_get(dr->zeta_off, dr->rt_w, dr->rt_h);
+         u32 _zw = 0, _zh = 0;
+@@ -5154,7 +5275,7 @@
+             const int ds = dr->tex[_u].set ? off_ds_find(dr->tex[_u].raw) : -1;
+             if (ds < 0) continue;
+             s_d3d.off_ds[ds].last_frame = s_d3d.frame_count;
+-            off_rt_get(dr->tex[_u].raw, s_d3d.off_ds[ds].w, s_d3d.off_ds[ds].h, 0x08u);
++            off_rt_get(dr->tex[_u].raw, s_d3d.off_ds[ds].w, s_d3d.off_ds[ds].h, 0x08u, 0);
+         }
+     }
+ 
+@@ -5251,6 +5372,7 @@
+         for (int _u = 0; _u < DRAW_SRV_STRIDE; _u++) {
+             u32 wslot = DRAW_SRV_BASE + _d * DRAW_SRV_STRIDE + (u32)_u;
+             dr->tex_rt[_u] = -1;
++            dr->tex_view[_u] = -1;
+             /* A depth surface read as a texture: its colour copy (made in the
+              * RT pre-pass), refreshed from the depth buffer just before this
+              * draw (ds_convert). */
+@@ -5321,6 +5443,14 @@
+                 }
+             }
+             if (dr->tex[_u].set) {
++                const int vw = dr->tex[_u].cube ? -1 : rt_view_for(dr->tex[_u].raw,
++                    dr->tex[_u].w, dr->tex[_u].h, dr->tex[_u].fmt, dr->tex[_u].pitch);
++                if (vw >= 0) {
++                    dr->tex_view[_u] = vw;
++                    srv_write(wslot, s_rt_view[vw].res, DXGI_FORMAT_R8G8B8A8_UNORM,
++                              D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING);
++                    continue;
++                }
+                 int rt = off_rt_find(dr->tex[_u].raw);
+                 if (rt >= 0) {
+                     dr->tex_rt[_u] = rt;
+@@ -5596,6 +5726,14 @@
+                     for (int _s = 0; _s < 16; _s++) samp_bound[_s] = -1;
+                     force_rebind = 1;
+                 }
++                for (int _u = 0; _u < 16 && !dr->is_clear; _u++)
++                    if (dr->tex[_u].set && dr->tex_view[_u] >= 0 &&
++                        rt_view_refresh(dr->tex_view[_u]) &&
++                        /* the bound target was copied from: bind it again (if this
++                         * op changes targets, the switch below does) */
++                        s_rt_view[dr->tex_view[_u]].parent == cur_rt && dr->rt_off &&
++                        off_rt_find(dr->rt_off) == cur_rt)
++                        force_rebind = 1;
+                 /* The reduced-viewport passes (this title's reflection, drawn
+                  * into a region of the same target) finish here -- snapshot
+                  * before the full-screen scene overwrites them. */
+@@ -5620,7 +5758,8 @@
+                 /* Remember where geometry actually went: off_rt_find() matches
+                  * on offset alone and slots share offsets at different sizes,
+                  * so the composite cannot just look the source up by address. */
+-                if (want >= 0) { s_last_drawn_slot = want; s_last_drawn_off = dr->rt_off; }
++                if (want >= 0) { s_last_drawn_slot = want; s_last_drawn_off = dr->rt_off;
++                                 s_d3d.off_rt[want].wgen++; }
+                 int wantm[3];
+                 for (int _m = 0; _m < 3; _m++)
+                     wantm[_m] = (dr->rt_mrt[_m] && !dr->no_color) ? off_rt_find(dr->rt_mrt[_m]) : -1;
+@@ -6495,6 +6634,8 @@
+             rec_zeta(dr);
+             dr->rt_w = rt_w; dr->rt_h = rt_h;
+             dr->rt_fmt = s_d3d.current_rsx_state ? s_d3d.current_rsx_state->surface_format : 0;
++            dr->rt_pitch = s_d3d.current_rsx_state ? s_d3d.current_rsx_state->surface_color_pitch
++                [s_d3d.current_rsx_state->color_target == 2 ? 1 : 0] : 0;
+             memcpy(dr->cc, cc, sizeof(cc));
+             dr->clear_mask = flags;
+             dr->clear_z = depth;
+@@ -7677,6 +7818,8 @@
+                                 dr->blend, dr->blend_key, 10); } }
+                 dr->rt_off = current_rt_off(&dr->rt_w, &dr->rt_h, dr->rt_mrt); rec_zeta(dr);
+                 dr->rt_fmt = s_d3d.current_rsx_state ? s_d3d.current_rsx_state->surface_format : 0;
++                dr->rt_pitch = s_d3d.current_rsx_state ? s_d3d.current_rsx_state->surface_color_pitch
++                    [s_d3d.current_rsx_state->color_target == 2 ? 1 : 0] : 0;
+                 if (s_d3d.current_rsx_state) {
+                     dr->vp_x = s_d3d.current_rsx_state->viewport_x;
+                     dr->vp_y = s_d3d.current_rsx_state->viewport_y;
+@@ -7804,6 +7947,8 @@
+             dr->blend_key = rsx_blend_key(s_d3d.current_rsx_state, dr->blend);
+             dr->rt_off = current_rt_off(&dr->rt_w, &dr->rt_h, dr->rt_mrt); rec_zeta(dr);
+             dr->rt_fmt = s_d3d.current_rsx_state ? s_d3d.current_rsx_state->surface_format : 0;
++            dr->rt_pitch = s_d3d.current_rsx_state ? s_d3d.current_rsx_state->surface_color_pitch
++                [s_d3d.current_rsx_state->color_target == 2 ? 1 : 0] : 0;
+             if (s_d3d.current_rsx_state) {
+                 dr->vp_x = s_d3d.current_rsx_state->viewport_x;
+                 dr->vp_y = s_d3d.current_rsx_state->viewport_y;
+@@ -7983,6 +8128,8 @@
+         dr->blend_key = rsx_blend_key(s_d3d.current_rsx_state, dr->blend);
+         dr->rt_off = current_rt_off(&dr->rt_w, &dr->rt_h, dr->rt_mrt); rec_zeta(dr);
+         dr->rt_fmt = s_d3d.current_rsx_state ? s_d3d.current_rsx_state->surface_format : 0;
++        dr->rt_pitch = s_d3d.current_rsx_state ? s_d3d.current_rsx_state->surface_color_pitch
++            [s_d3d.current_rsx_state->color_target == 2 ? 1 : 0] : 0;
+         if (s_d3d.current_rsx_state) {
+             dr->vp_x = s_d3d.current_rsx_state->viewport_x;
+             dr->vp_y = s_d3d.current_rsx_state->viewport_y;

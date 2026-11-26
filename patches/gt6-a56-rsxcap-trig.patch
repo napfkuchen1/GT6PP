@@ -1,0 +1,21 @@
+--- a/libs/video/rsx_d3d12_backend.c
++++ b/libs/video/rsx_d3d12_backend.c
+@@ -6304,6 +6304,18 @@
+             s_cap_count  = (n >= 2 && b) ? b : 1;
+             s_cap_stride = (n >= 3 && c) ? c : 1;
+         }
++        /* RSX_CAP_TRIG=<file>: once the file appears, capture the next
++         * <count> frames (numbered on) and delete the file. */
++        { static int s_trig_init = 0; static const char* s_trig = NULL;
++          static u32 s_trig_base = 0, s_poll = 0;
++          if (!s_trig_init) { s_trig_init = 1; s_trig = getenv("RSX_CAP_TRIG"); }
++          if (s_trig && ++s_poll % 4 == 0 && s_cap_done >= s_trig_base &&
++              GetFileAttributesA(s_trig) != INVALID_FILE_ATTRIBUTES) {
++              DeleteFileA(s_trig);
++              u32 n = s_cap_count - s_trig_base;
++              s_trig_base = s_cap_done; s_cap_count = s_cap_done + n;
++              s_cap_start = (u32)s_d3d.frame_count - s_cap_done * s_cap_stride;
++          } }
+         if (s_cap_done < s_cap_count) {
+             u32 target = s_cap_start + s_cap_done * s_cap_stride;
+             if (s_d3d.frame_count >= target && s_dbg_last_draws > 0) {
