@@ -861,3 +861,4 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   0x6FF52FF0 (AD4294+0x78 <6166A4 <7B51B8 <892BF8 <89332C <89295C <8A7BF0), tid1 AE27AC <6171D0 wait, tid3 B091FC.
   r2 18745 flips, never at menu capture frame 25000; tid30 in 8A7B90 (lr 8A7234).
 - [LWM-BLOCK] log is capped at 40 (runtime/ppu/ppu_sysprx.cpp:298); uncap it to print the owner of 0x6FF52FF0.
+- Env PS3_LWMUTEX_TRACE=1 prints [LWM-CONVOY] holder tid + held time for every contended lock; PS3_LWM_WATCH=<lwm> records the last lock site (ppu_sysprx.cpp:183,319).
