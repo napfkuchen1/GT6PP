@@ -93,3 +93,5 @@ Only line: game v1.22 + ps3recomp v0.20.0.
 
 - A62: cellAudioGetPortTimestamp counted from cellAudioInit (port 1 stamps in the past); now last read-index advance minus block periods (patches/gt6-a62-audio-port-timestamp.patch; AUDIO_TS_TRACE=1).
 - A63: movie freeze = CellVdecAvcInfo.frameRateCode (+0x1C) left 0 = 23.976; set from AU stamps, 60/s (patches/gt6-a63, play_a63frc_20261126_113049).
+- A63: post-movie hang = DEMUX_DONE only sent while demux active; teardown 8AE2A0 waits for it after ResetStream. Fixed (work/play_a63done_20261126_115546).
+- A63 user hint frame rate/PAL-NTSC: yes (rate), no PAL: movie is 59.94p (SPS VUI 2002/240000, frame_mbs_only, offline audit of snap_00248; A63 run paces 60/s).
