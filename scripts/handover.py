@@ -15,6 +15,7 @@ p.add_argument("--not-repeat", default="LEDGER §4 + locked chains in CLAUDE.md 
 p.add_argument("--running", default="nothing")
 p.add_argument("--read", default="STATE.md (last 3 lines)")
 p.add_argument("--commit", action="store_true")
+p.add_argument("--session", default=os.environ.get("CLAUDE_CODE_SESSION_ID", ""), help="session key; only a rerun with the same key replaces its LOOP row")
 a = p.parse_args()
 def git(*x): return subprocess.run(["git", "-C", R, *x], capture_output=True, text=True).stdout.strip()
 # 1) trim STATE: whole bullet blocks only; orphaned continuation lines left by older trims move too
@@ -55,16 +56,17 @@ lp = os.path.join(A, "LOOP.tsv"); rows = []
 if os.path.exists(lp):
     rows = [l.split("\t") for l in open(lp, encoding="utf-8").read().splitlines() if l and not l.startswith("#")]
 else:
-    open(lp, "w", encoding="utf-8", newline="\n").write("# time\titem\tchecked_boxes\n")
+    open(lp, "w", encoding="utf-8", newline="\n").write("# time\titem\tchecked_boxes\tsession\n")
 row = [datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), a.item, str(done)]
-# a second handover run within the same session (<60 min) replaces the previous row
+if a.session: row.append(a.session[:8])
 if a.reset: rows.append([row[0], "RESET", row[2]])
-if rows and rows[-1][1] == a.item and (datetime.datetime.now() - datetime.datetime.strptime(rows[-1][0], "%Y-%m-%d %H:%M")).total_seconds() < 3600:
+# only a rerun by the same session (same key and item) replaces its row; other sessions always append
+if a.session and rows and rows[-1][1] == a.item and rows[-1][3:] == row[3:]:
     rows[-1] = row
 else:
     rows.append(row)
 with open(lp, "w", encoding="utf-8", newline="\n") as f:
-    f.write("# time\titem\tchecked_boxes\n" + "".join("\t".join(r) + "\n" for r in rows))
+    f.write("# time\titem\tchecked_boxes\tsession\n" + "".join("\t".join(r) + "\n" for r in rows))
 def streak(match):
     """sessions at the end of the log that satisfy match and saw no new check-off."""
     n = 0
