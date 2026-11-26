@@ -1,16 +1,18 @@
 # GT6PP roadmap: to a race that is playable at 60 FPS with an XInput pad
 
-Snapshot of 2026-11-26. Live checklist: `docs/analysis/STATE.md` (single source of truth); this file is not
+Snapshot of 2026-11-26, 14:50. Live checklist: `docs/analysis/STATE.md` (single source of truth); this file is not
 read by the loop guard. IDs `R*` exist only here.
 
 ## Where we are
 
-Game 1.22 (EU, BCES01893) on ps3recomp v0.20. The Home menu is reached, the opening movie plays to the end,
-the dealer works and a car can be bought. No race has been driven yet.
+Game 1.22 (EU, BCES01893) on ps3recomp v0.20. The opening movie plays to the end, the tutorial runs through
+name entry, the first race and back to the Home menu (in separate steps), the dealer works and a car can be
+bought. The tutorial race is reached, but its 3D view stays black (HUD only).
 
-M1 (main menu): 15 items checked off, 16 open.
+M1 (main menu): 17 items checked off, 19 open.
 
-Done (evidence in the checklist files): T1, T2, G1, I1a, I1b, I1c, C1, C2, G4, G5, G6a, G6b, G6c, S3, D3.
+Done (evidence in the checklist files): T1, T2, G1, G4, G5, G6a, G6b, G6c, G8, I1a, I1b, I1c, I2a, C1, C2,
+S3, D3.
 
 ## Target (proposed acceptance, not yet agreed)
 
@@ -22,18 +24,23 @@ costing frame rate.
 
 | Scene | Measured | Note |
 |---|---|---|
+| Home menu after the tutorial | 14-19 FPS | window title, a few samples on one live run, about 450 draws |
 | Car view | 4.8-5 FPS | after lifting the SPU job modules (was 0.9); rest still interpreted (D4) |
 | Attract demo (race) | 0.29 FPS | measured before the SPU lifting, not re-measured (D1) |
 | Opening movie | 60 pictures/s | paced correctly (I1b) |
-| Driven race | not measured | not reached yet |
+| Tutorial race | not measured | 3D view black (G9) |
 
-The gap in race scenes is therefore unknown and may be large. R3 comes before any estimate.
+During a Home menu sample the process used about 1.5 of 16 logical cores. That one-core pinning (W2) limits
+the frame rate is a plausible but untested explanation. No frame-time profile exists yet.
 
 ## Phase 1: finish M1
 
 | ID | Open point |
 |---|---|
-| I2 | tutorial/intro flow runs without the skip overlay (next step) |
+| G9 | tutorial race: 3D view black with a yellow block, HUD fine |
+| I2b | movie, tutorial and Home in one unbroken run without the skip overlay (next step) |
+| I4 | dealer entry right after the tutorial stays on the GT logo for minutes |
+| W5 | remove the on-screen keyboard stub that confirms without an input window |
 | I3 | movie audio: decoder wired, not verified by ear |
 | L1 | live run with window, persistent save, real pad input |
 | G2 | car-name text in the dealer list smeared |
@@ -80,7 +87,7 @@ Order follows the R3 profile; the list below is the known candidates.
 | R9 | stable frame pacing at 59.94 with the 60 Hz guest vblank and host vsync |
 | W1 | confirm the spliced interpreter bodies with a full re-lift |
 | W3 | remove `GCM_PARK_GRACE_MS=5000` (FIFO resync) |
-| W4 | remove the `GCM_SEMA_BLOCK=500-560` workaround |
+| W4 | remove the `GCM_SEMA_BLOCK=4E0-560` workaround |
 
 ## Risks
 
