@@ -2,14 +2,15 @@
 Context of the running Claude session from the transcript (.jsonl): real usage values of the last
 assistant reply (input + cache_creation + cache_read). Fallback: chars/3.6 + 90k fixed share.
 Exit 0 = ok, 10 = handoff due (>= limit)."""
-import glob, json, os, sys
+import glob, json, os, re, sys
 
 FIX = 90000  # measured start context (tools+system+CLAUDE.md), fallback only
 a = sys.argv[1:]
 limit = int(a[a.index("--limit") + 1]) if "--limit" in a else 210000
 own = os.environ.get("CLAUDE_CODE_SESSION_ID", "")  # calling session, exact transcript
 sess = a[a.index("--session") + 1] if "--session" in a else ""
-d = os.path.join(os.path.expanduser("~"), ".claude", "projects", "C--Users-user-Downloads-Games-GT6-ClaudeCode-GT6PP")
+main = os.path.join(os.path.expanduser("~"), "Downloads", "Games", "GT6", "ClaudeCode", "GT6PP")  # main checkout
+d = os.path.join(os.path.expanduser("~"), ".claude", "projects", re.sub(r"[^A-Za-z0-9]", "-", main))
 fs = [f for f in glob.glob(os.path.join(d, "*.jsonl")) if os.path.basename(f).startswith(sess)]
 if not fs:
     print("ctxwatch: no transcript"); sys.exit(0)
