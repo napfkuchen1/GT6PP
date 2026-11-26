@@ -12,8 +12,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [x] T1 popup shows real German text (A49 a49menu frame 30, work/_a49/menu_home_a49.png)
 - [x] T2 garbled glyphs fixed (A49: DS-as-texture UV scale, patches/gt6-a49-ds-texscale.patch; 16/16 frames clean)
 - [x] G1 all Home tiles drawn after the first car buy (work/_a55/home_after.png)
-- [ ] I1 opening movie (A59): dmux + imports + MF H.264 in (7488456); lock inversion: dmux worker holds lwm
-  0x6FFE0960, wants 0x990; tid49 the reverse (play_a58mov_20261126_090939/run.log.err LWM-LONG)
+- [ ] I1 opening movie: lock deadlock fixed (A60: cellVdec callbacks on own thread, 0 LWM-LONG,
+  play_a60mov_20261126_094244); still black, audio DecodeAu stops at 57
 - [ ] I3 movie audio: cellAdec returns silent PCM for ATRAC3plus (decoder in third_party/at3_standalone)
 - [ ] I2 tutorial/intro flow runs without skip overlay (remove gt6_vol_a45 skips)
 - [x] C1 pad menu: popup X, dealer (~7 s), Honda car list (a53c: work/_a53/dealer_honda_cars.png)
@@ -56,8 +56,9 @@ sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-I1: PS3_LWCLOG=1 run (lwcond re-acquire is fine: lwm_acquire at ppu_sysprx.cpp:596); find
-who takes 0x960/0x990 on 0x7FFFxxxx threads and tid49. Name NID 0xA1709ABD. Repro: sh work/_a58/movie.sh.
+I1: movie.sh with VDEC_TRACE=1;DMUX_TRACE=1: count video DecodeAu/GetPicture, find where it stalls.
+If a cellAdec callback blocks (still synchronous, "caller=1" in log), thread it like cellVdec.
+NID 0xA1709ABD = sceNpManagerGetEntitlementById.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52) = attract demo. Post-save movie stall (Arbeit40).

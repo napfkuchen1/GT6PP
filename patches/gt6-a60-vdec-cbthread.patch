@@ -1,0 +1,252 @@
+--- a/libs/codec/cellVdec.c
++++ b/libs/codec/cellVdec.c
+@@ -93,19 +93,123 @@
+ #define VDEC_HANDLE_OF(slot) ((CellVdecHandle)((u32)(slot) + 1u))
+ #define VDEC_SLOT_OF(h)      (((u32)(h) - 1u) < MAX_VDEC ? (u32)(h) - 1u : (u32)MAX_VDEC)
+ 
+-/* Deliver a vdec message to the guest callback (handle, msgType, msgData,
+- * cbArg). It is a guest OPD, so it goes through g_ps3_guest_caller; this used
+- * to call it as a host function pointer, which crashes the first time a
+- * title's callback is reached.
+- * ponytail: synchronous on the caller's thread, like adec_notify; give it a
+- * decoder thread if a title's callback ever blocks on the DecodeAu caller. */
++/* Callbacks run on one thread per slot, as on the PS3, where the decoder's own
++ * thread delivers them. They must not run inside DecodeAu on the caller's
++ * thread: Gran Turismo 6 calls DecodeAu holding an lwmutex that its callback
++ * takes again, then waits on a second one whose holder wants the first, which
++ * the nested (recursive) hold never releases.
++ * Messages keep their order. A full queue drops the message and says so. */
++#define VDEC_CB_QUEUE 512
++typedef struct {
++    u32 type[VDEC_CB_QUEUE];
++    s32 data[VDEC_CB_QUEUE];
++    u32 head, count;
++    int started, busy;
++#ifdef _WIN32
++    CONDITION_VARIABLE cond;        /* zero == CONDITION_VARIABLE_INIT */
++    DWORD tid;
++#else
++    pthread_cond_t cond;
++    pthread_t tid;
++#endif
++} VdecCbQueue;
++static VdecCbQueue s_cb[MAX_VDEC];
++#ifdef _WIN32
++static SRWLOCK s_cb_lock = SRWLOCK_INIT;
++#define CB_LOCK()    AcquireSRWLockExclusive(&s_cb_lock)
++#define CB_UNLOCK()  ReleaseSRWLockExclusive(&s_cb_lock)
++#define CB_WAIT(c)   SleepConditionVariableSRW(c, &s_cb_lock, INFINITE, 0)
++#define CB_WAKE(c)   WakeAllConditionVariable(c)
++#else
++static pthread_mutex_t s_cb_lock = PTHREAD_MUTEX_INITIALIZER;
++#define CB_LOCK()    pthread_mutex_lock(&s_cb_lock)
++#define CB_UNLOCK()  pthread_mutex_unlock(&s_cb_lock)
++#define CB_WAIT(c)   pthread_cond_wait(c, &s_cb_lock)
++#define CB_WAKE(c)   pthread_cond_broadcast(c)
++#endif
++
++static void vdec_cb_run(u32 slot)
++{
++    VdecCbQueue* q = &s_cb[slot];
++    CB_LOCK();
++    for (;;) {
++        while (!q->count) CB_WAIT(&q->cond);
++        const u32 type = q->type[q->head];
++        const s32 data = q->data[q->head];
++        q->head = (q->head + 1u) % VDEC_CB_QUEUE;
++        q->count--;
++        const u32 func = s_vdec[slot].in_use ? s_vdec[slot].cbFunc : 0;
++        const u32 arg = s_vdec[slot].cbArg;
++        q->busy = 1;
++        CB_UNLOCK();
++        if (func && g_ps3_guest_caller)
++            g_ps3_guest_caller(func, (u64)VDEC_HANDLE_OF(slot), (u64)type,
++                               (u64)(s64)data, (u64)arg, 0, 0, 0, 0);
++        CB_LOCK();
++        q->busy = 0;
++    }
++}
++#ifdef _WIN32
++static DWORD WINAPI vdec_cb_thread(LPVOID arg) { vdec_cb_run((u32)(uintptr_t)arg); return 0; }
++#else
++static void* vdec_cb_thread(void* arg) { vdec_cb_run((u32)(uintptr_t)arg); return NULL; }
++#endif
++
++/* Queue a vdec message for the guest callback (handle, msgType, msgData, cbArg). */
+ static void vdec_notify(u32 slot, u32 msg_type, s32 msg_data)
+ {
+     if (slot >= MAX_VDEC || !s_vdec[slot].in_use) return;
+-    const VdecSlot* v = &s_vdec[slot];
+-    if (!v->cbFunc || !g_ps3_guest_caller) return;
+-    g_ps3_guest_caller(v->cbFunc, (u64)VDEC_HANDLE_OF(slot), (u64)msg_type,
+-                       (u64)(s64)msg_data, (u64)v->cbArg, 0, 0, 0, 0);
++    if (!s_vdec[slot].cbFunc || !g_ps3_guest_caller) return;
++    VdecCbQueue* q = &s_cb[slot];
++    CB_LOCK();
++    if (!q->started) {
++        void* arg = (void*)(uintptr_t)slot;
++#ifdef _WIN32
++        HANDLE t = CreateThread(NULL, 16u << 20, vdec_cb_thread, arg,
++                                STACK_SIZE_PARAM_IS_A_RESERVATION, &q->tid);
++        if (t) { CloseHandle(t); q->started = 1; }
++#else
++        pthread_cond_init(&q->cond, NULL);
++        if (pthread_create(&q->tid, NULL, vdec_cb_thread, arg) == 0) {
++            pthread_detach(q->tid);
++            q->started = 1;
++        }
++#endif
++    }
++    if (q->started && q->count < VDEC_CB_QUEUE) {
++        const u32 i = (q->head + q->count) % VDEC_CB_QUEUE;
++        q->type[i] = msg_type;
++        q->data[i] = msg_data;
++        q->count++;
++        CB_WAKE(&q->cond);
++    } else {
++        printf("[cellVdec] callback queue unusable; message %u dropped\n", msg_type);
++    }
++    CB_UNLOCK();
++}
++
++/* Close: nothing queued may reach the guest afterwards. Waits for a running
++ * callback, at most a second (the closer may hold a lock that callback wants). */
++static void vdec_cb_drop(u32 slot)
++{
++    VdecCbQueue* q = &s_cb[slot];
++    CB_LOCK();
++    q->head = q->count = 0;
++#ifdef _WIN32
++    const int self = q->started && q->tid == GetCurrentThreadId();
++#else
++    const int self = q->started && pthread_equal(q->tid, pthread_self());
++#endif
++    for (int ms = 0; !self && q->busy && ms < 1000; ms++) {
++        CB_UNLOCK();
++#ifdef _WIN32
++        Sleep(1);
++#else
++        usleep(1000);
++#endif
++        CB_LOCK();
++    }
++    CB_UNLOCK();
+ }
+ 
+ /* ---------------------------------------------------------------------------
+@@ -329,6 +433,7 @@
+     if (handle >= MAX_VDEC || !s_vdec[handle].in_use)
+         return (s32)CELL_VDEC_ERROR_ARG;
+ 
++    vdec_cb_drop(handle);
+     VDEC_LOCK();
+     if (s_vdec[handle].ff) {
+         vdec_queue_clear(&s_vdec[handle]);
+--- a/runtime/ppu/ppu_sysprx.cpp
++++ b/runtime/ppu/ppu_sysprx.cpp
+@@ -264,6 +264,34 @@
+ uint32_t g_lwmw_lr, g_lwmw_sp; char g_lwmw_chain[200];  /* PS3_LWM_WATCH: last lock site of the watched lwmutex */
+ /* syscalls/sys_ppu_thread.c: this thread is about to wait (PS3_PRIO_START). */
+ extern "C" void ppu_thread_note_block(uint64_t tid);
++/* PS3_LWM_RING=1: history of lwmutex operations, dumped per mutex by LWM-LONG. */
++struct LwmOp { uint32_t lwm, tid, lr, up; char op; };
++#define LWM_DEPTH 16   /* per mutex: a shared ring is overwritten long before the 30 s report */
++static LwmOp g_lwm_ring[LWM_HASH][LWM_DEPTH];
++static volatile long g_lwm_ring_n[LWM_HASH];
++static int lwm_ring_on(void){ static int v=-1; if(v<0) v=getenv("PS3_LWM_RING")?1:0; return v; }
++static void lwm_note(char op, uint32_t lwm, ppu_context* ctx)
++{
++    if (!lwm_ring_on()) return;
++    struct LwmSlot* sl = lwm_slot(lwm);
++    if (!sl) return;
++    const size_t i = (size_t)(sl - g_lwm);
++    uint32_t s = (uint32_t)ctx->gpr[1], up = 0;
++    if (s > 0x10000) { uint32_t a = vm_read32(s + 4); if (a > s) { up = vm_read32(a + 20); uint32_t b = vm_read32(a + 4); if (b > a) up = vm_read32(b + 20); } }
++    LwmOp* r = &g_lwm_ring[i][(uint32_t)InterlockedIncrement(&g_lwm_ring_n[i]) % LWM_DEPTH];
++    r->lwm = lwm; r->tid = (uint32_t)ctx->thread_id; r->lr = (uint32_t)ctx->lr; r->up = up; r->op = op;
++}
++static void lwm_ring_dump(uint32_t lwm)
++{
++    if (!lwm_ring_on()) return;
++    struct LwmSlot* sl = lwm_slot(lwm);
++    if (!sl) return;
++    const size_t i = (size_t)(sl - g_lwm);
++    const uint32_t end = (uint32_t)g_lwm_ring_n[i];
++    for (uint32_t k = end > LWM_DEPTH - 1 ? end - (LWM_DEPTH - 1) : 1; k <= end; k++) {
++        const LwmOp* r = &g_lwm_ring[i][k % LWM_DEPTH];
++        fprintf(stderr, "[LWM-RING] lwm=0x%08X #%u op=%c tid=%u lr=%08X up=%08X\n", lwm, k, r->op, r->tid, r->lr, r->up); }
++}
+ static void sys_lwmutex_lock(ppu_context* ctx)
+ {
+     uint32_t lwm = (uint32_t)ctx->gpr[3];
+@@ -287,6 +315,7 @@
+          * Only the holder ever stamps owner=self, so this check is race-free. */
+         if (vm_read32(lwm + LWM_OWNER) == self && vm_read32(lwm + LWM_RECUR) > 0) {
+             vm_write32(lwm + LWM_RECUR, vm_read32(lwm + LWM_RECUR) + 1);
++            lwm_note('R', lwm, ctx);
+             ctx->gpr[3] = 0;
+             return;
+         }
+@@ -313,6 +342,13 @@
+                             (unsigned long long)ctx->thread_id, lwm, waited, vm_read32(lwm + LWM_OWNER), vm_read32(lwm + LWM_RECUR),
+                             vm_read32(lwm), vm_read32(lwm + 4), vm_read32(lwm + 8), vm_read32(lwm + 12), vm_read32(lwm + 16), vm_read32(lwm + 20),
+                             (uint32_t)ctx->lr);
++                        /* guest back chain: which call path holds one lock and wants the other */
++                        char ch[256]; int o = 0; ch[0] = 0; uint32_t s = (uint32_t)ctx->gpr[1];
++                        for (int i = 0; i < 16 && s > 0x10000 && o < 240; i++) {
++                            uint32_t nx = vm_read32(s + 4); if (nx <= s) break;
++                            o += snprintf(ch + o, sizeof(ch) - o, " %08X", vm_read32(nx + 20)); s = nx; }
++                        fprintf(stderr, "[LWM-LONG]   tid=%llu chain:%s\n", (unsigned long long)ctx->thread_id, ch);
++                        if (waited == 30) lwm_ring_dump(lwm);
+                         fflush(stderr);
+                     }
+                 }
+@@ -333,6 +369,7 @@
+           { uint32_t s = g_lwmw_sp; int o = 0; g_lwmw_chain[0] = 0; for (int i = 0; i < 7 && s > 0x10000; i++) { uint32_t nx = vm_read32(s + 4); if (nx <= s) break; o += snprintf(g_lwmw_chain + o, sizeof(g_lwmw_chain) - o, " %08X", vm_read32(nx + 0x10 + 4)); s = nx; } } } }
+     vm_write32(lwm + LWM_OWNER, self);
+     vm_write32(lwm + LWM_RECUR, 1);
++    lwm_note('L', lwm, ctx);
+     ctx->gpr[3] = 0;   // CELL_OK
+ }
+ /* Fast forms for ps3_hle_call (see ps3_hle_register_fast): a lock that is
+@@ -343,7 +380,7 @@
+     const uint32_t lwm = (uint32_t)ctx->gpr[3];
+     if (!lwm_addr_ok(lwm)) return 0;   /* full handler logs + returns ESRCH */
+     struct LwmSlot* sl = lwm_slot(lwm);
+-    if (!sl || lwm_trace()) return 0;
++    if (!sl || lwm_trace() || lwm_ring_on()) return 0;
+     const uint32_t self = LWM_SELF(ctx);
+     if (vm_read32(lwm + LWM_OWNER) == self && vm_read32(lwm + LWM_RECUR) > 0)
+         vm_write32(lwm + LWM_RECUR, vm_read32(lwm + LWM_RECUR) + 1);
+@@ -385,6 +422,7 @@
+     if (lwm_trace()) { struct LwmSlot* sl = lwm_find(lwm); if (sl) { sl->holder = (long)self; sl->acq_us = lwm_now_us(); sl->acq_fences = g_gcm_ref_pub_count; sl->acq_cpu_us = ppu_thread_cpu_us(self); } }
+     vm_write32(lwm + LWM_OWNER, self);
+     vm_write32(lwm + LWM_RECUR, 1);
++    lwm_note('T', lwm, ctx);
+     ctx->gpr[3] = 0;
+ }
+ static void sys_lwmutex_unlock(ppu_context* ctx)
+@@ -395,6 +433,7 @@
+         return;
+     }
+     uint32_t rc = vm_read32(lwm + LWM_RECUR);
++    lwm_note(vm_read32(lwm + LWM_OWNER) == LWM_SELF(ctx) ? 'U' : 'X', lwm, ctx);
+     if (rc > 1) {                       /* recursive hold: count down, keep the lock */
+         vm_write32(lwm + LWM_RECUR, rc - 1);
+         ctx->gpr[3] = 0;
+@@ -573,6 +612,7 @@
+     if (sl) {
+         own = vm_read32(lwmutex + LWM_OWNER);
+         rc  = vm_read32(lwmutex + LWM_RECUR);
++        lwm_note(own == LWM_SELF(ctx) ? 'W' : 'Y', lwmutex, ctx);
+         vm_write32(lwmutex + LWM_RECUR, 0);
+         vm_write32(lwmutex + LWM_OWNER, 0);
+         lwm_release(sl);
+@@ -595,6 +635,7 @@
+         lwm_acquire(sl, 0);
+         vm_write32(lwmutex + LWM_OWNER, own);
+         vm_write32(lwmutex + LWM_RECUR, rc ? rc : 1);
++        lwm_note('A', lwmutex, ctx);
+     }
+     ctx->gpr[3] = rv ? (uint64_t)(int64_t)(int32_t)rv : 0;
+ }
