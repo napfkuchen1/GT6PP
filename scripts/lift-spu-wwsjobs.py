@@ -24,6 +24,11 @@ WORK = ROOT / "work" / "spu_jobs" / "wws_analysis"
 REG = ROOT / "gt6" / "src" / "gen" / "spu_workloads_wwsjobs.c"
 LOAD_LSA = 0x4000
 FIRST_IMAGE_ID = 40
+# Entries only reached by indirect branches (seen with SPU_INTERP_STATS=10), by module EA.
+EXTRA_FUNCS = {
+    0x01380000: "0x108EC",
+    0x0143F280: "0x7788,0x7948,0x7DC8,0x810C,0x84FC,0x8894,0x8F40",
+}
 
 
 def segments(elf):
@@ -74,7 +79,8 @@ def main():
                     [sys.executable, str(SDK / "spu_lifter.py"), str(code), "--base", hex(LOAD_LSA),
                      "--functions", str(funcs), "--symbol-prefix", "wws_%s_" % name.lower(),
                      "--output", str(OUT / name), "--source-name", "spu_recomp.c",
-                     "--header-name", "spu_recomp.h"]):
+                     "--header-name", "spu_recomp.h"]
+                    + (["--extra-funcs", EXTRA_FUNCS[ea]] if ea in EXTRA_FUNCS else [])):
             r = subprocess.run(cmd, capture_output=True, text=True)
             (WORK / (name + "." + Path(cmd[-1 if "-I" not in cmd else 2]).stem + ".log")).write_text(
                 r.stdout + r.stderr)

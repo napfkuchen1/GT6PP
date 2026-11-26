@@ -20,7 +20,8 @@ STOP-GRUND: MENUE only when all M1 items are verified, incl. a live (non-headles
 - [ ] G6 showroom: 3D car not drawn, black background (work/_a54/car_ret2.png)
 - [x] S3 delivery screen ends, dealer list returns (~2-3 min; same run, work/_a55/buy4.png, buy5.png)
 - [x] D3 SPU interpreter off the hot path: 38 -> 2.6M steps/s, car view 0.9 -> 4.8 FPS (same run, car.png)
-- [ ] D4 rest interpreted: image 89 entries LS 0x810C/0x8F40/0x84FC/0x7DC8, PM 0xA68 (SPU_INTERP_STATS=10)
+- [ ] D4 rest interpreted, car view 5 FPS: image 76 LS 0x108EC/0x7D28/0x8048, image 74 0x54BC, PM 0xA68
+  (play_a55lift2_20261126_061944; image 89 entries fixed via EXTRA_FUNCS)
 - [ ] G7 popup bar draws several popups on top of each other (work/_a55/home_after.png): check vs real
 - [ ] G5 FP 0x04D0BC01 rejected, X3504 index out of bounds (play_a54ucq); FP_FAIL_DUMP
 - [ ] G2 car-name text in dealer list smeared/overbold (work/_a53/dealer_cars_full.png)
@@ -50,9 +51,9 @@ sh work/_a53/to_home2.sh, python -I work/_a53/dealer.py.
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-D4: add missing entries to scripts/lift-spu-wwsjobs.py (lifter --extra-funcs, image 89 = 50th module in
-gt6/src/gen/spu_workloads_wwsjobs.c), relift, build, repro work/_a55/repro.sh. Then next M1 item: G6 (car
-view 3D car / black background) or I1 (opening movie). Fresh gt6/generated needs lift-spu-wwsjobs.py.
+M1 next item: G6 (car view black, no 3D car): capture draws in car view, compare with showroom. D4: extend
+EXTRA_FUNCS / try --return-entries in scripts/lift-spu-wwsjobs.py (image N = 40 + registry row). Repro:
+work/_a55/repro.sh; buy: cross (color), down x3, cross, cross. Fresh gt6/generated needs that lift script.
 
 ## Refuted / symptom (do not repeat)
 "Dealer load hang" (Arbeit50-52, tid30 interpreter, file opens) = attract demo. Post-save movie stall (Arbeit40). Quit flag, savedata fileBuf, sceNp Term, userdb, IsExitGame, Hyp. 1-116, PRIO_START/LOCKSTEP, PRIO_MAP, exit race.
