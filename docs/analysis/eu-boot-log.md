@@ -857,3 +857,6 @@ Script VM addresses 9EEA88/9F0748 are 1.00 (0 calls in 1.22).
   dealer loading screen; loading still shown at 720 s (~100 s+). Frames work/_a50/sheet_pad*.png.
 - cellPamf HLE read a wrong header layout (0 streams); rewritten (patches/gt6-a50-pamf-header.patch).
 - cellDmux v020 is a stub (no PES parsing); cellVdec needs PS3RECOMP_FFMPEG_RUNTIME + FFmpeg headers.
+- a50deal (2x 900 s, X 560..620, WD 780/880): r1 42341 flips, loading screen to the end; tid30 sys_lwmutex_lock
+  0x6FF52FF0 (AD4294+0x78 <6166A4 <7B51B8 <892BF8 <89332C <89295C <8A7BF0), tid1 AE27AC <6171D0 wait, tid3 B091FC.
+  r2 18745 flips, never at menu capture frame 25000; tid30 in 8A7B90 (lr 8A7234).

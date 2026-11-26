@@ -1,6 +1,6 @@
 Goal: M1: complete, correct main menu (intro plays, controllable, no gfx/text errors, live run + pad); then M2 first race.
-State: last commit 99db830 fix: wait longer on FIFO parks, scale depth-surface textures by host siz; PROGRESS: 2026-11-26 | 99db830 | vol | ok ok FAIL FAIL ok FAIL - | probe_a49menu_20261126_002007_2 | non-black=81%
-Next step: C1/G1: probe -Parallel 2 -Seconds 700, GT6_VOL_ROOT=work/gt6_vol_a45, same pad + X/dir presses after 470 s, RSX_CAP=23000:40:301; popup close, dealer tile, stacked banner; then I1 movie without skipopening
-Do not repeat: SPU stall img5 (fixed, park grace); shredded text (fixed, ds texscale); GCM_SEMA_ACQUIRE
+State: last commit 6ea021e fix: parse the real PAMF header layout in cellPamf; record menu pad resu; PROGRESS: 2026-11-26 | 6ea021e | vol | ok FAIL - - - - - | probe_a50deal_20261126_004329_1 | non-black=0%
+Next step: Dealer load hang (a50deal): find owner of lwmutex 0x6FF52FF0 that blocks tid30 (AD4294<6166A4); snapshot or watchdog owner print; also r2 stall before menu (tid30 8A7B90). Then I1: real cellDmux + FFmpeg headers.
+Do not repeat: SPU stall img5, shredded text, PAMF header parse (fixed), pad popup/dealer press (works)
 Still running: nothing
-Read: STATE.md; eu-boot-log.md Arbeit49
+Read: STATE.md; eu-boot-log.md Arbeit50; side note arbeit50-movie.md

@@ -55,7 +55,9 @@ Batch tools: scripts/boot-batch.ps1, boot-outcome.py. Never modify work/gt6_vol 
   Frame work/_a46/main_menu_home.png; overlay gt6_vol_a45 (skip tutorial + opening), pad X 220..395.
 
 ## Next step
-a50deal (2x 900 s, X 560..620, PS3_WD_AT=780,880): does the dealer load finish? If not: WD stacks / tid1 chain, file opens.
+a50deal (2x 900 s): dealer load never finishes. r1 tid30 in sys_lwmutex_lock(0x6FF52FF0), chain AD4294+0x78 <6166A4
+<7B51B8, same at 780/880 s; tid3 in B091FC (heap). r2 only 18745 flips (stall before menu; tid30 8A7B90). Find the lock
+owner (lwmutex struct at that EA, snapshot or WD print), compare with tools/guard_heaplock.py deadlock (Arbeit37).
 Then I1: real MPEG-PS demux in cellDmux.c + FFmpeg headers (avcodec-63/avutil-61, DLLs in tools/RPCS3), run without
 skipopening; check served .pam size (old run passed 1.00 size 351096832). Notes: side-session note arbeit50-movie.md.
 
